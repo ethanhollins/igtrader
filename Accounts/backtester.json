@@ -1,0 +1,9 @@
+{
+	"method": "compare",
+	"start": "20/9/18 13:00",
+	"end": "",
+	"plans": [{
+		"name": "IncomePro_KELTNER/v1.2.0",
+		"variables": {}
+	}]
+}

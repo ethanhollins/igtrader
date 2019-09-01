@@ -1,0 +1,19 @@
+{
+    "username": "ethanhollinsdemo",
+    "password": "#r!05Op0.2FF",
+    "key": "e96fae1ecb21ef662efc9aeb4b6cf8afc8e6f890",
+    "tokens": {
+        "X-SECURITY-TOKEN": "f9f257f7c8c497d8b0b92376c7adc8f5b551d1ad98c0d7c48c5d29fc2fb6487501113",
+        "CST": "fd20b4447d72d017326f40b402cdf939b67e8db22fa25d67015c6a43911e6ad001113"
+    },
+    "isDemo": true,
+    "accounts": {
+        "ZU769": {
+            "IncomePro_KELTNER/v1.2.0": {
+                "variables": {},
+                "storage": {},
+                "positions": []
+            }
+        }
+    }
+}
