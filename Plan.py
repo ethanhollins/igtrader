@@ -1,10 +1,11 @@
-from Indicators import *
+from Position import Position
 from enum import Enum
 from Backtester import Backtester
 import importlib.util
 import Constants
 import time
 import json
+import traceback
 
 from Indicators.ATR import ATR
 from Indicators.BOLL import BOLL
@@ -77,10 +78,17 @@ class Plan(object):
 
 	def getSavedPositions(self):
 		info = self.account.getRootDict()
+		found_positions = []
 		for i in info['accounts'][self.account.accountid][self.name]['positions']:
 			for pos in self.positions:
 				if pos.orderid == i['orderid']:
 					pos.data = i['data']
+					found_positions.append(pos)
+
+		for i in range(len(self.positions)-1,-1,-1):
+			pos = self.positions[i]
+			if not pos in found_positions:
+				del self.positions[i]
 
 	def updatePositions(self):
 		result = self.account.manager.getPositions(self.account.accountid)
@@ -94,7 +102,7 @@ class Plan(object):
 						break
 
 				if not found:
-					new_pos = Position(self, 
+					new_pos = Position(self.account, 
 						pos['position']['dealId'], 
 						pos['market']['epic'], 
 						pos['position']['direction']
@@ -102,8 +110,10 @@ class Plan(object):
 					new_pos.lotsize = float(pos['position']['size'])
 					new_pos.entryprice = float(pos['position']['level'])
 					new_pos.opentime = self.account.manager.utils.convertUTCSnapshotToTimestamp(pos['position']['createdDateUTC'])
-					new_pos.sl = float(pos['position']['stopLevel'])
-					new_pos.tp = float(pos['position']['limitLevel'])
+					if pos['position']['stopLevel']:
+						new_pos.sl = float(pos['position']['stopLevel'])
+					if pos['position']['limitLevel']:
+						new_pos.tp = float(pos['position']['limitLevel'])
 
 					self.positions.append(new_pos)
 
@@ -111,8 +121,8 @@ class Plan(object):
 		save = []
 		for pos in self.positions:
 			save.append({
-				'orderid': pos['orderid'],
-				'data': pos['data']
+				'orderid': pos.orderid,
+				'data': pos.data
 			})
 		info = self.account.getRootDict()
 		root_path = 'Accounts/{0}.json'.format(self.account.root.root_name)
@@ -128,7 +138,6 @@ class Plan(object):
 			f.write(json.dumps(info, indent=4))
 
 	def saveVariables(self):
-		save = [dict(pos) for pos in self.positions]
 		info = self.account.getRootDict()
 		root_path = 'Accounts/{0}.json'.format(self.account.root.root_name)
 		with open(root_path, 'w') as f:
@@ -141,7 +150,7 @@ class Plan(object):
 				self.module.onStopLoss(pos)
 			except Exception as e:
 				if not 'has no attribute \'onStopLoss\'' in str(e):
-					print('PlanError ({0}):\n{1}'.format(self.account.accountid, str(e)))
+					print('PlanError ({0}):\n{1}'.format(self.account.accountid, traceback.format_exc()))
 					self.plan_state = PlanState.STOPPED
 
 	def onTakeProfit(self, pos):
@@ -150,7 +159,7 @@ class Plan(object):
 				self.module.onTakeProfit(pos)
 			except Exception as e:
 				if not 'has no attribute \'onTakeProfit\'' in str(e):
-					print('PlanError ({0}):\n{1}'.format(self.account.accountid, str(e)))
+					print('PlanError ({0}):\n{1}'.format(self.account.accountid, traceback.format_exc()))
 					self.plan_state = PlanState.STOPPED
 
 	def onClose(self, pos):
@@ -159,16 +168,16 @@ class Plan(object):
 				self.module.onClose(pos)
 			except Exception as e:
 				if not 'has no attribute \'onClose\'' in str(e):
-					print('PlanError ({0}):\n{1}'.format(self.account.accountid, str(e)))
+					print('PlanError ({0}):\n{1}'.format(self.account.accountid, traceback.format_exc()))
 					self.plan_state = PlanState.STOPPED
 
 	def onRejected(self, pos):
 		if self.plan_state == PlanState.STARTED:
 			try:
-				self.module.onRejected(item)
+				self.module.onRejected(pos)
 			except Exception as e:
 				if not 'has no attribute \'onRejected\'' in str(e):
-					print('PlanError ({0}):\n{1}'.format(self.account.accountid, str(e)))
+					print('PlanError ({0}):\n{1}'.format(self.account.accountid, traceback.format_exc()))
 					self.plan_state = PlanState.STOPPED
 
 	def onModified(self, pos):
@@ -177,7 +186,7 @@ class Plan(object):
 				self.module.onModified(pos)
 			except Exception as e:
 				if not 'has no attribute \'onModified\'' in str(e):
-					print('PlanError ({0}):\n{1}'.format(self.account.accountid, str(e)))
+					print('PlanError ({0}):\n{1}'.format(self.account.accountid, traceback.format_exc()))
 					self.plan_state = PlanState.STOPPED
 
 	'''
@@ -205,6 +214,7 @@ class Plan(object):
 				if i.orderid == orderid:
 					del self.account.position_queue[self.account.position_queue.index(i)]
 					self.positions.append(i)
+					i.plan = self
 					pos = i
 					break
 
@@ -218,8 +228,8 @@ class Plan(object):
 		try:
 			self.module.onEntry(pos)
 		except Exception as e:
-			if not 'onEntry' in str(e):
-				print('PlanError {0}:\n{1}'.format(self.account.accountid, str(e)))
+			if not 'has no attribute \'onEntry\'' in str(e):
+				print('PlanError ({0}):\n{1}'.format(self.account.accountid, traceback.format_exc()))
 				self.plan_state = PlanState.STOPPED
 
 		self.savePositions()
@@ -245,6 +255,7 @@ class Plan(object):
 			for i in self.account.position_queue:
 				if i.orderid == orderid:
 					del self.account.position_queue[self.account.position_queue.index(i)]
+					i.plan = self
 					self.positions.append(i)
 					pos = i
 					break
@@ -258,12 +269,43 @@ class Plan(object):
 		try:
 			self.module.onEntry(pos)
 		except Exception as e:
-			if not 'onEntry' in str(e):
-				print('PlanError {0}:\n{1}'.format(self.account.accountid, str(e)))
+			if not 'has no attribute \'onEntry\'' in str(e):
+				print('PlanError ({0}):\n{1}'.format(self.account.accountid, traceback.format_exc()))
 				self.plan_state = PlanState.STOPPED
 
 		self.savePositions()
 		return pos
+
+	def stopAndReverse(self, 
+		product, lotsize,
+		slPrice=None, slRange=None, 
+		tpPrice=None, tpRange=None
+	):
+		direction = None
+		for i in range(len(self.positions)-1, -1,-1):
+			pos = self.positions[i]
+			if pos.product == product:
+				direction = pos.direction
+				pos.close()
+
+		new_pos = None
+		if direction:
+			if direction == Constants.BUY:
+				new_pos = self.sell(
+					product, lotsize, 
+					slPrice=slPrice, slRange=slRange, 
+					tpPrice=tpPrice, tpRange=tpRange
+				)
+			else:
+				new_pos = self.buy(
+					product, lotsize, 
+					slPrice=slPrice, slRange=slRange, 
+					tpPrice=tpPrice, tpRange=tpRange
+				)
+
+		self.closed_positions.sort(key=lambda x: x.opentime)
+
+		return new_pos
 
 	def subscribeChart(self, product, period):
 		chart = self.account.root.manager.subscribeChart(self, product, period)

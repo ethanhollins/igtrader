@@ -39,10 +39,8 @@ class Account(object):
 
 	def onItemUpdate(self, item):
 		if 'OPU' in item['values'] and item['values']['OPU']:
-			opu = item['values']['OPU']
-
+			opu = json.loads(item['values']['OPU'])
 			if opu['dealStatus'] == 'ACCEPTED':
-
 				if opu['status'] == 'OPEN':
 					pos = Position(
 						self, opu['dealId'],
@@ -51,9 +49,12 @@ class Account(object):
 					pos.lotsize = float(opu['size'])
 					pos.entryprice = float(opu['level'])
 					pos.opentime = self.manager.utils.convertUTCSnapshotToTimestamp(opu['timestamp'])
-					pos.sl = float(opu['stopLevel'])
-					pos.tp = float(opu['limitLevel'])
+					if opu['stopLevel']:
+						pos.sl = float(opu['stopLevel'])
+					if opu['limitLevel']:
+						pos.tp = float(opu['limitLevel'])
 
+					print(dict(pos))
 					self.position_queue.append(pos)
 
 				elif opu['status'] == 'DELETED':
@@ -72,25 +73,25 @@ class Account(object):
 								del plan.positions[plan.positions.index(pos)]
 								plan.closed_positions.append(pos)
 
-								if float(opu['level']) == float(opu['stopLevel']):
+								if opu['stopLevel'] and float(opu['level']) == float(opu['stopLevel']):
 									plan.onStopLoss(pos)
-								elif float(opu['level']) == float(opu['limitLevel']):
+								elif opu['limitLevel'] and float(opu['level']) == float(opu['limitLevel']):
 									plan.onTakeProfit(pos)
 								else:
 									low_chart = plan.getLowestPeriodChart()
 									if low_chart:
 										if opu['direction'] == Constants.BUY:
-											if low_chart.c_bid[2] <= float(opu['stopLevel']):
+											if opu['stopLevel'] and low_chart.c_bid[2] <= float(opu['stopLevel']):
 												plan.onStopLoss(pos)
-											elif low_chart.c_bid[1] >= float(opu['limitLevel']):
+											elif opu['limitLevel'] and low_chart.c_bid[1] >= float(opu['limitLevel']):
 												plan.onTakeProfit(pos)
 											else:
 												plan.onClose(pos)
 
 										else:
-											if low_chart.c_ask[1] >= float(opu['stopLevel']):
+											if opu['stopLevel'] and low_chart.c_ask[1] >= float(opu['stopLevel']):
 												plan.onStopLoss(pos)
-											elif low_chart.c_ask[2] <= float(opu['limitLevel']):
+											elif opu['limitLevel'] and low_chart.c_ask[2] <= float(opu['limitLevel']):
 												plan.onTakeProfit(pos)
 											else:
 												plan.onClose(pos)
@@ -101,14 +102,22 @@ class Account(object):
 
 					for pos in self.position_queue:
 						if pos.orderid == opu['dealId']:
-							pos.sl = float(opu['stopLevel'])
-							pos.tp = float(opu['limitLevel'])
+							if opu['stopLevel']:
+								pos.sl = float(opu['stopLevel'])
+							if opu['limitLevel']:
+								pos.tp = float(opu['limitLevel'])
 
 					for plan in self.plans:
 						for pos in plan.positions:
 							if pos.orderid == opu['dealId']:
-								pos.sl = float(opu['stopLevel'])
-								pos.tp = float(opu['limitLevel'])
+								if opu['stopLevel']:
+									pos.sl = float(opu['stopLevel'])
+								else:
+									pos.sl = None
+								if opu['limitLevel']:
+									pos.tp = float(opu['limitLevel'])
+								else:
+									pos.tp = None
 
 								plan.onModified(pos)
 								plan.savePositions()

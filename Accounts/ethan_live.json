@@ -9,14 +9,14 @@
 	"isDemo": false,
 	"accounts": {
 		"HXVKG": {
-			"IncomePro_KELTNER/v1.0.0": {
+			"IncomePro_KELTNER/v1.3.4": {
 				"variables": {},
 				"storage": {},
 				"positions": []
 			}
 		},
 		"HXWTS": {
-			"IncomePro_KELTNER/v1.0.0": {
+			"IncomePro_KELTNER/v1.3.4": {
 				"variables": {},
 				"storage": {},
 				"positions": []

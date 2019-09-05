@@ -305,7 +305,7 @@ class IGManager(object):
 			print('Error:\n{0}'.format(res.json()))
 			return None
 
-	def createPosition(
+	def createPosition(self,
 		accountid,
 		product, direction, lotsize, 
 		orderType = 'MARKET', 
@@ -322,7 +322,7 @@ class IGManager(object):
 			"direction": direction,
 			"size": lotsize,
 			"orderType": orderType,
-			"timeInForce": "EXECUTE_AND_ELIMINATE",
+			"timeInForce": "FILL_OR_KILL",
 			"level": None,
 			"guaranteedStop": "false",
 			"stopLevel": slPrice,
@@ -333,7 +333,7 @@ class IGManager(object):
 			"limitLevel": tpPrice,
 			"limitDistance": tpRange,
 			"quoteId": None,
-			"currencyCode": "AUD"
+			"currencyCode": "USD"
 		}
 
 		self.headers['Version'] = '2'
@@ -342,9 +342,10 @@ class IGManager(object):
 			data=json.dumps(payload),
 			headers=self.headers
 		)
+		print(res.json())
 
 		if res.status_code == 200:
-			return self.getReferenceDetails(res.json()['dealReference'])
+			return self.getReferenceDetails(accountid, res.json()['dealReference'])
 		else:
 			print('Error:\n{0}'.format(res.json()))
 			return None
@@ -370,7 +371,7 @@ class IGManager(object):
 		)
 
 		if res.status_code == 200:
-			return self.getReferenceDetails(res.json()['dealReference'])
+			return self.getReferenceDetails(accountid, res.json()['dealReference'])
 		else:
 			print('Error:\n{0}'.format(res.json()))
 			return None
@@ -406,7 +407,7 @@ class IGManager(object):
 		self.headers.pop('_method', None)
 
 		if res.status_code == 200:
-			return self.getReferenceDetails(res.json()['dealReference'])
+			return self.getReferenceDetails(accountid, res.json()['dealReference'])
 		else:
 			print('Error:\n{0}'.format(res.json()))
 			return None

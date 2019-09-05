@@ -68,6 +68,7 @@ class ATR(object):
 
 	def get(self, plan, chart, shift, amount):
 		vals = []
-		for i in range(chart.ts.size-shift-amount, chart.ts.size-shift):
-			vals.append(self.getValue(chart.getAllBidOHLC(plan)[:i]))
+		c_idx = chart.getTsOffset(plan.c_ts)
+		for i in range(c_idx+1-shift-amount, c_idx+1-shift):
+			vals.append(self.getValue(chart.bids_ohlc[:i+1]))
 		return vals

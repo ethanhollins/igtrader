@@ -1,9 +1,10 @@
 {
 	"method": "compare",
+	"source": "ig",
 	"start": "20/9/18 13:00",
 	"end": "",
 	"plans": [{
-		"name": "IncomePro_KELTNER/v1.2.0",
+		"name": "IncomePro_KELTNER/v1.3.4",
 		"variables": {}
 	}]
 }

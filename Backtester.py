@@ -10,6 +10,7 @@ import json
 import numpy as np
 import traceback
 from timeit import default_timer as timer
+from enum import Enum
 
 from Indicators.ATR import ATR
 from Indicators.BOLL import BOLL
@@ -169,8 +170,8 @@ class Position(object):
 		try:
 			self.backtester.module.onModified(pos)
 		except Exception as e:
-			if not 'onModified' in str(e):
-				print('PlanError ({0}):\n{1}'.format('Backtester', str(e)))
+			if not 'has no attribute \'onModified\'' in str(e):
+				print('PlanError ({0}):\n{1}'.format('Backtester', traceback.format_exc()))
 		return True
 
 	def removeSL(self):
@@ -178,8 +179,8 @@ class Position(object):
 		try:
 			self.backtester.module.onModified(pos)
 		except Exception as e:
-			if not 'onModified' in str(e):
-				print('PlanError ({0}):\n{1}'.format('Backtester', str(e)))
+			if not 'has no attribute \'onModified\'' in str(e):
+				print('PlanError ({0}):\n{1}'.format('Backtester', traceback.format_exc()))
 		return True
 
 	def modifyTP(self, tp):
@@ -187,8 +188,8 @@ class Position(object):
 		try:
 			self.backtester.module.onModified(pos)
 		except Exception as e:
-			if not 'onModified' in str(e):
-				print('PlanError ({0}):\n{1}'.format('Backtester', str(e)))
+			if not 'has no attribute \'onModified\'' in str(e):
+				print('PlanError ({0}):\n{1}'.format('Backtester', traceback.format_exc()))
 		return True
 
 	def removeTP(self):
@@ -196,8 +197,8 @@ class Position(object):
 		try:
 			self.backtester.module.onModified(pos)
 		except Exception as e:
-			if not 'onModified' in str(e):
-				print('PlanError ({0}):\n{1}'.format('Backtester', str(e)))
+			if not 'has no attribute \'onModified\'' in str(e):
+				print('PlanError ({0}):\n{1}'.format('Backtester', traceback.format_exc()))
 		return True
 
 	def breakeven(self):
@@ -223,8 +224,8 @@ class Position(object):
 		try:
 			self.backtester.module.onModified(pos)
 		except Exception as e:
-			if not 'onModified' in str(e):
-				print('PlanError ({0}):\n{1}'.format('Backtester', str(e)))
+			if not 'has no attribute \'onModified\'' in str(e):
+				print('PlanError ({0}):\n{1}'.format('Backtester', traceback.format_exc()))
 		return True
 
 	def close(self):
@@ -237,8 +238,8 @@ class Position(object):
 		try:
 			self.backtester.module.onClose(pos)
 		except Exception as e:
-			if not 'onClose' in str(e):
-				print('PlanError ({0}):\n{1}'.format('Backtester', str(e)))
+			if not 'has no attribute \'onClose\'' in str(e):
+				print('PlanError ({0}):\n{1}'.format('Backtester', traceback.format_exc()))
 		
 		return True
 
@@ -340,6 +341,11 @@ class Position(object):
 
 		return round(profit, 2)
 
+class PlanState(Enum):
+	BACKTEST = 2
+	RUN = 3
+	STEP = 4
+
 class Backtester(object):
 
 	__slots__ = (
@@ -348,11 +354,12 @@ class Backtester(object):
 		'positions', 'closed_positions',
 		'c_ts', 'storage', 'method',
 		'external_bank', 'maximum_bank', 'minimum_bank',
-		'last_day', 'max_ret'
+		'last_day', 'max_ret', 'source', 'plan_state'
 	)
-	def __init__(self, name, variables):
+	def __init__(self, name, variables, source='ig'):
 		self.name = name
 		self.variables = variables
+		self.source = source
 		self.indicators = []
 		self.charts = []
 
@@ -362,6 +369,8 @@ class Backtester(object):
 		self.c_ts = 0
 		self.storage = {}
 
+		self.plan_state = PlanState.BACKTEST
+
 		self.external_bank = 0
 		self.maximum_bank = 10000
 		self.minimum_bank = 0
@@ -369,28 +378,46 @@ class Backtester(object):
 		self.last_day = None
 		self.max_ret = None
 
+
 	def loadData(self, product, period):
-		for i in ['bid', 'ask']:
-			path = 'Data/{0}_{1}_{2}.json'.format(product, period, i)
+		if self.source == 'ig':
+			for i in ['bid', 'ask']:
+				path = 'Data/{0}_{1}_{2}.json'.format(product, period, i)
+				if os.path.exists(path):
+					with open(path, 'r') as f:
+						values = json.load(f)
+
+						if i == 'bid':
+							bids_ts = np.array([int(i[0]) for i in sorted(values.items(), key=lambda kv: kv[0])], dtype=np.int32)
+							bids_ohlc = np.array([i[1] for i in sorted(values.items(), key=lambda kv: kv[0])], dtype=np.float32)
+						else:
+							asks_ts = np.array([int(i[0]) for i in sorted(values.items(), key=lambda kv: kv[0])], dtype=np.int32)
+							asks_ohlc = np.array([i[1] for i in sorted(values.items(), key=lambda kv: kv[0])], dtype=np.float32)
+				else:
+					print('Error: Could not find data for chart product: {0}, period: {1}.'.format(product, period))
+					return None
+			chart = Chart(
+				product, period, 
+				bids_ts, bids_ohlc,
+				asks_ts, asks_ohlc
+			)
+			return chart
+		elif self.source == 'mt':
+			path = 'Data/MT_{0}_{1}.json'.format(product, period)
 			if os.path.exists(path):
 				with open(path, 'r') as f:
 					values = json.load(f)
-
-					if i == 'bid':
-						bids_ts = np.array([int(i[0]) for i in sorted(values.items(), key=lambda kv: kv[0])], dtype=np.int32)
-						bids_ohlc = np.array([i[1] for i in sorted(values.items(), key=lambda kv: kv[0])], dtype=np.float32)
-					else:
-						asks_ts = np.array([int(i[0]) for i in sorted(values.items(), key=lambda kv: kv[0])], dtype=np.int32)
-						asks_ohlc = np.array([i[1] for i in sorted(values.items(), key=lambda kv: kv[0])], dtype=np.float32)
+					bids_ts = np.array([int(i[0]) for i in sorted(values.items(), key=lambda kv: kv[0])], dtype=np.int32)
+					bids_ohlc = np.array([i[1] for i in sorted(values.items(), key=lambda kv: kv[0])], dtype=np.float32)
 			else:
 				print('Error: Could not find data for chart product: {0}, period: {1}.'.format(product, period))
 				return None
-		chart = Chart(
-			product, period, 
-			bids_ts, bids_ohlc,
-			asks_ts, asks_ohlc
-		)
-		return chart
+			chart = Chart(
+				product, period, 
+				bids_ts, bids_ohlc,
+				bids_ts, bids_ohlc
+			)
+			return chart
 
 	def backtest(self, start=None, end=None, method='run', plan=None):
 		print('Running backtest ({0})...'.format(self.name))
@@ -433,6 +460,11 @@ class Backtester(object):
 				if chart.doesTsExist(all_ts[i]):
 					charts.append(chart)
 			all_charts.append(charts)
+
+		if self.method == 'step':
+			self.plan_state = PlanState.STEP
+		else:
+			self.plan_state = PlanState.RUN
 
 		data = {}
 		start = timer()
@@ -496,7 +528,7 @@ class Backtester(object):
 			perc_ret = 0
 			pip_ret = 0
 
-			for i in self.positions + self.closed_positions:
+			for i in self.closed_positions + self.positions:
 				perc_ret += i.getPercentageProfit()
 				pip_ret += i.getPipProfit()
 
@@ -507,19 +539,19 @@ class Backtester(object):
 				self.max_ret = perc_ret
 
 			if Constants.DAILY_PERC_RET in data:
-				data[Constants.DAILY_PERC_RET].append(perc_ret)
+				data[Constants.DAILY_PERC_RET][time] = perc_ret
 			else:
-				data[Constants.DAILY_PERC_RET] = [perc_ret]
+				data[Constants.DAILY_PERC_RET] = {time: perc_ret}
 
 			if Constants.DAILY_PIP_RET in data:
-				data[Constants.DAILY_PIP_RET].append(pip_ret)
+				data[Constants.DAILY_PIP_RET][time] = pip_ret
 			else:
-				data[Constants.DAILY_PIP_RET] = [pip_ret]
+				data[Constants.DAILY_PIP_RET] = {time: pip_ret}
 
 			if Constants.DAILY_PERC_DD in data:
-				data[Constants.DAILY_PERC_DD].append(self.max_ret - perc_ret)
+				data[Constants.DAILY_PERC_DD][time] = self.max_ret - perc_ret
 			else:
-				data[Constants.DAILY_PERC_DD] = [self.max_ret - perc_ret]
+				data[Constants.DAILY_PERC_DD] = {time: self.max_ret - perc_ret}
 
 		return data
 
@@ -528,13 +560,24 @@ class Backtester(object):
 		pip_ret = 0
 		max_ret = 0
 		perc_dd = 0
+
+		pos_equity_ret = {}
+		pos_equity_dd = {}
 		
 		wins = 0
 		losses = 0
 		gain = 0
 		loss = 0
+		
+		bank = 100000
+		compound_positions = []
 
-		for i in self.positions + self.closed_positions:
+		for i in self.closed_positions + self.positions:
+			if i.closetime:
+				time = self.convertTimestampToDatetime(i.closetime)
+			else:
+				time = self.convertTimestampToDatetime(self.c_ts)
+
 			perc_profit = i.getPercentageProfit()
 			perc_ret += perc_profit
 			pip_ret += i.getPipProfit()
@@ -545,6 +588,9 @@ class Backtester(object):
 			if max_ret - perc_ret > perc_dd:
 				perc_dd = max_ret - perc_ret
 
+			pos_equity_ret[time] = perc_ret
+			pos_equity_dd[time] = max_ret - perc_ret
+
 			if perc_profit >= 0:
 				wins += 1
 				gain += perc_profit
@@ -552,18 +598,33 @@ class Backtester(object):
 				losses += 1
 				loss += abs(perc_profit)
 
+			if len(compound_positions) > 0:
+				if i.opentime > compound_positions[-1].opentime:
+					total_profit = 0
+					for j in compound_positions:
+						total_profit += j.getPercentageProfit()
+						bank += (bank * (total_profit/100))
 
-		data[Constants.POS_PERC_RET] = perc_ret
-		data[Constants.POS_PIP_RET] = pip_ret
-		data[Constants.POS_PERC_DD] = perc_dd
+					compound_positions = []
+			compound_positions.append(i)
 
+		print(bank)
+		data[Constants.POS_PERC_RET] = round(perc_ret, 2)
+		data[Constants.POS_PIP_RET] = round(pip_ret, 1)
+		data[Constants.POS_PERC_DD] = round(perc_dd, 2)
+
+		data[Constants.POS_EQUITY_RET] = pos_equity_ret
+		data[Constants.POS_EQUITY_DD] = pos_equity_dd
+
+		data[Constants.POS_COMPOUND_RET] = ((bank / 100000) - 1) * 100
+		print(data[Constants.POS_COMPOUND_RET])
 		data[Constants.WINS] = wins
 		data[Constants.LOSSES] = losses
-		data[Constants.WIN_PERC] = wins/(wins+losses)
-		data[Constants.LOSS_PERC] = losses/(wins+losses)
-		data[Constants.GAIN] = gain
-		data[Constants.LOSS] = loss
-		data[Constants.GPR] = gain/loss
+		data[Constants.WIN_PERC] = round(wins/(wins+losses), 2)
+		data[Constants.LOSS_PERC] = round(losses/(wins+losses), 2)
+		data[Constants.GAIN] = round(gain, 2)
+		data[Constants.LOSS] = round(loss, 2)
+		data[Constants.GPR] = round(gain/loss, 2)
 
 		return data
 
@@ -585,8 +646,8 @@ class Backtester(object):
 					try:
 						self.module.onStopLoss(pos)
 					except Exception as e:
-						if not 'onStopLoss' in str(e):
-							print('PlanError ({0}):\n{1}'.format('Backtester', str(e)))
+						if not 'has no attribute \'onStopLoss\'' in str(e):
+							print('PlanError ({0}):\n{1}'.format('Backtester', traceback.format_exc()))
 
 			else:
 				if pos.sl and ask_high >= pos.sl:
@@ -599,8 +660,8 @@ class Backtester(object):
 					try:
 						self.module.onStopLoss(pos)
 					except Exception as e:
-						if not 'onStopLoss' in str(e):
-							print('PlanError ({0}):\n{1}'.format('Backtester', str(e)))
+						if not 'has no attribute \'onStopLoss\'' in str(e):
+							print('PlanError ({0}):\n{1}'.format('Backtester', traceback.format_exc()))
 
 	def checkTp(self):
 		chart = self.getLowestPeriodChart()
@@ -620,8 +681,8 @@ class Backtester(object):
 					try:
 						self.module.onTakeProfit(pos)
 					except Exception as e:
-						if not 'onTakeProfit' in str(e):
-							print('PlanError ({0}):\n{1}'.format('Backtester', str(e)))
+						if not 'has no attribute \'onTakeProfit\'' in str(e):
+							print('PlanError ({0}):\n{1}'.format('Backtester', traceback.format_exc()))
 
 			else:
 				if pos.tp and ask_low <= pos.tp:
@@ -634,8 +695,8 @@ class Backtester(object):
 					try:
 						self.module.onTakeProfit(pos)
 					except Exception as e:
-						if not 'onTakeProfit' in str(e):
-							print('PlanError ({0}):\n{1}'.format('Backtester', str(e)))
+						if not 'has no attribute \'onTakeProfit\'' in str(e):
+							print('PlanError ({0}):\n{1}'.format('Backtester', traceback.format_exc()))
 
 	'''
 	Utilities
@@ -648,11 +709,18 @@ class Backtester(object):
 		return pytz.timezone(tz).localize(dt)
 
 	def convertTimestampToDatetime(self, ts):
-		return Constants.DT_START_DATE + datetime.timedelta(seconds=int(ts))
+		if self.source == 'ig':
+			return Constants.DT_START_DATE + datetime.timedelta(seconds=int(ts))
+		elif self.source == 'mt':
+			return Constants.MT_DT_START_DATE + datetime.timedelta(seconds=int(ts))
 		
 	def convertDatetimeToTimestamp(self, dt):
 		# dt = self.convertTimezone(dt, 'Australia/Melbourne')
-		return int((dt - Constants.DT_START_DATE).total_seconds())
+		if self.source == 'ig':
+			return int((dt - Constants.DT_START_DATE).total_seconds())
+		elif self.source == 'mt':
+			return int((dt - Constants.MT_DT_START_DATE).total_seconds())
+		
 
 	def getTime(self):
 		return self.convertTimestampToDatetime(self.c_ts)
@@ -667,7 +735,13 @@ class Backtester(object):
 		return round(pips / 10000, 5)
 
 	def getMinPeriod(self):
-		return max([i.min_period for i in self.indicators])
+		if len(self.indicators) > 0:
+			return max([i.min_period for i in self.indicators])
+		else:
+			return 0
+
+	def savePositions(self):
+		return
 
 	'''
 	Plan Utilities
@@ -704,8 +778,8 @@ class Backtester(object):
 		try:
 			self.module.onEntry(pos)
 		except Exception as e:
-			if not 'onEntry' in str(e):
-				print('PlanError {0}:\n{1}'.format('Backtester', str(e)))
+			if not 'has no attribute \'onEntry\'' in str(e):
+				print('PlanError {0}:\n{1}'.format('Backtester', traceback.format_exc()))
 		
 		return pos
 
@@ -741,8 +815,8 @@ class Backtester(object):
 		try:
 			self.module.onEntry(pos)
 		except Exception as e:
-			if not 'onEntry' in str(e):
-				print('PlanError {0}:\n{1}'.format('Backtester', str(e)))
+			if not 'has no attribute \'onEntry\'' in str(e):
+				print('PlanError {0}:\n{1}'.format('Backtester', traceback.format_exc()))
 
 		return pos
 
@@ -754,8 +828,9 @@ class Backtester(object):
 		direction = None
 		for i in range(len(self.positions)-1, -1,-1):
 			pos = self.positions[i]
-			direction = pos.direction
-			pos.close()
+			if pos.product == product:
+				direction = pos.direction
+				pos.close()
 
 		self.closed_positions.sort(key=lambda x: x.opentime)
 
@@ -860,7 +935,7 @@ class Backtester(object):
 		return macd
 
 	def log(self, tag, msg):
-		if self.method == 'step':
+		if self.plan_state == PlanState.STEP:
 			if not tag:
 				print('{0}'.format(msg))
 			else:

@@ -4,10 +4,12 @@ class Position(object):
 
 	def __init__(self, account, orderid, product, direction):
 		self.account = account
-		self.utils = self.account.manager.utils
+		self.utils = self.account.root.manager.utils
 		self.orderid = orderid
 		self.product = product
 		self.direction = direction
+
+		self.plan = None
 
 		self.opentime = None
 		self.closetime = None
@@ -48,13 +50,13 @@ class Position(object):
 		self.close()
 
 		if self.direction == Constants.BUY:
-			pos = self.account.buy(
+			pos = self.plan.sell(
 				self.product, lotsize, 
 				slPrice=slPrice, slRange=slRange,
 				tpPrice=tpPrice, tpRange=tpRange
 			)
 		else:
-			pos = self.account.sell(
+			pos = self.plan.buy(
 				self.product, lotsize, 
 				slPrice=slPrice, slRange=slRange,
 				tpPrice=tpPrice, tpRange=tpRange
@@ -63,51 +65,51 @@ class Position(object):
 		return pos
 
 	def modify(self, sl=None, tp=None):
-		result = self.account.manager.modifyPosition(self.orderid, sl, tp)
+		result = self.account.root.manager.modifyPosition(self.account.accountid, self.orderid, sl, tp)
 		return result != None
 
 	def modifySL(self, sl):
-		result = self.account.manager.modifyPosition(self.orderid, sl, self.tp)
+		result = self.account.root.manager.modifyPosition(self.account.accountid, self.orderid, sl, self.tp)
 		return result != None
 
 	def removeSL(self):
-		result = self.account.manager.modifyPosition(self.orderid, None, self.tp)
+		result = self.account.root.manager.modifyPosition(self.account.accountid, self.orderid, None, self.tp)
 		return result != None
 
 	def modifyTP(self, tp):
-		result = self.account.manager.modifyPosition(self.orderid, self.sl, tp)
+		result = self.account.root.manager.modifyPosition(self.account.accountid, self.orderid, self.sl, tp)
 		return result != None
 
 	def removeTP(self):
-		result = self.account.manager.modifyPosition(self.orderid, self.sl, None)
+		result = self.account.root.manager.modifyPosition(self.account.accountid, self.orderid, self.sl, None)
 		return result != None
 
 	def breakeven(self):
 		min_price = 0.00040
 		if self.direction == Constants.BUY:
-			if self.account.getBid(self.product) > self.entryprice + min_price:
-				result = self.account.manager.modifyPosition(self.orderid, self.entryprice, self.tp)
+			if self.plan.getBid(self.product) > self.entryprice + min_price:
+				result = self.account.root.manager.modifyPosition(self.account.accountid, self.orderid, self.entryprice, self.tp)
 				return result != None
-			elif self.account.getBid(self.product) < self.entryprice - min_price:
-				result = self.account.manager.modifyPosition(self.orderid, self.sl, self.entryprice)
+			elif self.plan.getBid(self.product) < self.entryprice - min_price:
+				result = self.account.root.manager.modifyPosition(self.account.accountid, self.orderid, self.sl, self.entryprice)
 				return result != None
 			else:
 				print('Error: Breakeven must be atleast 4 pips from entry.')
 				return False
 
 		else:
-			if self.account.getAsk(self.product) < self.entryprice - min_price:
-				result = self.account.manager.modifyPosition(self.orderid, self.entryprice, self.tp)
+			if self.plan.getAsk(self.product) < self.entryprice - min_price:
+				result = self.account.root.manager.modifyPosition(self.account.accountid, self.orderid, self.entryprice, self.tp)
 				return result != None
-			elif self.account.getAsk(self.product) > self.entryprice + min_price:
-				result = self.account.manager.modifyPosition(self.orderid, self.sl, self.entryprice)
+			elif self.plan.getAsk(self.product) > self.entryprice + min_price:
+				result = self.account.root.manager.modifyPosition(self.account.accountid, self.orderid, self.sl, self.entryprice)
 				return result != None
 			else:
 				print('Error: Breakeven must be atleast 4 pips from entry.')
 				return False
 
 	def close(self):
-		result = self.account.manager.closePosition(self)
+		result = self.account.root.manager.closePosition(self.account.accountid, self)
 		return result != None
 
 	def isBreakeven(self):
@@ -172,9 +174,9 @@ class Position(object):
 	def getPipProfit(self):
 		if not self.closeprice == 0:
 			if self.direction == Constants.BUY:
-				profit = self.account.getBid(self.product) - self.entryprice
+				profit = self.plan.getBid(self.product) - self.entryprice
 			else:
-				profit = self.entryprice - self.account.getAsk(self.product)
+				profit = self.entryprice - self.plan.getAsk(self.product)
 		else:
 			if self.direction == Constants.BUY:
 				profit = self.closeprice - self.entryprice
@@ -186,9 +188,9 @@ class Position(object):
 	def getPercentageProfit(self):
 		if not self.closeprice:
 			if self.direction == Constants.BUY:
-				profit = self.account.getBid(self.product) - self.entryprice
+				profit = self.plan.getBid(self.product) - self.entryprice
 			else:
-				profit = self.entryprice - self.account.getAsk(self.product)
+				profit = self.entryprice - self.plan.getAsk(self.product)
 		else:
 			if self.direction == Constants.BUY:
 				profit = self.closeprice - self.entryprice
@@ -197,7 +199,7 @@ class Position(object):
 			
 		profit = self.utils.convertToPips(profit)
 
-		variables = self.account.module.VARIABLES
+		variables = self.plan.module.VARIABLES
 		risk = variables['risk'] if 'risk' in variables else None
 		stoprange = variables['stoprange'] if 'stoprange' in variables else None
 		

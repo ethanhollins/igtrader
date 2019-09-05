@@ -23,9 +23,9 @@ MARKET = 'MARKET'
 '''
 Timestamps
 '''
-import datetime, pytz
-# DT_START_DATE = pytz.timezone('Australia/Melbourne').localize(datetime.datetime(year=2014, month=1, day=1))
+import datetime
 DT_START_DATE = datetime.datetime(year=2014, month=1, day=1)
+MT_DT_START_DATE = datetime.datetime(year=1970, month=1, day=1)
 
 '''
 Backtester
@@ -33,6 +33,11 @@ Backtester
 DAILY_PERC_RET = 'd_perc'
 DAILY_PIP_RET = 'd_pip'
 DAILY_PERC_DD = 'd_dd'
+
+POS_EQUITY_RET = 'pos_equity_ret'
+POS_EQUITY_DD = 'pos_equity_dd'
+
+POS_COMPOUND_RET = 'pos_compound_ret'
 
 POS_PERC_RET = 'pos_perc'
 POS_PIP_RET = 'pos_pip'
