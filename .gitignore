@@ -4,5 +4,5 @@ tcl
 Scripts
 Include
 Accounts/
-__pycache__
+__pycache__/
 *.pyc
