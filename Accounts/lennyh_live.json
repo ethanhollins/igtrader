@@ -1,14 +1,14 @@
 {
     "username": "lennyh",
-    "password": "teddyh00",
-    "key": "",
+    "password": "Teddyh00",
+    "key": "3369045dfea87995a6b72a9bf84bf73bb69ecece",
     "tokens": {
         "X-SECURITY-TOKEN": "",
         "CST": ""
     },
     "isDemo": false,
     "accounts": {
-        "": {
+        "HXRZV": {
             "external_bank": 0,
             "maximum_bank": 20000,
             "minimum_bank": 0,
