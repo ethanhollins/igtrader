@@ -87,7 +87,6 @@ class Chart(object):
 		end_dt = datetime.datetime.now()
 		result = self.manager.getPricesByDate(self.product, self.price_period, start_dt, end_dt, 1, {})
 
-		print(result)
 		if len(result['bids']) == 0:
 			return
 
