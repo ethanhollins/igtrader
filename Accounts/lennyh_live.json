@@ -9,9 +9,9 @@
     "isDemo": false,
     "accounts": {
         "HXRZV": {
-            "external_bank": 0,
-            "maximum_bank": 20000,
-            "minimum_bank": 0,
+            "external_bank": 14000,
+            "maximum_bank": 30000,
+            "minimum_bank": 10000,
             "plans": {
                 "IncomePro_KELTNER/v1.3.4": {
                     "variables": {
