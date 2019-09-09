@@ -255,7 +255,7 @@ class Chart(object):
 									plan.module.onNewBar(self)
 								except Exception as e:
 									if not 'has no attribute \'onNewBar\'' in str(e):
-										print('PlanError ({0}):\n {1}'.format(plan.accountid, traceback.format_exc()))
+										print('PlanError ({0}):\n {1}'.format(plan.account.accountid, traceback.format_exc()))
 										plan.plan_state = PlanState.STOPPED
 								
 						self.saveValues()

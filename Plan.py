@@ -84,12 +84,14 @@ class Plan(object):
 			if 'is_dummy' in i and i['is_dummy']:
 				pos = Position(self.account, None, None, None)
 				pos.setDict(i)
+				pos.plan = self
 				self.positions.append(pos)
 				found_positions.append(pos)
 			else:
 				for pos in self.positions:
 					if pos.orderid == i['orderid']:
 						pos.data = i['data']
+						pos.plan = self
 						found_positions.append(pos)
 
 		for i in range(len(self.positions)-1,-1,-1):
