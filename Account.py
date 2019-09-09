@@ -16,14 +16,9 @@ class Account(object):
 
 		self.accountid = accountid
 		self.position_queue = []
- 
-		self.manager.subscribe(
-			self.ls_client, 
-			'DISTINCT', 
-			['TRADE:{0}'.format(self.accountid)], 
-			['OPU'], 
-			self.onItemUpdate
-		)
+
+		self.audusd_bid = None
+		self.getLiveData()
 
 		self.plans = [Plan(
 			self, i,
@@ -37,7 +32,24 @@ class Account(object):
 			root_dict = json.load(f)
 		return root_dict
 
-	def onItemUpdate(self, item):
+	def getLiveData(self):
+		self.manager.subscribe(
+			self.ls_client, 
+			'DISTINCT', 
+			['TRADE:{0}'.format(self.accountid)], 
+			['OPU'], 
+			self.onOpuItemUpdate
+		)
+
+		self.manager.subscribe(
+			self.ls_client, 
+			'DISTINCT', 
+			['CHART:CS.D.AUDUSD.CFD.IP:TICK'], 
+			['BID'],
+			self.onAUDItemUpdate
+		)
+
+	def onOpuItemUpdate(self, item):
 		if 'OPU' in item['values'] and item['values']['OPU']:
 			opu = json.loads(item['values']['OPU'])
 			if opu['dealStatus'] == 'ACCEPTED':
@@ -128,3 +140,6 @@ class Account(object):
 						if pos.orderid == opu['dealId']:
 							plan.onRejected(pos)
 
+	def onAUDItemUpdate(self, item):
+		if item['values'] and item['values']['BID']:
+			self.audusd_bid = float(item['values']['BID'])

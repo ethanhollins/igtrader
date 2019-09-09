@@ -185,13 +185,7 @@ def handleStopAndReverse(entry):
 	and check if tradable conditions are met.
 	'''
 
-	bank = utils.getBankSize() + utils.external_bank
-	if bank > utils.maximum_bank:
-		bank = utils.maximum_bank
-
-	if utils.getBankSize() <= utils.minimum_bank:
-		utils.log('', 'Bank is below minimum {0:.2f}'.format(utils.minimum_bank))
-		return
+	bank = utils.getBank()
 
 	pos = utils.stopAndReverse(
 		VARIABLES['PRODUCT'], 
@@ -216,13 +210,7 @@ def handleRegularEntry(entry):
 	and check if tradable conditions are met.
 	'''
 
-	bank = utils.getBankSize() + utils.external_bank
-	if bank > utils.maximum_bank:
-		bank = utils.maximum_bank
-
-	if utils.getBankSize() <= utils.minimum_bank:
-		utils.log('', 'Bank is below minimum {0:.2f}'.format(utils.minimum_bank))
-		return
+	bank = utils.getBank()
 
 	if entry.direction == Direction.LONG:
 		pos = utils.buy(

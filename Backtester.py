@@ -120,7 +120,7 @@ class Position(object):
 		'backtester', 'orderid', 'product',
 		'direction', 'opentime', 'closetime',
 		'lotsize', 'entryprice', 'closeprice',
-		'sl', 'tp', 'data',
+		'sl', 'tp', 'data', 'is_dummy'
 	)
 	def __init__(self, 
 		backtester, orderid, 
@@ -140,6 +140,8 @@ class Position(object):
 		self.closeprice = 0
 		self.sl = 0
 		self.tp = 0
+
+		self.is_dummy = False
 
 		self.data = {}
 
@@ -408,7 +410,12 @@ class Backtester(object):
 				with open(path, 'r') as f:
 					values = json.load(f)
 					bids_ts = np.array([int(i[0]) for i in sorted(values.items(), key=lambda kv: kv[0])], dtype=np.int32)
-					bids_ohlc = np.array([i[1] for i in sorted(values.items(), key=lambda kv: kv[0])], dtype=np.float32)
+					bids_ohlc = np.array([[
+						float(i[1][0]),
+						float(i[1][1]),
+						float(i[1][2]),
+						float(i[1][3])
+					] for i in sorted(values.items(), key=lambda kv: kv[0])], dtype=np.float32)
 			else:
 				print('Error: Could not find data for chart product: {0}, period: {1}.'.format(product, period))
 				return None
@@ -422,7 +429,7 @@ class Backtester(object):
 	def backtest(self, start=None, end=None, method='run', plan=None):
 		print('Running backtest ({0})...'.format(self.name))
 		self.method = method
-
+		# 20/9/18 13:00
 		if not plan:
 			self.module = self.execPlan()
 			self.setPlanVariables()
@@ -570,6 +577,8 @@ class Backtester(object):
 		loss = 0
 		
 		bank = 100000
+		max_bank = bank
+		max_cmp_dd = 0
 		compound_positions = []
 
 		for i in self.closed_positions + self.positions:
@@ -605,10 +614,14 @@ class Backtester(object):
 						total_profit += j.getPercentageProfit()
 						bank += (bank * (total_profit/100))
 
+					if bank > max_bank:
+						max_bank = bank
+					else:
+						dd = (max_bank - bank) / max_bank
+						max_cmp_dd = dd if dd > max_cmp_dd else max_cmp_dd
 					compound_positions = []
 			compound_positions.append(i)
 
-		print(bank)
 		data[Constants.POS_PERC_RET] = round(perc_ret, 2)
 		data[Constants.POS_PIP_RET] = round(pip_ret, 1)
 		data[Constants.POS_PERC_DD] = round(perc_dd, 2)
@@ -616,8 +629,9 @@ class Backtester(object):
 		data[Constants.POS_EQUITY_RET] = pos_equity_ret
 		data[Constants.POS_EQUITY_DD] = pos_equity_dd
 
-		data[Constants.POS_COMPOUND_RET] = ((bank / 100000) - 1) * 100
-		print(data[Constants.POS_COMPOUND_RET])
+		data[Constants.POS_COMPOUND_RET] = round(((bank / 100000) - 1) * 100, 2)
+		data[Constants.POS_COMPOUND_DD] = round(max_cmp_dd * 100, 2)
+
 		data[Constants.WINS] = wins
 		data[Constants.LOSSES] = losses
 		data[Constants.WIN_PERC] = round(wins/(wins+losses), 2)
@@ -896,7 +910,13 @@ class Backtester(object):
 	def getLotsize(self, bank, risk, stoprange):
 		return round(bank * (risk / 100) / stoprange, 2)
 
-	def getBankSize(self):
+	def getBank(self):
+		return 10000
+
+	def getTotalBank(self):
+		return 10000
+
+	def getTradableBank(self):
 		return 10000
 
 	def SMA(self, period):

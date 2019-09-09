@@ -1,0 +1,26 @@
+{
+    "username": "lennyh",
+    "password": "teddyh00",
+    "key": "",
+    "tokens": {
+        "X-SECURITY-TOKEN": "",
+        "CST": ""
+    },
+    "isDemo": false,
+    "accounts": {
+        "": {
+            "external_bank": 0,
+            "maximum_bank": 20000,
+            "minimum_bank": 0,
+            "plans": {
+                "IncomePro_KELTNER/v1.3.4": {
+                    "variables": {
+                        "risk": 1.0
+                    },
+                    "storage": {},
+                    "positions": []
+                }
+            }
+        }
+    }
+}

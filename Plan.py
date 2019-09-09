@@ -53,6 +53,7 @@ class Plan(object):
 		bt = Backtester(self.name, self.variables)
 		self.module, _ = bt.backtest(plan=self)
 
+		self.getBankConfig()
 		self.updatePositions()
 		self.getSavedPositions()
 		self.savePositions()
@@ -79,16 +80,28 @@ class Plan(object):
 	def getSavedPositions(self):
 		info = self.account.getRootDict()
 		found_positions = []
-		for i in info['accounts'][self.account.accountid][self.name]['positions']:
-			for pos in self.positions:
-				if pos.orderid == i['orderid']:
-					pos.data = i['data']
-					found_positions.append(pos)
+		for i in info['accounts'][self.account.accountid]['plans'][self.name]['positions']:
+			if 'is_dummy' in i and i['is_dummy']:
+				pos = Position(self.account, None, None, None)
+				pos.setDict(i)
+				self.positions.append(pos)
+				found_positions.append(pos)
+			else:
+				for pos in self.positions:
+					if pos.orderid == i['orderid']:
+						pos.data = i['data']
+						found_positions.append(pos)
 
 		for i in range(len(self.positions)-1,-1,-1):
 			pos = self.positions[i]
 			if not pos in found_positions:
 				del self.positions[i]
+
+	def getBankConfig(self):
+		info = self.account.getRootDict()
+		self.external_bank = float(info['accounts'][self.account.accountid]['external_bank'])
+		self.maximum_bank = float(info['accounts'][self.account.accountid]['maximum_bank'])
+		self.minimum_bank = float(info['accounts'][self.account.accountid]['minimum_bank'])
 
 	def updatePositions(self):
 		result = self.account.manager.getPositions(self.account.accountid)
@@ -122,26 +135,27 @@ class Plan(object):
 		for pos in self.positions:
 			save.append({
 				'orderid': pos.orderid,
-				'data': pos.data
+				'data': pos.data,
+				'is_dummy': pos.is_dummy
 			})
 		info = self.account.getRootDict()
 		root_path = 'Accounts/{0}.json'.format(self.account.root.root_name)
 		with open(root_path, 'w') as f:
-			info['accounts'][self.account.accountid][self.name]['positions'] = save
+			info['accounts'][self.account.accountid]['plans'][self.name]['positions'] = save
 			f.write(json.dumps(info, indent=4))
 
 	def saveStorage(self):
 		info = self.account.getRootDict()
 		root_path = 'Accounts/{0}.json'.format(self.account.root.root_name)
 		with open(root_path, 'w') as f:
-			info['accounts'][self.account.accountid][self.name]['storage'] = self.storage
+			info['accounts'][self.account.accountid]['plans'][self.name]['storage'] = self.storage
 			f.write(json.dumps(info, indent=4))
 
 	def saveVariables(self):
 		info = self.account.getRootDict()
 		root_path = 'Accounts/{0}.json'.format(self.account.root.root_name)
 		with open(root_path, 'w') as f:
-			info['accounts'][self.account.accountid][self.name]['variables'] = self.variables
+			info['accounts'][self.account.accountid]['plans'][self.name]['variables'] = self.variables
 			f.write(json.dumps(info, indent=4))
 
 	def onStopLoss(self, pos):
@@ -336,6 +350,9 @@ class Plan(object):
 		print('Error: Must be subscribed to chart to get bid.')
 		return None
 
+	def getAUDUSDBid(self):
+		return self.account.audusd_bid
+
 	def getAsk(self, product):
 		for chart in self.charts:
 			if chart.product == product:
@@ -353,13 +370,41 @@ class Plan(object):
 		return low_chart
 
 	def getLotsize(self, bank, risk, stoprange):
-		return round(bank * (risk / 100) / stoprange, 2)
+		if self.getAUDUSDBid():
+			return max(round((bank * (risk / 100) / stoprange) * self.getAUDUSDBid(), 2), 1.0)
+		
+		return None	
 
-	def getBankSize(self): # TODO
+	def getBank(self):
 		return self.account.manager.accountInfo(self.account.accountid)['balance']
+
+	def getTotalBank(self):
+		return self.getBank() + self.external_bank
+
+	def getTradableBank(self):
+		bank = self.getTotalBank()
+		return min(bank, self.maximum_bank) if bank > self.minimum_bank else 0
+
+	def convertTimezone(self, dt, tz):
+		return self.account.manager.utils.convertTimezone(dt, tz)
+
+	def setTimezone(self, dt, tz):
+		return self.account.manager.utils.setTimezone(dt, tz)
+		
+	def convertTimestampToDatetime(self, ts):
+		return self.account.manager.utils.convertTimestampToDatetime(ts)
+		
+	def convertDatetimeToTimestamp(self, dt):
+		return self.account.manager.utils.convertDatetimeToTimestamp(dt)
 
 	def getTime(self):
 		return self.account.manager.utils.convertTimestampToDatetime(self.c_ts)
+
+	def convertToPips(self, price):
+		return self.account.manager.utils.convertToPips(price)
+
+	def convertToPrice(self, pips):
+		return self.account.manager.utils.convertToPrice(pips)
 
 	def getLatestTimestamp(self):
 		return self.c_ts

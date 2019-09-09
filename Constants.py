@@ -38,6 +38,7 @@ POS_EQUITY_RET = 'pos_equity_ret'
 POS_EQUITY_DD = 'pos_equity_dd'
 
 POS_COMPOUND_RET = 'pos_compound_ret'
+POS_COMPOUND_DD = 'pos_compound_dd'
 
 POS_PERC_RET = 'pos_perc'
 POS_PIP_RET = 'pos_pip'

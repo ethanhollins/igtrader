@@ -6,7 +6,7 @@ VARIABLES = {
 	'PRODUCT': Constants.GBPUSD,
 	'BANK': None,
 	'risk': 1.0,
-	'stoprange': 130,
+	'stoprange': 130.0,
 	'RSI': None,
 	'rsi_long': 52,
 	'rsi_short': 48,
@@ -200,29 +200,23 @@ def handleStopAndReverse(entry):
 	and check if tradable conditions are met.
 	'''
 
-	bank = utils.getBankSize() + utils.external_bank
-	if bank > utils.maximum_bank:
-		bank = utils.maximum_bank
+	bank = utils.getTradableBank()
+	if bank:
+		pos = utils.stopAndReverse(
+			VARIABLES['PRODUCT'], 
+			utils.getLotsize(bank, VARIABLES['risk'], VARIABLES['stoprange']), 
+			slRange = VARIABLES['stoprange']
+		)
 
-	if utils.getBankSize() <= utils.minimum_bank:
-		utils.log('', 'Bank is below minimum {0:.2f}'.format(utils.minimum_bank))
-		return
+		pos.data = {
+			'idx': len(utils.positions),
+			'type': entry.entry_type.value,
+		}
 
-	pos = utils.stopAndReverse(
-		VARIABLES['PRODUCT'], 
-		utils.getLotsize(bank, VARIABLES['risk'], VARIABLES['stoprange']), 
-		slRange = VARIABLES['stoprange']
-	)
+		if entry.entry_type == EntryType.AdTwoEntry:
+			pos.data['boll_ret'] = False
 
-	pos.data = {
-		'idx': len(utils.positions),
-		'type': entry.entry_type.value,
-	}
-
-	if entry.entry_type == EntryType.AdTwoEntry:
-		pos.data['boll_ret'] = False
-
-	utils.savePositions()
+		utils.savePositions()
 
 def handleRegularEntry(entry):
 	''' 
@@ -230,40 +224,30 @@ def handleRegularEntry(entry):
 	and check if tradable conditions are met.
 	'''
 
-	bank = utils.getBankSize() + utils.external_bank
-	if bank > utils.maximum_bank:
-		bank = utils.maximum_bank
-
-	if utils.getBankSize() <= utils.minimum_bank:
-		utils.log('', 'Bank is below minimum {0:.2f}'.format(utils.minimum_bank))
-		return
-
-	if entry.direction == Direction.LONG:
-		pos = utils.buy(
-			VARIABLES['PRODUCT'], 
-			utils.getLotsize(bank, VARIABLES['risk'], VARIABLES['stoprange']), 
-			slRange = VARIABLES['stoprange']
-		)
-	else:
-		pos = utils.sell(
-			VARIABLES['PRODUCT'], 
-			utils.getLotsize(bank, VARIABLES['risk'], VARIABLES['stoprange']), 
-			slRange = VARIABLES['stoprange']
-		)
+	bank = utils.getTradableBank()
+	if bank:
+		if entry.direction == Direction.LONG:
+			pos = utils.buy(
+				VARIABLES['PRODUCT'], 
+				utils.getLotsize(bank, VARIABLES['risk'], VARIABLES['stoprange']), 
+				slRange = VARIABLES['stoprange']
+			)
+		else:
+			pos = utils.sell(
+				VARIABLES['PRODUCT'], 
+				utils.getLotsize(bank, VARIABLES['risk'], VARIABLES['stoprange']), 
+				slRange = VARIABLES['stoprange']
+			)
 	
-	# if not pos:
-	# 	utils.setStopped()
-	# 	print('SOMETHING WENT WRONG WITH POSITION ENTRY!')
-	# 	return
-	pos.data = {
-		'idx': len(utils.positions),
-		'type': entry.entry_type.value,
-	}
+		pos.data = {
+			'idx': len(utils.positions),
+			'type': entry.entry_type.value,
+		}
 
-	if entry.entry_type == EntryType.AdTwoEntry:
-		pos.data['boll_ret'] = False
+		if entry.entry_type == EntryType.AdTwoEntry:
+			pos.data['boll_ret'] = False
 
-	utils.savePositions()
+		utils.savePositions()
 
 def onStopLoss(pos):
 	utils.log("onStopLoss", '')
@@ -301,15 +285,16 @@ def checkTime():
 
 def runSequence():
 	''' Main trade plan sequence '''
-	utils.log(
-		'runSequence',
-		"\n OHLC: {0} SMA: {1} L_ONE: {2} L_TWO: {3}\n L_THREE: {4} B_ONE: {5} B_TWO: {6}\n MACD: {7} KELT_CH: {8} KELT_MAE: {9}".format(
-			chart.getCurrentBidOHLC(utils), sma.getCurrent(utils, chart), limit_one.getCurrent(utils, chart),
-			limit_two.getCurrent(utils, chart), limit_three.getCurrent(utils, chart),
-			boll_one.getCurrent(utils, chart), boll_two.getCurrent(utils, chart),
-			macd.getCurrent(utils, chart), kelt_ch.getCurrent(utils, chart),
-			kelt_mae.getCurrent(utils, chart)
-	))
+	if utils.plan_state.value in (1,4):
+		utils.log(
+			'runSequence',
+			"\n OHLC: {0} SMA: {1} L_ONE: {2} L_TWO: {3}\n L_THREE: {4} B_ONE: {5} B_TWO: {6}\n MACD: {7} KELT_CH: {8} KELT_MAE: {9}".format(
+				chart.getCurrentBidOHLC(utils), sma.getCurrent(utils, chart), limit_one.getCurrent(utils, chart),
+				limit_two.getCurrent(utils, chart), limit_three.getCurrent(utils, chart),
+				boll_one.getCurrent(utils, chart), boll_two.getCurrent(utils, chart),
+				macd.getCurrent(utils, chart), kelt_ch.getCurrent(utils, chart),
+				kelt_mae.getCurrent(utils, chart)
+		))
 
 	if time_state == TimeState.STOP:
 		return
@@ -430,11 +415,12 @@ def preEntrySetup(trigger, blocked=False):
 				return confirmation(trigger, EntryType.PreTEntry)
 
 def preEntryConfirmation(direction):
-	utils.log('preEntryConfirmation', 'Pre T-Entry Conf: {0} {1} {2} {3} {4} {5}'.format(
-		isWithinKMae(direction), isWithinCtKelt(direction),
-		isMacdDirConf(direction), isRsiDirConf(direction),
-		isBB(direction), not isDoji()
-	))
+	if utils.plan_state.value in (1,4):
+		utils.log('preEntryConfirmation', 'Pre T-Entry Conf: {0} {1} {2} {3} {4} {5}'.format(
+			isWithinKMae(direction), isWithinCtKelt(direction),
+			isMacdDirConf(direction), isRsiDirConf(direction),
+			isBB(direction), not isDoji()
+		))
 
 	return (
 		isWithinKMae(direction) and
@@ -446,12 +432,13 @@ def preEntryConfirmation(direction):
 	)
 
 def preEntryReverseConfirmation(direction, reverse=False):
-	utils.log('preEntryReverseConfirmation', 'Pre T-Entry Reverse Conf: {0} ({1} or {2}) {3} {4}'.format(
-		isCloseABSma(direction, reverse=not reverse),
-		isCloseABLThreeOut(direction, reverse=not reverse),
-		isCloseABKSma(direction, reverse=not reverse),
-		isBB(direction, reverse=not reverse), not isDoji()
-	))
+	if utils.plan_state.value in (1,4):
+		utils.log('preEntryReverseConfirmation', 'Pre T-Entry Reverse Conf: {0} ({1} or {2}) {3} {4}'.format(
+			isCloseABSma(direction, reverse=not reverse),
+			isCloseABLThreeOut(direction, reverse=not reverse),
+			isCloseABKSma(direction, reverse=not reverse),
+			isBB(direction, reverse=not reverse), not isDoji()
+		))
 
 	return (
 		isCloseABSma(direction, reverse=not reverse) and
@@ -472,8 +459,6 @@ def isPreEntryConfirmed(direction, reverse=False):
 			return long_trigger.pre_t_entry_state.value < PreTEntryState.REVERSE.value
 		else:
 			return short_trigger.pre_t_entry_state.value < PreTEntryState.REVERSE.value
-
-
 
 def tEntrySetup(trigger, blocked=False):
 
@@ -507,10 +492,11 @@ def tEntrySetup(trigger, blocked=False):
 				return setCDirection(trigger.direction)
 
 def tEntryConfimation(direction):
-	utils.log('tEntryConfimation', 'T-Entry Conf: {0} {1} {2} {3}'.format(
-		isMacdDirConf(direction), isRsiDirConf(direction),
-		isBB(direction), not isDoji()
-	))
+	if utils.plan_state.value in (1,4):
+		utils.log('tEntryConfimation', 'T-Entry Conf: {0} {1} {2} {3}'.format(
+			isMacdDirConf(direction), isRsiDirConf(direction),
+			isBB(direction), not isDoji()
+		))
 
 	return (
 		isMacdDirConf(direction) and
@@ -617,11 +603,12 @@ def adEntryOne(trigger, blocked=False):
 			return
 
 def adEntryOneConfirmation(direction):
-	utils.log('adEntryOneConfirmation', 'Ad Entry One Conf: {0} {1} {2} {3}'.format(
-		isCloseABLOneIn(direction, reverse=True),
-		isBB(direction), not isDoji(),
-		time_state.value < TimeState.NCT.value
-	))
+	if utils.plan_state.value in (1,4):
+		utils.log('adEntryOneConfirmation', 'Ad Entry One Conf: {0} {1} {2} {3}'.format(
+			isCloseABLOneIn(direction, reverse=True),
+			isBB(direction), not isDoji(),
+			time_state.value < TimeState.NCT.value
+		))
 
 	return (
 		isCloseABLOneIn(direction, reverse=True) and
@@ -658,10 +645,11 @@ def adEntryTwo(trigger):
 				return adEntryTwo(trigger)
 
 def adEntryTwoConfirmation(direction):
-	utils.log('adEntryTwoConfirmation', 'Ad Entry Two Conf: {0} {1}'.format(
-		isBollConfirmation(direction),
-		isCloseABLThreeOut(direction, reverse=True)
-	))
+	if utils.plan_state.value in (1,4):
+		utils.log('adEntryTwoConfirmation', 'Ad Entry Two Conf: {0} {1}'.format(
+			isBollConfirmation(direction),
+			isCloseABLThreeOut(direction, reverse=True)
+		))
 
 	return (
 		isBollConfirmation(direction) and
@@ -700,14 +688,15 @@ def ctEntry(trigger, blocked=False):
 
 
 def ctEntryConfirmation(direction):
-	utils.log('ctEntryConfirmation', 'CT Entry Conf: {0} {1} {2} {3} {4} {5}'.format(
-		(isCloseABKeltIn(direction, reverse=True) or
-			isCloseABLThreeIn(direction, reverse=True)),
-		isCloseABKMaeIn(direction),
-		isMacdCtConf(direction),
-		isBB(direction), not isDoji(),
-		isPosInProfit()
-	))
+	if utils.plan_state.value in (1,4):
+		utils.log('ctEntryConfirmation', 'CT Entry Conf: {0} {1} {2} {3} {4} {5}'.format(
+			(isCloseABKeltIn(direction, reverse=True) or
+				isCloseABLThreeIn(direction, reverse=True)),
+			isCloseABKMaeIn(direction),
+			isMacdCtConf(direction),
+			isBB(direction), not isDoji(),
+			isPosInProfit()
+		))
 
 	return (
 		(isCloseABKeltIn(direction, reverse=True) or
@@ -720,11 +709,12 @@ def ctEntryConfirmation(direction):
 	)
 
 def ctReverseEntryConfirmation(direction):
-	utils.log('ctReverseEntryConfirmation', 'CT Reverse Entry Conf: {0} {1}'.format(
-		isConsecBBABKeltMAE(direction, reverse=True),
-		(isBB(direction, reverse=True) and
-			isMacdReverseConf(direction, reverse=True))
-	))
+	if utils.plan_state.value in (1,4):
+		utils.log('ctReverseEntryConfirmation', 'CT Reverse Entry Conf: {0} {1}'.format(
+			isConsecBBABKeltMAE(direction, reverse=True),
+			(isBB(direction, reverse=True) and
+				isMacdReverseConf(direction, reverse=True))
+		))
 
 	return (
 		isConsecBBABKeltMAE(direction, reverse=True) or

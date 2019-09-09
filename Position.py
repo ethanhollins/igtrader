@@ -21,6 +21,8 @@ class Position(object):
 		self.sl = 0
 		self.tp = 0
 
+		self.is_dummy = False
+
 		self.data = {}
 
 	def __iter__(self):
@@ -65,22 +67,43 @@ class Position(object):
 		return pos
 
 	def modify(self, sl=None, tp=None):
+		if self.is_dummy:
+			self.sl = sl
+			self.tp = tp
+			return True
+
 		result = self.account.root.manager.modifyPosition(self.account.accountid, self.orderid, sl, tp)
 		return result != None
 
 	def modifySL(self, sl):
+		if self.is_dummy:
+			self.sl = sl
+			return True
+
 		result = self.account.root.manager.modifyPosition(self.account.accountid, self.orderid, sl, self.tp)
 		return result != None
 
 	def removeSL(self):
+		if self.is_dummy:
+			self.sl = 0
+			return True
+
 		result = self.account.root.manager.modifyPosition(self.account.accountid, self.orderid, None, self.tp)
 		return result != None
 
 	def modifyTP(self, tp):
+		if self.is_dummy:
+			self.tp = tp
+			return True
+
 		result = self.account.root.manager.modifyPosition(self.account.accountid, self.orderid, self.sl, tp)
 		return result != None
 
 	def removeTP(self):
+		if self.is_dummy:
+			self.tp = 0
+			return True
+
 		result = self.account.root.manager.modifyPosition(self.account.accountid, self.orderid, self.sl, None)
 		return result != None
 
@@ -88,34 +111,58 @@ class Position(object):
 		min_price = 0.00040
 		if self.direction == Constants.BUY:
 			if self.plan.getBid(self.product) > self.entryprice + min_price:
-				result = self.account.root.manager.modifyPosition(self.account.accountid, self.orderid, self.entryprice, self.tp)
-				return result != None
+				if self.is_dummy:
+					self.sl = self.entryprice
+					return True
+				else:
+					result = self.account.root.manager.modifyPosition(self.account.accountid, self.orderid, self.entryprice, self.tp)
+					return result != None
 			elif self.plan.getBid(self.product) < self.entryprice - min_price:
-				result = self.account.root.manager.modifyPosition(self.account.accountid, self.orderid, self.sl, self.entryprice)
-				return result != None
+				if self.is_dummy:
+					self.tp = self.entryprice
+					return True
+				else:
+					result = self.account.root.manager.modifyPosition(self.account.accountid, self.orderid, self.sl, self.entryprice)
+					return result != None
 			else:
 				print('Error: Breakeven must be atleast 4 pips from entry.')
 				return False
 
 		else:
 			if self.plan.getAsk(self.product) < self.entryprice - min_price:
-				result = self.account.root.manager.modifyPosition(self.account.accountid, self.orderid, self.entryprice, self.tp)
-				return result != None
+				if self.is_dummy:
+					self.sl = self.entryprice
+					return True
+				else:
+					result = self.account.root.manager.modifyPosition(self.account.accountid, self.orderid, self.entryprice, self.tp)
+					return result != None
 			elif self.plan.getAsk(self.product) > self.entryprice + min_price:
-				result = self.account.root.manager.modifyPosition(self.account.accountid, self.orderid, self.sl, self.entryprice)
-				return result != None
+				if self.is_dummy:
+					self.tp = self.entryprice
+					return True
+				else:
+					result = self.account.root.manager.modifyPosition(self.account.accountid, self.orderid, self.sl, self.entryprice)
+					return result != None
 			else:
 				print('Error: Breakeven must be atleast 4 pips from entry.')
 				return False
 
 	def close(self):
-		result = self.account.root.manager.closePosition(self.account.accountid, self)
-		return result != None
+		if self.is_dummy:
+			del self.plan.positions[self.plan.positions.index(self)]
+			self.plan.savePositions()
+			return True
+		else:
+			result = self.account.root.manager.closePosition(self.account.accountid, self)
+			return result != None
 
 	def isBreakeven(self):
 		return self.sl == self.entryprice or self.tp == self.entryprice
 
 	def calculateSLPoints(self, price):
+		if self.is_dummy and not self.entryprice:
+			return 0
+
 		if self.direction == Constants.BUY:
 			points = self.entryprice - price
 		else:
@@ -124,6 +171,9 @@ class Position(object):
 		return self.utils.convertToPips(points)
 
 	def calculateSLPrice(self, points):
+		if self.is_dummy and not self.entryprice:
+			return 0
+
 		price = self.utils.convertToPrice(points)
 		if self.direction == Constants.BUY:
 			return round(self.entryprice - price, 5)
@@ -131,6 +181,9 @@ class Position(object):
 			return round(self.entryprice + price, 5)
 
 	def isSLPoints(self, points):
+		if self.is_dummy and not self.entryprice:
+			return 0
+
 		sl_price = self.utils.convertToPrice(points)
 
 		if self.direction == Constants.BUY:
@@ -144,6 +197,9 @@ class Position(object):
 		return self.sl == price
 
 	def calculateTPPoints(self, price):
+		if self.is_dummy and not self.entryprice:
+			return 0
+
 		if self.direction == Constants.BUY:
 			points = round(price - self.entryprice, 5)
 		else:
@@ -152,6 +208,9 @@ class Position(object):
 		return self.utils.convertToPips(points)
 
 	def calculateTPPrice(self, points):
+		if self.is_dummy and not self.entryprice:
+			return 0
+
 		price = self.utils.convertToPrice(points)
 		if self.direction == Constants.BUY:
 			return round(self.entryprice + price, 5)
@@ -159,6 +218,9 @@ class Position(object):
 			return round(self.entryprice - price, 5)
 
 	def isTPPoints(self, points):
+		if self.is_dummy and not self.entryprice:
+			return True
+
 		tp_price = self.utils.convertToPrice(points)
 
 		if self.direction == Constants.BUY:
@@ -172,6 +234,9 @@ class Position(object):
 		return self.tp == price
 
 	def getPipProfit(self):
+		if self.is_dummy:
+			return 0
+
 		if not self.closeprice == 0:
 			if self.direction == Constants.BUY:
 				profit = self.plan.getBid(self.product) - self.entryprice
@@ -186,6 +251,9 @@ class Position(object):
 		return self.utils.convertToPips(profit)
 
 	def getPercentageProfit(self):
+		if self.is_dummy:
+			return 0
+
 		if not self.closeprice:
 			if self.direction == Constants.BUY:
 				profit = self.plan.getBid(self.product) - self.entryprice

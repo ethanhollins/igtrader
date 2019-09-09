@@ -11,12 +11,10 @@ class Utilities(object):
 
 	def convertSnapshotToTimestamp(self, snapshot):
 		s_dt = datetime.datetime.strptime(snapshot, '%Y/%m/%d %H:%M:%S')
-		# s_dt = self.setTimezone(s_dt, 'Australia/Melbourne')
 		return int((s_dt - Constants.DT_START_DATE).total_seconds())
 
 	def convertSnapshotToDatetime(self, snapshot):
 		return datetime.datetime.strptime(snapshot, '%Y/%m/%d %H:%M:%S')
-		# return self.setTimezone(s_dt, 'Australia/Melbourne')
 
 	def convertUTCSnapshotToTimestamp(self, snapshot):
 		s_dt = datetime.datetime.strptime(snapshot.split('.')[0], '%Y-%m-%dT%H:%M:%S')
@@ -29,8 +27,10 @@ class Utilities(object):
 		return Constants.DT_START_DATE + datetime.timedelta(seconds=int(ts))
 		
 	def convertDatetimeToTimestamp(self, dt):
-		# dt = self.convertTimezone(dt, 'Australia/Melbourne')
 		return int((dt - Constants.DT_START_DATE).total_seconds())
+
+	def convertMTDatetimeToTimestamp(self, dt):
+		return int((dt - Constants.MT_DT_START_DATE).total_seconds())
 
 	def convertToPips(self, price):
 		return round(price * 10000, 1)

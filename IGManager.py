@@ -342,7 +342,6 @@ class IGManager(object):
 			data=json.dumps(payload),
 			headers=self.headers
 		)
-		print(res.json())
 
 		if res.status_code == 200:
 			return self.getReferenceDetails(accountid, res.json()['dealReference'])

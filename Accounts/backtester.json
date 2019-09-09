@@ -1,10 +1,10 @@
 {
 	"method": "compare",
-	"source": "ig",
-	"start": "20/9/18 13:00",
+	"source": "mt",
+	"start": "01/01/17 0:00",
 	"end": "",
 	"plans": [{
 		"name": "IncomePro_KELTNER/v1.3.4",
-		"variables": {}
+		"variables": {"risk":1.0, "stoprange":130}
 	}]
 }

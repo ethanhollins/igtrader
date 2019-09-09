@@ -6,6 +6,7 @@ import numpy as np
 import datetime
 import pytz
 import Constants
+import traceback
 
 class Chart(object):
 	
@@ -35,6 +36,7 @@ class Chart(object):
 		self.getPricePeriod()
 		self.updateValues()
 		self.subscription = self.getLiveData()
+		self.last_update = None
 
 	def getPricePeriod(self):
 		if self.period == Constants.FOUR_HOURS:
@@ -83,7 +85,6 @@ class Chart(object):
 			start_dt -= datetime.timedelta(seconds=3600)
 
 		end_dt = datetime.datetime.now()
-		print(str(start_dt), str(end_dt))
 		result = self.manager.getPricesByDate(self.product, self.price_period, start_dt, end_dt, 1, {})
 
 		if len(result['bids']) == 0:
@@ -98,16 +99,16 @@ class Chart(object):
 		result['asks'].pop(latest_ts, None)
 
 		bids = {int(self.bids_ts[i]):[
-			float(self.bids_ohlc[i,0]),
-			float(self.bids_ohlc[i,1]),
-			float(self.bids_ohlc[i,2]),
-			float(self.bids_ohlc[i,3])
+			round(float(self.bids_ohlc[i,0]), 5),
+			round(float(self.bids_ohlc[i,1]), 5),
+			round(float(self.bids_ohlc[i,2]), 5),
+			round(float(self.bids_ohlc[i,3]), 5)
 		] for i in range(self.bids_ts.size)}
 		asks = {int(self.asks_ts[i]):[
-			float(self.asks_ohlc[i,0]),
-			float(self.asks_ohlc[i,1]),
-			float(self.asks_ohlc[i,2]),
-			float(self.asks_ohlc[i,3]) 
+			round(float(self.asks_ohlc[i,0]), 5),
+			round(float(self.asks_ohlc[i,1]), 5),
+			round(float(self.asks_ohlc[i,2]), 5),
+			round(float(self.asks_ohlc[i,3]), 5) 
 		] for i in range(self.asks_ts.size)}
 		bids = {**bids, **result['bids']}
 		asks = {**asks, **result['asks']}
@@ -141,16 +142,16 @@ class Chart(object):
 
 	def saveValues(self):
 		bids = {int(self.bids_ts[i]):[
-			float(self.bids_ohlc[i,0]),
-			float(self.bids_ohlc[i,1]),
-			float(self.bids_ohlc[i,2]),
-			float(self.bids_ohlc[i,3])
+			round(float(self.bids_ohlc[i,0]), 5),
+			round(float(self.bids_ohlc[i,1]), 5),
+			round(float(self.bids_ohlc[i,2]), 5),
+			round(float(self.bids_ohlc[i,3]), 5)
 		] for i in range(self.bids_ts.size)}
 		asks = {int(self.asks_ts[i]):[
-			float(self.asks_ohlc[i,0]),
-			float(self.asks_ohlc[i,1]),
-			float(self.asks_ohlc[i,2]),
-			float(self.asks_ohlc[i,3])
+			round(float(self.asks_ohlc[i,0]), 5),
+			round(float(self.asks_ohlc[i,1]), 5),
+			round(float(self.asks_ohlc[i,2]), 5),
+			round(float(self.asks_ohlc[i,3]), 5)
 		] for i in range(self.asks_ts.size)}
 
 		path = 'Data/{0}_{1}_bid.json'.format(self.product, self.period)
@@ -177,9 +178,12 @@ class Chart(object):
 			'OFR_OPEN', 'OFR_HIGH', 'OFR_LOW', 'OFR_CLOSE'
 		]
 
+		self.last_update = datetime.datetime.now()
 		return self.manager.subscribe(self.root.ls_client, 'MERGE', items, fields, self.onItemUpdate)
 
 	def onItemUpdate(self, item):
+		self.last_update = datetime.datetime.now()
+
 		# print('chart:', str(item))
 		if item['values']:
 			b_open = float(item['values']['BID_OPEN'])
@@ -218,6 +222,7 @@ class Chart(object):
 				now = datetime.datetime.now()
 				now = self.manager.utils.setTimezone(now, 'Australia/Melbourne')
 				lon = self.manager.utils.convertTimezone(now, 'Europe/London')
+				now = now.replace(tzinfo=None)
 
 				if self.period == Constants.FOUR_HOURS:
 					now = self.nearestHour(now)
@@ -250,7 +255,7 @@ class Chart(object):
 									plan.module.onNewBar(self)
 								except Exception as e:
 									if not 'has no attribute \'onNewBar\'' in str(e):
-										print('PlanError ({0}):\n {1}'.format(plan.accountid, str(e)))
+										print('PlanError ({0}):\n {1}'.format(plan.accountid, traceback.format_exc()))
 										plan.plan_state = PlanState.STOPPED
 								
 						self.saveValues()

@@ -46,6 +46,7 @@ def stitchData(product, period, data):
 	print('Stitching data...')
 	new_data = {}
 	stitch = []
+	aus_ts = None
 	if period == FOUR_HOURS:
 		ts_l = [i[0] for i in sorted(data.items(), key=lambda kv: kv[0])]
 		for ts in ts_l:
@@ -55,25 +56,27 @@ def stitchData(product, period, data):
 			aus_dt = aus_dt.replace(tzinfo=None)
 
 			if lon_dt.hour in LONDON_FOUR_BARS:
-				aus_ts = convertDatetimeToTimestamp(aus_dt)
-				new_ohlc = [0,0,0,0]
-				for i in range(len(stitch)):
-					ohlc = stitch[i]
-					if i == 0:
-						new_ohlc[0] = ohlc[0]
-						new_ohlc[1] = ohlc[1]
-						new_ohlc[2] = ohlc[2]
-						new_ohlc[3] = ohlc[3]
-					else:
-						if ohlc[1] > new_ohlc[1]:
+				if aus_ts:
+					new_ohlc = [0,0,0,0]
+					for i in range(len(stitch)):
+						ohlc = stitch[i]
+						if i == 0:
+							new_ohlc[0] = ohlc[0]
 							new_ohlc[1] = ohlc[1]
-
-						if ohlc[2] < new_ohlc[2]:
 							new_ohlc[2] = ohlc[2]
+							new_ohlc[3] = ohlc[3]
+						else:
+							if ohlc[1] > new_ohlc[1]:
+								new_ohlc[1] = ohlc[1]
 
-						new_ohlc[3] = ohlc[3]
+							if ohlc[2] < new_ohlc[2]:
+								new_ohlc[2] = ohlc[2]
 
-				new_data[aus_ts] = new_ohlc
+							new_ohlc[3] = ohlc[3]
+
+					new_data[aus_ts] = new_ohlc
+				
+				aus_ts = convertDatetimeToTimestamp(aus_dt)
 				stitch = []
 			else:
 				stitch.append(data[ts])

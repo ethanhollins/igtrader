@@ -14,12 +14,13 @@ import time
 import traceback
 import datetime
 
-ONE_HOUR = 60 * 60
+TWO_MINUTES = 60 * 2
 
 class RootAccount(object):
 	
 	def __init__(self, root_name, running_accounts):
 		self.root_name = root_name
+		self.cmd_queue = []
 		if self.root_name == 'backtester':
 			self.run_backtester(root_name)
 		else:
@@ -55,7 +56,7 @@ class RootAccount(object):
 							self.manager,
 							self.ls_client,
 							name,
-							info['accounts'][name]
+							info['accounts'][name]['plans']
 						)
 
 						if not self.manager:
@@ -68,7 +69,6 @@ class RootAccount(object):
 			print('Account name {0} does not exist'.format(root_name))
 
 	def runloop(self):
-		check_time = time.time()
 		while True:
 
 			for acc in self.accounts:
@@ -81,9 +81,10 @@ class RootAccount(object):
 								print('PlanError ({0}):\n{1}'.format(acc.accountid, traceback.format_exc()))
 								plan.plan_state = PlanState.STOPPED
 			
-			if time.time() - check_time > ONE_HOUR:
-				self.manager.getTokens()
-				check_time = time.time()
+			for chart in self.manager.charts:
+				if (datetime.datetime.now() - chart.last_update).total_seconds() > TWO_MINUTES:
+					self.manager.reconnectLS(self.ls_client)
+					chart.last_update = datetime.datetime.now()
 			time.sleep(0.1)
 
 	def run_backtester(self, root_name):
@@ -94,18 +95,29 @@ class RootAccount(object):
 			with open(f_path, 'r') as f:
 				info = json.load(f)
 				method = info['method']
+				source = info['source']
 
 				if info['start']:
-					start = utils.convertDatetimeToTimestamp(
-						datetime.datetime.strptime(info['start'], '%d/%m/%y %H:%M')
-					)
+					if source == 'ig':
+						start = utils.convertDatetimeToTimestamp(
+							datetime.datetime.strptime(info['start'], '%d/%m/%y %H:%M')
+						)
+					elif source == 'mt':
+						start = utils.convertMTDatetimeToTimestamp(
+							datetime.datetime.strptime(info['start'], '%d/%m/%y %H:%M')
+						)
 				else:
 					start = None
 
 				if info['end']:
-					end = utils.convertDatetimeToTimestamp(
-						datetime.datetime.strptime(info['end'], '%d/%m/%y %H:%M')
-					)
+					if source == 'ig':
+						end = utils.convertDatetimeToTimestamp(
+							datetime.datetime.strptime(info['end'], '%d/%m/%y %H:%M')
+						)
+					elif source == 'mt':
+						end = utils.convertMTDatetimeToTimestamp(
+							datetime.datetime.strptime(info['end'], '%d/%m/%y %H:%M')
+						)
 				else:
 					end = None
 
@@ -182,22 +194,24 @@ class RootAccount(object):
 			)
 			ax3.text(
 				0, len(results)*8-count*8-6, 
-				'% Ret: {0}'.format(
-					results[plan][Constants.POS_PERC_RET]
+				'% Ret: {0} | % DD: {1}'.format(
+					results[plan][Constants.POS_PERC_RET],
+					results[plan][Constants.POS_PERC_DD]
 				), 
 				fontsize=10, horizontalalignment='left'
 			)
 			ax3.text(
 				0, len(results)*8-count*8-5, 
-				'PIP Ret: {0}'.format(
-					results[plan][Constants.POS_PIP_RET]
+				'CMP % Ret: {0} | CMP % DD: {1}'.format(
+					results[plan][Constants.POS_COMPOUND_RET],
+					results[plan][Constants.POS_COMPOUND_DD]
 				), 
 				fontsize=10, horizontalalignment='left'
 			)
 			ax3.text(
 				0, len(results)*8-count*8-4, 
-				'% DD: {0}'.format(
-					results[plan][Constants.POS_PERC_DD]
+				'PIP Ret: {0}'.format(
+					results[plan][Constants.POS_PIP_RET]
 				), 
 				fontsize=10, horizontalalignment='left'
 			)
@@ -259,3 +273,5 @@ class RootAccount(object):
 				return accountid
 		return None
 		
+	def addToQueue(self, item):
+		self.cmd_queue.append(item)

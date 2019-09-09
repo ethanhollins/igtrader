@@ -3,16 +3,21 @@
     "password": "#r!05Op0.2FF",
     "key": "e96fae1ecb21ef662efc9aeb4b6cf8afc8e6f890",
     "tokens": {
-        "X-SECURITY-TOKEN": "a52eb62f7a863ac52f4951b0b38adac0a6bde0d327a5d5962f573762e45f539901113",
-        "CST": "6d00208c4f3e47d44506a853af9dac531772d7000f7073a2abec996110811d5a01113"
+        "X-SECURITY-TOKEN": "c653fa760c1a8b7393bedab1250420be650fab5f5e66c8572d9813b634a862cb01111",
+        "CST": "256f7bbfa91acf1aaa9bee4d2d72dd94268e42e700cd613b753ba40eaddd4b1901111"
     },
     "isDemo": true,
     "accounts": {
         "ZU769": {
-            "test": {
-                "variables": {},
-                "storage": {},
-                "positions": []
+            "external_bank": 0,
+            "maximum_bank": 100000,
+            "minimum_bank": 10000,
+            "plans": {
+                "IncomePro_KELTNER/v1.3.4": {
+                    "variables": {},
+                    "storage": {},
+                    "positions": []
+                }
             }
         }
     }
