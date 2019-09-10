@@ -5,4 +5,5 @@ Scripts
 Include
 Accounts/
 __pycache__/
+Data/
 *.pyc
