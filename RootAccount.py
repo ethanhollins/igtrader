@@ -78,8 +78,8 @@ class RootAccount(object):
 							plan.module.onLoop()
 						except Exception as e:
 							if not 'onLoop' in str(e):
-								print('PlanError ({0}):\n{1}'.format(acc.accountid, traceback.format_exc()))
 								plan.plan_state = PlanState.STOPPED
+								print('PlanError ({0}):\n{1}'.format(acc.accountid, traceback.format_exc()))
 			
 			for chart in self.manager.charts:
 				if (datetime.datetime.now() - chart.last_update).total_seconds() > TWO_MINUTES:

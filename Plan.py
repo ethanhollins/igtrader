@@ -104,6 +104,7 @@ class Plan(object):
 		self.external_bank = float(info['accounts'][self.account.accountid]['external_bank'])
 		self.maximum_bank = float(info['accounts'][self.account.accountid]['maximum_bank'])
 		self.minimum_bank = float(info['accounts'][self.account.accountid]['minimum_bank'])
+		self.lotsize_min = float(info['accounts'][self.account.accountid]['lotsize_min'])
 
 	def updatePositions(self):
 		result = self.account.manager.getPositions(self.account.accountid)
@@ -166,8 +167,8 @@ class Plan(object):
 				self.module.onStopLoss(pos)
 			except Exception as e:
 				if not 'has no attribute \'onStopLoss\'' in str(e):
-					print('PlanError ({0}):\n{1}'.format(self.account.accountid, traceback.format_exc()))
 					self.plan_state = PlanState.STOPPED
+					print('PlanError ({0}):\n{1}'.format(self.account.accountid, traceback.format_exc()))
 
 	def onTakeProfit(self, pos):
 		if self.plan_state == PlanState.STARTED:
@@ -175,8 +176,8 @@ class Plan(object):
 				self.module.onTakeProfit(pos)
 			except Exception as e:
 				if not 'has no attribute \'onTakeProfit\'' in str(e):
-					print('PlanError ({0}):\n{1}'.format(self.account.accountid, traceback.format_exc()))
 					self.plan_state = PlanState.STOPPED
+					print('PlanError ({0}):\n{1}'.format(self.account.accountid, traceback.format_exc()))
 
 	def onClose(self, pos):
 		if self.plan_state == PlanState.STARTED:
@@ -184,8 +185,8 @@ class Plan(object):
 				self.module.onClose(pos)
 			except Exception as e:
 				if not 'has no attribute \'onClose\'' in str(e):
-					print('PlanError ({0}):\n{1}'.format(self.account.accountid, traceback.format_exc()))
 					self.plan_state = PlanState.STOPPED
+					print('PlanError ({0}):\n{1}'.format(self.account.accountid, traceback.format_exc()))
 
 	def onRejected(self, pos):
 		if self.plan_state == PlanState.STARTED:
@@ -193,8 +194,8 @@ class Plan(object):
 				self.module.onRejected(pos)
 			except Exception as e:
 				if not 'has no attribute \'onRejected\'' in str(e):
-					print('PlanError ({0}):\n{1}'.format(self.account.accountid, traceback.format_exc()))
 					self.plan_state = PlanState.STOPPED
+					print('PlanError ({0}):\n{1}'.format(self.account.accountid, traceback.format_exc()))
 
 	def onModified(self, pos):
 		if self.plan_state == PlanState.STARTED:
@@ -202,8 +203,8 @@ class Plan(object):
 				self.module.onModified(pos)
 			except Exception as e:
 				if not 'has no attribute \'onModified\'' in str(e):
-					print('PlanError ({0}):\n{1}'.format(self.account.accountid, traceback.format_exc()))
 					self.plan_state = PlanState.STOPPED
+					print('PlanError ({0}):\n{1}'.format(self.account.accountid, traceback.format_exc()))
 
 	'''
 	Plan Utilities
@@ -245,8 +246,8 @@ class Plan(object):
 			self.module.onEntry(pos)
 		except Exception as e:
 			if not 'has no attribute \'onEntry\'' in str(e):
-				print('PlanError ({0}):\n{1}'.format(self.account.accountid, traceback.format_exc()))
 				self.plan_state = PlanState.STOPPED
+				print('PlanError ({0}):\n{1}'.format(self.account.accountid, traceback.format_exc()))
 
 		self.savePositions()
 		return pos
@@ -286,8 +287,8 @@ class Plan(object):
 			self.module.onEntry(pos)
 		except Exception as e:
 			if not 'has no attribute \'onEntry\'' in str(e):
-				print('PlanError ({0}):\n{1}'.format(self.account.accountid, traceback.format_exc()))
 				self.plan_state = PlanState.STOPPED
+				print('PlanError ({0}):\n{1}'.format(self.account.accountid, traceback.format_exc()))
 
 		self.savePositions()
 		return pos
@@ -373,9 +374,9 @@ class Plan(object):
 
 	def getLotsize(self, bank, risk, stoprange):
 		if self.getAUDUSDBid():
-			return max(round((bank * (risk / 100) / stoprange) * self.getAUDUSDBid(), 2), 1.0)
+			return max(round((bank * (risk / 100) / stoprange) * self.getAUDUSDBid(), 2), self.lotsize_min)
 		
-		return None	
+		return 0	
 
 	def getBank(self):
 		return self.account.manager.accountInfo(self.account.accountid)['balance']

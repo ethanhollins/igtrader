@@ -202,7 +202,8 @@ class IGManager(object):
 			self.saveTokens()
 			self.ls_endpoint = res.json()['lightstreamerEndpoint']
 
-			self.switchAccount(accountid)
+			if accountid:
+				self.switchAccount(accountid)
 
 			# Reconnect LS Client
 			if self.root.ls_client:
@@ -438,7 +439,7 @@ class IGManager(object):
 				pass
 
 	def reconnectLS(self, ls_client):
-		if not self.getTokens(accountid):
+		if not self.getTokens():
 			return None
 
 		subscriptions = ls_client._subscriptions
