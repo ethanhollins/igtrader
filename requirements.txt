@@ -4,3 +4,4 @@ numba==0.45.1
 numpy==1.17.0
 pytz==2019.2
 requests==2.22.0
+mpl_finance==0.10.0

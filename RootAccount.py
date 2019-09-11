@@ -6,6 +6,7 @@ from Backtester import Backtester
 from matplotlib import pyplot as plt
 from matplotlib import dates as mpl_dates
 from matplotlib import gridspec as gridspec
+from mpl_finance import candlestick_ohlc
 import Constants
 import os
 import sys
@@ -134,12 +135,12 @@ class RootAccount(object):
 
 		if method == 'compare':
 			self.showGraphs(results)
+		elif method == 'show':
+			self.showCharts(results)
+
 
 	def showGraphs(self, results):
 		plt.style.use('seaborn')
-		# fig = plt.figure()
-		# gridspec.GridSpec((4,2))
-		# fig, (ax1, ax2) = plt.subplots(1, 2)
 
 		ax1 = plt.subplot2grid((1,8), (0,0), colspan=3)
 		ax2 = plt.subplot2grid((1,8), (0,3), colspan=3)
@@ -266,6 +267,33 @@ class RootAccount(object):
 		plt.gcf().autofmt_xdate()
 		plt.tight_layout()
 		plt.show()
+
+	def showCharts(self, results):
+
+		for plan in results:
+
+			ax1 = plt.subplot2grid((1,1), (0,0))
+
+			candlestick_ohlc(ax1, 
+				results[plan]['quotes'],
+				colorup='g',
+				colordown='r',
+				width=0.1
+			)
+
+			dates = [i[0] for i in results[plan]['quotes']]
+
+			for i in range(len(results[plan]['overlays'][:1])):
+				overlay = results[plan]['overlays'][i]
+				ax1.plot(dates, overlay)
+
+			date_format = mpl_dates.DateFormatter('%d/%m/%y %H:%M')
+			ax1.xaxis_date()
+			ax1.xaxis.set_major_formatter(date_format)
+
+			plt.gcf().autofmt_xdate()
+			plt.autoscale(tight=True)
+			plt.show()
 
 	def findAccount(self, accountid):
 		for acc in self.accounts:

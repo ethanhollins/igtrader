@@ -169,6 +169,9 @@ def onLoop():
 	''' Function called on every program iteration '''
 
 	handleEntries()
+	for pos in utils.positions:
+		utils.log("onLoop", str(dict(pos)))
+
 
 def handleEntries():
 	''' Handle all pending entries '''

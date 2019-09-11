@@ -11,6 +11,7 @@ import numpy as np
 import traceback
 from timeit import default_timer as timer
 from enum import Enum
+from matplotlib import dates as mpl_dates
 
 from Indicators.ATR import ATR
 from Indicators.BOLL import BOLL
@@ -468,12 +469,30 @@ class Backtester(object):
 					charts.append(chart)
 			all_charts.append(charts)
 
-		if self.method == 'step':
+		data = {}
+
+		if self.method == 'show':
+			data['quotes'] = []
+			data['overlays'] = [[] for i in range(len(self.indicators))]
+			for i in range(all_ts.size):
+				self.c_ts = all_ts[i]
+				time = mpl_dates.date2num(self.convertTimestampToDatetime(self.c_ts))
+				
+				for chart in all_charts[i]:
+					ohlc = chart.getCurrentBidOHLC(self)
+				
+				for i in range(len(self.indicators[:1])):
+					ind = self.indicators[i]
+					data['overlays'][i].append(ind.getCurrent(self, chart))
+
+				data['quotes'].append([time, ohlc[0], ohlc[1], ohlc[2], ohlc[3]])
+			
+			return self.module, data
+		elif self.method == 'step':
 			self.plan_state = PlanState.STEP
 		else:
 			self.plan_state = PlanState.RUN
 
-		data = {}
 		start = timer()
 		for i in range(all_ts.size):
 			self.c_ts = all_ts[i]
