@@ -237,7 +237,7 @@ class Position(object):
 		if self.is_dummy:
 			return 0
 
-		if not self.closeprice == 0:
+		if not self.closeprice:
 			if self.direction == Constants.BUY:
 				profit = self.plan.getBid(self.product) - self.entryprice
 			else:
