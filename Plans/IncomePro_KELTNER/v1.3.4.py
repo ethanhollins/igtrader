@@ -114,10 +114,10 @@ def init(utilities):
 	limit_three = utils.MAE(10, 0.09)
 	boll_one = utils.BOLL(10, 2.2)
 	boll_two = utils.BOLL(20, 1.9)
-	rsi = utils.RSI(10)
-	macd = utils.MACD(4, 40, 3)
 	kelt_ch = utils.KELT(20, 20, 1.5)
 	kelt_mae = utils.MAE(20, 0.02, ma_type='typ')
+	rsi = utils.RSI(10)
+	macd = utils.MACD(4, 40, 3)
 	
 	setGlobalVars()
 

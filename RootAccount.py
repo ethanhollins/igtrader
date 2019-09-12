@@ -14,6 +14,7 @@ import json
 import time
 import traceback
 import datetime
+import numpy as np
 
 TWO_MINUTES = 60 * 2
 
@@ -92,6 +93,8 @@ class RootAccount(object):
 		f_path = 'Accounts/{0}.json'.format(root_name)
 		utils = Utilities()
 		plans = []
+		formatting = {}
+
 		if os.path.exists(f_path):
 			with open(f_path, 'r') as f:
 				info = json.load(f)
@@ -126,6 +129,10 @@ class RootAccount(object):
 
 				for i in plans_info:
 					plans.append(Backtester(i['name'], i['variables'], info['source']))
+					if 'colors' in i:
+						formatting['colors'] = i['colors']
+					if 'styles' in i:
+						formatting['styles'] = i['styles']
 
 		results = {}
 		for i in range(len(plans)):
@@ -136,7 +143,7 @@ class RootAccount(object):
 		if method == 'compare':
 			self.showGraphs(results)
 		elif method == 'show':
-			self.showCharts(results)
+			self.showCharts(results, formatting)
 
 
 	def showGraphs(self, results):
@@ -268,11 +275,12 @@ class RootAccount(object):
 		plt.tight_layout()
 		plt.show()
 
-	def showCharts(self, results):
+	def showCharts(self, results, formatting):
 
 		for plan in results:
 
-			ax1 = plt.subplot2grid((1,1), (0,0))
+
+			ax1 = plt.subplot2grid((4 + len(results[plan]['studies']),1), (0,0), rowspan=4)
 
 			candlestick_ohlc(ax1, 
 				results[plan]['quotes'],
@@ -282,22 +290,58 @@ class RootAccount(object):
 			)
 
 			dates = [i[0] for i in results[plan]['quotes']]
-
-			# CHECK IF NUMPY ARRAY
-			for i in range(len(results[plan]['overlays'][:1])):
-				overlay = results[plan]['overlays'][i]
-				ax1.plot(dates, overlay)
-
-			# for i in range(len(results[plan]['studies'])):
-			# 	overlay = results[plan]['overlays'][i]
-			# 	ax1.plot(dates, overlay)
-
 			date_format = mpl_dates.DateFormatter('%d/%m/%y %H:%M')
+
+			for i in range(len(results[plan]['overlays'])):
+				if 'colors' in formatting:
+					colors = formatting['colors']
+				else:
+					colors = ['b', 'g', 'r', 'c', 'm', 'y']
+
+				if 'styles' in formatting:
+					styles = formatting['styles']
+				else:
+					styles = None
+
+				overlay = results[plan]['overlays'][i]
+				if len(overlay) > 0:
+					if type(overlay[0]) == np.ndarray:
+						for j in range(overlay[0].size):
+							data = []
+							for dp in overlay:
+								data.append(dp[j])
+
+							style = styles[(i % len(styles))] if styles else None
+
+							ax1.plot(dates, data, linestyle=style, color= colors[(i % len(colors))], alpha=0.7, linewidth=0.5)
+					else:
+						style = styles[(i % len(styles))] if styles else None
+						ax1.plot(dates, overlay, linestyle=style, color= colors[(i % len(colors))], alpha=0.7, linewidth=0.5)
+
+			for i in range(len(results[plan]['studies'])):
+				ax = plt.subplot2grid((4 + len(results[plan]['studies']),1), (4 + i,0), sharex=ax1)
+				study = results[plan]['studies'][i]
+
+				if len(study) > 0:
+					if type(study[0]) == np.ndarray:
+						for j in range(study[0].size):
+							data = []
+							for dp in study:
+								data.append(dp[j])
+
+							ax.plot(dates, data, alpha=0.7, linewidth=0.75)
+					else:
+						ax.plot(dates, study, alpha=0.7, linewidth=0.75)
+				
+				ax.xaxis_date()
+				ax.xaxis.set_major_formatter(date_format)
+				ax.autoscale(tight=True)
+
 			ax1.xaxis_date()
 			ax1.xaxis.set_major_formatter(date_format)
+			ax1.autoscale(tight=True)
 
 			plt.gcf().autofmt_xdate()
-			plt.autoscale(tight=True)
 			plt.show()
 
 	def findAccount(self, accountid):
