@@ -6,6 +6,7 @@ class SMA(object):
 	def __init__(self, period):
 		self.period = period
 		self.min_period = self.period
+		self.type = 'overlay'
 
 	@jit
 	def calculate(ohlc, period):

@@ -7,6 +7,7 @@ class BOLL(object):
 		self.period = period
 		self.std = std
 		self.min_period = self.period
+		self.type = 'overlay'
 
 	@jit
 	def calculate(ohlc, period, std):

@@ -283,9 +283,14 @@ class RootAccount(object):
 
 			dates = [i[0] for i in results[plan]['quotes']]
 
+			# CHECK IF NUMPY ARRAY
 			for i in range(len(results[plan]['overlays'][:1])):
 				overlay = results[plan]['overlays'][i]
 				ax1.plot(dates, overlay)
+
+			# for i in range(len(results[plan]['studies'])):
+			# 	overlay = results[plan]['overlays'][i]
+			# 	ax1.plot(dates, overlay)
 
 			date_format = mpl_dates.DateFormatter('%d/%m/%y %H:%M')
 			ax1.xaxis_date()

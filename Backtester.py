@@ -473,7 +473,11 @@ class Backtester(object):
 
 		if self.method == 'show':
 			data['quotes'] = []
-			data['overlays'] = [[] for i in range(len(self.indicators))]
+			overlays = [i for i in self.indicators if i.type == 'overlay']
+			studies = [i for i in self.indicators if i.type == 'study']
+			data['overlays'] = [[] for i in overlays]
+			data['studies'] = [[] for i in studies]
+
 			for i in range(all_ts.size):
 				self.c_ts = all_ts[i]
 				time = mpl_dates.date2num(self.convertTimestampToDatetime(self.c_ts))
@@ -481,10 +485,14 @@ class Backtester(object):
 				for chart in all_charts[i]:
 					ohlc = chart.getCurrentBidOHLC(self)
 				
-				for i in range(len(self.indicators[:1])):
-					ind = self.indicators[i]
+				for i in range(len(overlays)):
+					ind = overlays[i]
 					data['overlays'][i].append(ind.getCurrent(self, chart))
 
+				for i in range(len(studies)):
+					ind = studies[i]
+					data['studies'][i].append(ind.getCurrent(self, chart))
+					
 				data['quotes'].append([time, ohlc[0], ohlc[1], ohlc[2], ohlc[3]])
 			
 			return self.module, data

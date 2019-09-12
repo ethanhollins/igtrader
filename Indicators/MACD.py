@@ -8,6 +8,7 @@ class MACD(object):
 		self.slowperiod = slowperiod
 		self.signalperiod = signalperiod
 		self.min_period = self.slowperiod + self.signalperiod
+		self.type = 'study'
 
 	@jit
 	def calculate(ohlc, fastperiod, slowperiod, signalperiod):

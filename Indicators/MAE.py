@@ -8,6 +8,7 @@ class MAE(object):
 		self.offset = offset
 		self.min_period = self.period
 		self.ma_type = ma_type
+		self.type = 'overlay'
 
 	@jit
 	def calculate(ohlc, period, offset):

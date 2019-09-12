@@ -9,6 +9,7 @@ class KELT(object):
 		self.atr_period = atr_period
 		self.multi = multi
 		self.min_period = self.period
+		self.type = 'overlay'
 
 	@jit
 	def calculate(ohlc, period, atr_period, multi):

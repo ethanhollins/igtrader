@@ -205,10 +205,6 @@ class IGManager(object):
 			if accountid:
 				self.switchAccount(accountid)
 
-			# Reconnect LS Client
-			if self.root.ls_client:
-				self.reconnectLS(self.root.ls_client)
-
 			return True
 		else:
 			print('Error getting tokens:\n{0}'.format(res.json()))
@@ -443,7 +439,9 @@ class IGManager(object):
 			return None
 
 		subscriptions = ls_client._subscriptions
-		
+	
+		ls_client.disconnect()
+
 		new_ls_client = LSClient(
 			self.root.root_name,
 			"CST-{0}|XST-{1}".format(
@@ -457,13 +455,14 @@ class IGManager(object):
 			print("Attempting connection...")
 			try:
 				new_ls_client.connect()
+				break
 			except Exception as e:
+				time.sleep(1)
 				pass
 
 		for i in subscriptions:
 			new_ls_client.subscribe(subscriptions[i])
 
-		ls_client.disconnect()
 		return new_ls_client
 
 	def subscribe(self, ls_client, mode, items, fields, listener):
