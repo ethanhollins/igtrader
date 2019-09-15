@@ -199,7 +199,6 @@ class Chart(object):
 
 			if len(self.c_bid) == 0 or b_close == 0 or self.c_bid[3] == 0 or self.reset:
 				self.c_bid = [b_open, b_high, b_low, b_close]
-				self.reset = False
 			else:
 				self.c_bid = [
 					self.c_bid[0],
@@ -243,7 +242,10 @@ class Chart(object):
 					if lon.hour in Constants.FOUR_HOURS_BARS:
 						self.reset = True
 						
-						new_ts = self.manager.utils.convertDatetimeToTimestamp(now)
+						prev_hour = Constants.FOUR_HOURS_BARS[Constants.FOUR_HOURS_BARS.index(lon.hour)-1]
+						dist = 24 - (lon.hour - prev_hour) % 24
+
+						new_ts = self.manager.utils.convertDatetimeToTimestamp(now - datetime.timedelta(hours=dist))
 						
 						print('Bid: {0}\nAsk: {1}'.format(self.c_bid, self.c_ask))
 

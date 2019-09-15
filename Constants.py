@@ -11,7 +11,7 @@ PRICE_ONE_HOUR = 'HOUR'
 
 FOUR_HOURS = 4
 PRICE_FOUR_HOURS = 'HOUR_4'
-FOUR_HOURS_BARS = [0, 4, 8, 12, 16, 20]
+FOUR_HOURS_BARS = list(range(0,24,4))
 
 '''
 Positions
