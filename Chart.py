@@ -184,14 +184,20 @@ class Chart(object):
 	def onItemUpdate(self, item):
 		self.last_update = datetime.datetime.now()
 
-		# print('chart:', str(item))
 		if item['values']:
-			b_open = float(item['values']['BID_OPEN'])
-			b_high = float(item['values']['BID_HIGH'])
-			b_low = float(item['values']['BID_LOW'])
-			b_close = float(item['values']['BID_CLOSE'])
+			b_open = item['values']['BID_OPEN']
+			b_open = float(b_open) if b_open else 0
+			
+			b_high = item['values']['BID_HIGH']
+			b_high = float(b_high) if b_high else 0
+			
+			b_low = item['values']['BID_LOW']
+			b_low = float(b_low) if b_low else 0
+			
+			b_close = item['values']['BID_CLOSE']
+			b_close = float(b_close) if b_close else 0
 
-			if len(self.c_bid) == 0 or self.reset:
+			if len(self.c_bid) == 0 or b_close == 0 or self.c_bid[3] == 0 or self.reset:
 				self.c_bid = [b_open, b_high, b_low, b_close]
 				self.reset = False
 			else:
@@ -202,12 +208,19 @@ class Chart(object):
 					b_close
 				]
 
-			a_open = float(item['values']['OFR_OPEN'])
-			a_high = float(item['values']['OFR_HIGH'])
-			a_low = float(item['values']['OFR_LOW'])
-			a_close = float(item['values']['OFR_CLOSE'])
+			a_open = item['values']['OFR_OPEN']
+			a_open = float(a_open) if a_open else 0
+			
+			a_high = item['values']['OFR_HIGH']
+			a_high = float(a_high) if a_high else 0
+			
+			a_low = item['values']['OFR_LOW']
+			a_low = float(a_low) if a_low else 0
+			
+			a_close = item['values']['OFR_CLOSE']
+			a_close = float(a_close) if a_close else 0
 
-			if len(self.c_ask) == 0 or self.reset:
+			if len(self.c_ask) == 0 or a_close == 0 or self.c_ask[3] == 0 or self.reset:
 				self.c_ask = [a_open, a_high, a_low, a_close]
 				self.reset = False
 			else:

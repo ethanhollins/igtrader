@@ -200,7 +200,7 @@ class IGManager(object):
 			self.headers['X-SECURITY-TOKEN'] = res.headers.get('X-SECURITY-TOKEN')
 			self.headers['CST'] = res.headers.get('CST')
 			self.saveTokens()
-			self.ls_endpoint = res.json()['lightstreamerEndpoint']
+			self.ls_endpoint = res.json().get('lightstreamerEndpoint')
 
 			if accountid:
 				self.switchAccount(accountid)
@@ -228,6 +228,9 @@ class IGManager(object):
 
 		if res.status_code == 200 or res.status_code == 412:
 			self.current_account = accountid
+			if res.headers.get('X-SECURITY-TOKEN'):
+				self.headers['X-SECURITY-TOKEN'] = res.headers.get('X-SECURITY-TOKEN')
+			self.saveTokens()
 			return True
 		else:
 			print('Error:\n{0}'.format(res.json()))

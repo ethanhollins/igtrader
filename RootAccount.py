@@ -71,7 +71,13 @@ class RootAccount(object):
 			print('Account name {0} does not exist'.format(root_name))
 
 	def runloop(self):
+		self.is_weekend = False
 		while True:
+			time.sleep(0.1)
+
+			if self.is_weekend:
+				self.is_weekend = self.isWeekend()
+				continue
 
 			for acc in self.accounts:
 				for plan in acc.plans:
@@ -84,10 +90,35 @@ class RootAccount(object):
 								print('PlanError ({0}):\n{1}'.format(acc.accountid, traceback.format_exc()))
 			
 			for chart in self.manager.charts:
-				if (datetime.datetime.now() - chart.last_update).total_seconds() > TWO_MINUTES:
-					self.manager.reconnectLS(self.ls_client)
-					chart.last_update = datetime.datetime.now()
-			time.sleep(0.1)
+				if not chart.last_update or (datetime.datetime.now() - chart.last_update).total_seconds() > TWO_MINUTES:
+					if self.isWeekend():
+						chart.c_bid = []
+						chart.c_ask = []
+						self.is_weekend = True
+						continue
+					else:
+						self.manager.reconnectLS(self.ls_client)
+						chart.last_update = datetime.datetime.now()
+
+	def isWeekend(self):
+		now = datetime.datetime.now()
+		now = self.manager.utils.convertTimezone(now, 'Europe/London')
+		today = now.weekday() + 1
+		fri = 5
+		sun = 7
+
+		if sun > today > fri:
+			return True
+		else:
+			fri_dt = now + datetime.timedelta(hours=24 * ((7 - (today - fri)) % 7))
+			fri_dt = fri_dt.replace(second=0, microsecond=0, minute=0, hour=22)
+			sun_dt = now + datetime.timedelta(hours=24 * ((7 - (today - sun)) % 7))
+			sun_dt = sun_dt.replace(second=0, microsecond=0, minute=0, hour=21)
+
+			if now > fri_dt or sun_dt > now:
+				return True
+
+		return False
 
 	def run_backtester(self, root_name):
 		f_path = 'Accounts/{0}.json'.format(root_name)
@@ -127,12 +158,18 @@ class RootAccount(object):
 
 				plans_info = info['plans']
 
-				for i in plans_info:
-					plans.append(Backtester(i['name'], i['variables'], info['source']))
-					if 'colors' in i:
-						formatting['colors'] = i['colors']
-					if 'styles' in i:
-						formatting['styles'] = i['styles']
+				for i in range(len(plans_info)):
+					plan = plans_info[i]
+					plans.append(Backtester(plan['name'], plan['variables'], info['source']))
+
+					name = plan['name'] + ' ({0})'.format(i)
+					formatting[name] = {}
+					if 'colors' in plan:
+						formatting[name]['colors'] = plan['colors']
+					if 'styles' in plan:
+						formatting[name]['styles'] = plan['styles']
+					if 'studies' in plan:
+						formatting[name]['studies'] = plan['studies']
 
 		results = {}
 		for i in range(len(plans)):
@@ -278,8 +315,6 @@ class RootAccount(object):
 	def showCharts(self, results, formatting):
 
 		for plan in results:
-
-
 			ax1 = plt.subplot2grid((4 + len(results[plan]['studies']),1), (0,0), rowspan=4)
 
 			candlestick_ohlc(ax1, 
@@ -293,15 +328,20 @@ class RootAccount(object):
 			date_format = mpl_dates.DateFormatter('%d/%m/%y %H:%M')
 
 			for i in range(len(results[plan]['overlays'])):
-				if 'colors' in formatting:
-					colors = formatting['colors']
+				if 'colors' in formatting[plan]:
+					colors = formatting[plan]['colors']
 				else:
 					colors = ['b', 'g', 'r', 'c', 'm', 'y']
 
-				if 'styles' in formatting:
-					styles = formatting['styles']
+				if 'styles' in formatting[plan]:
+					styles = formatting[plan]['styles']
 				else:
 					styles = None
+
+				if 'studies' in formatting[plan]:
+					studies = formatting[plan]['studies']
+				else:
+					studies = None
 
 				overlay = results[plan]['overlays'][i]
 				if len(overlay) > 0:
@@ -322,6 +362,10 @@ class RootAccount(object):
 				ax = plt.subplot2grid((4 + len(results[plan]['studies']),1), (4 + i,0), sharex=ax1)
 				study = results[plan]['studies'][i]
 
+				s_type = None
+				if studies:
+					s_type = studies[i]
+
 				if len(study) > 0:
 					if type(study[0]) == np.ndarray:
 						for j in range(study[0].size):
@@ -329,9 +373,20 @@ class RootAccount(object):
 							for dp in study:
 								data.append(dp[j])
 
-							ax.plot(dates, data, alpha=0.7, linewidth=0.75)
+							if s_type == 'MACD':
+								if j == 2:
+									y = np.zeros(len(dates))
+									ax.plot(dates, y, alpha=0.5, linewidth=0.75)
+									ax.bar(dates, data, alpha=0.8, width=0.1)
+							else:
+								ax.plot(dates, data, alpha=0.8, linewidth=0.75)
 					else:
-						ax.plot(dates, study, alpha=0.7, linewidth=0.75)
+						if s_type == 'RSI':
+							y = np.ones(len(dates)) * 50
+							ax.plot(dates, y, alpha=0.5, linewidth=0.75)
+							ax.plot(dates, study, alpha=0.8, linewidth=0.75)
+						else:
+							ax.plot(dates, study, alpha=0.8, linewidth=0.75)
 				
 				ax.xaxis_date()
 				ax.xaxis.set_major_formatter(date_format)
