@@ -243,7 +243,7 @@ class Chart(object):
 						self.reset = True
 						
 						prev_hour = Constants.FOUR_HOURS_BARS[Constants.FOUR_HOURS_BARS.index(lon.hour)-1]
-						dist = 24 - (lon.hour - prev_hour) % 24
+						dist = 24 - (prev_hour - lon.hour) % 24
 
 						new_ts = self.manager.utils.convertDatetimeToTimestamp(now - datetime.timedelta(hours=dist))
 						
