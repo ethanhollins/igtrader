@@ -72,6 +72,7 @@ class RootAccount(object):
 
 	def runloop(self):
 		self.is_weekend = False
+		print(self.isWeekend())
 		while True:
 			time.sleep(0.1)
 
@@ -113,9 +114,12 @@ class RootAccount(object):
 			fri_dt = now + datetime.timedelta(hours=24 * ((7 - (today - fri)) % 7))
 			fri_dt = fri_dt.replace(second=0, microsecond=0, minute=0, hour=22)
 			sun_dt = now + datetime.timedelta(hours=24 * ((7 - (today - sun)) % 7))
-			sun_dt = sun_dt.replace(second=0, microsecond=0, minute=0, hour=21)
+			sun_dt = sun_dt.replace(second=0, microsecond=0, minute=0, hour=22)
 
-			if now > fri_dt or sun_dt > now:
+			if (
+				(now > fri_dt and today == fri) or 
+				(sun_dt > now and today == sun)
+			):
 				return True
 
 		return False
