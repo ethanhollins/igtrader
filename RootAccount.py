@@ -72,7 +72,6 @@ class RootAccount(object):
 
 	def runloop(self):
 		self.is_weekend = False
-		print(self.isWeekend())
 		while True:
 			time.sleep(0.1)
 
