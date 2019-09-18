@@ -91,6 +91,7 @@ class Trigger(dict):
  
 		self.entry_type = None
 		self.can_so_reenter = True
+		self.can_ct_be = False
 
 		self.count = Trigger.static_count
 		Trigger.static_count += 1
@@ -215,6 +216,11 @@ def handleStopAndReverse(entry):
 
 		if entry.entry_type == EntryType.AdTwoEntry:
 			pos.data['boll_ret'] = False
+		elif entry.entry_type == EntryType.CtEntry:
+			if entry.can_ct_be:
+				pos.data['can_ct_be'] = True
+			else:
+				pos.data['can_ct_be'] = False
 
 		utils.savePositions()
 
@@ -246,6 +252,11 @@ def handleRegularEntry(entry):
 
 		if entry.entry_type == EntryType.AdTwoEntry:
 			pos.data['boll_ret'] = False
+		elif entry.entry_type == EntryType.CtEntry:
+			if entry.can_ct_be:
+				pos.data['can_ct_be'] = True
+			else:
+				pos.data['can_ct_be'] = False
 
 		utils.savePositions()
 
@@ -365,6 +376,8 @@ def runSequence():
 
 	if reloop:
 		return runSequence()
+
+	setCtEntryBE()
 
 def preEntrySetup(trigger, blocked=False):
 
@@ -586,9 +599,9 @@ def adEntryOne(trigger, blocked=False):
 				return
 
 		elif trigger.ad_entry_one_state == AdEntryOneState.TWO:
-			if isCloseABKSma(trigger.direction, reverse=True):
+			if isRetHitKSma(trigger.direction):
 				trigger.ad_entry_one_state = AdEntryOneState.THREE
-				return
+				return adEntryOne(trigger, blocked)
 
 		elif trigger.ad_entry_one_state == AdEntryOneState.THREE:
 			if adEntryOneConfirmation(trigger.direction) and not isKeltOutside():
@@ -686,7 +699,6 @@ def ctEntry(trigger, blocked=False):
 				trigger.ct_entry_state = CTEntryState.ONE
 				return confirmation(trigger, EntryType.CtEntry, reverse=True)
 
-
 def ctEntryConfirmation(direction):
 	if utils.plan_state.value in (1,4):
 		utils.log('ctEntryConfirmation', 'CT Entry Conf: {0} {1} {2} {3} {4} {5}'.format(
@@ -721,6 +733,14 @@ def ctReverseEntryConfirmation(direction):
 		(isBB(direction, reverse=True) and
 			isMacdReverseConf(direction, reverse=True))
 	)
+
+def setCtEntryBE():
+	for pos in utils.positions:
+		if pos.data['type'] == EntryType.CtEntry.value:
+			if pos.data['can_ct_be'] and not pos.isBreakeven():
+				direction = Direction.LONG if pos.direction == Constants.BUY else Direction.SHORT
+				if isCloseABKMaeOut(direction):
+					pos.breakeven()
 
 def isPosInProfit(direction):
 	if len(utils.positions) == 0:
@@ -959,6 +979,21 @@ def isCloseABKMaeIn(direction, reverse=False):
 			return close < upper
 		else:
 			return close > lower
+
+def isCloseABKMaeOut(direction, reverse=False):
+	upper, lower = kelt_mae.getCurrent(utils, chart)
+	close = chart.getCurrentBidOHLC(utils)[3]
+
+	if reverse:
+		if direction == Direction.LONG:
+			return close < lower
+		else:
+			return close > upper
+	else:
+		if direction == Direction.LONG:
+			return close > upper
+		else:
+			return close < lower
 
 def isCloseABKeltOut(direction, reverse=False):
 	upper, _, lower = kelt_ch.getCurrent(utils, chart)
@@ -1373,6 +1408,8 @@ def confirmation(trigger, entry_type, reverse=False):
 				return False
 			elif pos.direction == Constants.SELL and trigger.direction == Direction.SHORT:
 				return False
+	elif entry_type == EntryType.CtEntry:
+		trigger.can_ct_be = isCloseABLOneIn(trigger.direction, reverse=True)
 
 	istemp = False
 	trigger.entry_type = entry_type

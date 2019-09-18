@@ -274,7 +274,7 @@ def checkTime():
 	time = utils.convertTimestampToDatetime(utils.getLatestTimestamp())
 	london_time = utils.convertTimezone(time, 'Europe/London')
 	utils.log('checkTime', 'London Time: {0}'.format(london_time))
-	if london_time.weekday() == 4 and london_time.hour >= 20:
+	if (london_time.weekday() == 4 and london_time.hour >= 20) or london_time.hour == 20:
 		utils.log('checkTime', 'is STOP!')
 		time_state = TimeState.STOP
 	elif london_time.weekday() == 4 and london_time.hour >= 12:

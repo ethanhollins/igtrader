@@ -366,6 +366,8 @@ def runSequence():
 	if reloop:
 		return runSequence()
 
+	# setCtEntryBE()
+
 def preEntrySetup(trigger, blocked=False):
 
 	if trigger and (c_direction != trigger.direction or istemp) and not blocked:
@@ -586,9 +588,9 @@ def adEntryOne(trigger, blocked=False):
 				return
 
 		elif trigger.ad_entry_one_state == AdEntryOneState.TWO:
-			if isCloseABKSma(trigger.direction, reverse=True):
+			if isRetHitKSma(trigger.direction):
 				trigger.ad_entry_one_state = AdEntryOneState.THREE
-				return
+				return adEntryOne(trigger, blocked)
 
 		elif trigger.ad_entry_one_state == AdEntryOneState.THREE:
 			if adEntryOneConfirmation(trigger.direction) and not isKeltOutside():
@@ -686,7 +688,6 @@ def ctEntry(trigger, blocked=False):
 				trigger.ct_entry_state = CTEntryState.ONE
 				return confirmation(trigger, EntryType.CtEntry, reverse=True)
 
-
 def ctEntryConfirmation(direction):
 	if utils.plan_state.value in (1,4):
 		utils.log('ctEntryConfirmation', 'CT Entry Conf: {0} {1} {2} {3} {4} {5}'.format(
@@ -721,6 +722,14 @@ def ctReverseEntryConfirmation(direction):
 		(isBB(direction, reverse=True) and
 			isMacdReverseConf(direction, reverse=True))
 	)
+
+def setCtEntryBE():
+	for pos in utils.positions:
+		if pos.data['type'] == EntryType.CtEntry.value:
+			if not pos.isBreakeven():
+				direction = Direction.LONG if pos.direction == Constants.BUY else Direction.SHORT
+				if isCloseABKMaeOut(direction):
+					pos.breakeven()
 
 def isPosInProfit(direction):
 	if len(utils.positions) == 0:
@@ -959,6 +968,21 @@ def isCloseABKMaeIn(direction, reverse=False):
 			return close < upper
 		else:
 			return close > lower
+
+def isCloseABKMaeOut(direction, reverse=False):
+	upper, lower = kelt_mae.getCurrent(utils, chart)
+	close = chart.getCurrentBidOHLC(utils)[3]
+
+	if reverse:
+		if direction == Direction.LONG:
+			return close < lower
+		else:
+			return close > upper
+	else:
+		if direction == Direction.LONG:
+			return close > upper
+		else:
+			return close < lower
 
 def isCloseABKeltOut(direction, reverse=False):
 	upper, _, lower = kelt_ch.getCurrent(utils, chart)

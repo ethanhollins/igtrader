@@ -1363,6 +1363,7 @@ def confirmation(trigger, entry_type, reverse=False):
 		else:
 			trigger = long_trigger
 
+
 	if entry_type == EntryType.PreTEntry or entry_type == EntryType.TEntry:
 		cancel = False
 		if pending_entry and pending_entry.direction != trigger.direction:
@@ -1373,6 +1374,12 @@ def confirmation(trigger, entry_type, reverse=False):
 				return False
 			elif pos.direction == Constants.SELL and trigger.direction == Direction.SHORT:
 				return False
+
+	if len(utils.positions) >= 3:
+		if utils.positions[0].direction == Constants.BUY and trigger.direction == Direction.LONG:
+			return False
+		elif utils.positions[0].direction == Constants.SELL and trigger.direction == Direction.SHORT:
+			return False
 
 	istemp = False
 	trigger.entry_type = entry_type

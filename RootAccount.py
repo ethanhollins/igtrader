@@ -173,6 +173,8 @@ class RootAccount(object):
 						formatting[name]['styles'] = plan['styles']
 					if 'studies' in plan:
 						formatting[name]['studies'] = plan['studies']
+					if 'pos_data' in plan:
+						formatting[name]['pos_data'] = plan['pos_data']
 
 		results = {}
 		for i in range(len(plans)):
@@ -346,6 +348,11 @@ class RootAccount(object):
 				else:
 					studies = None
 
+				if 'pos_data' in formatting[plan]:
+					pos_data = formatting[plan]['pos_data']
+				else:
+					pos_data = None
+
 				overlay = results[plan]['overlays'][i]
 				if len(overlay) > 0:
 					if type(overlay[0]) == np.ndarray:
@@ -403,8 +410,21 @@ class RootAccount(object):
 
 				if d == Constants.BUY:
 					ax1.arrow(i, ep + 0.002, 0, 0.005, color='blue', length_includes_head=True, head_width=0.075, head_length=0.002)
+					annotation = []
+					if pos_data:
+						for j in pos_data:
+							annotation.append(str(results[plan]['positions'][i][2][j]))
+
+					ax1.annotate(', '.join(annotation), xy=(i + 0.003, ep + 0.003))
+
 				elif d == Constants.SELL:
 					ax1.arrow(i, ep - 0.002, 0, -0.005, color='orange', length_includes_head=True, head_width=0.075, head_length=0.002)
+					annotation = []
+					if pos_data:
+						for j in pos_data:
+							annotation.append(str(results[plan]['positions'][i][2][j]))
+					
+					ax1.annotate(', '.join(annotation), xy=(i + 0.003, ep - 0.003))
 
 			ax1.xaxis_date()
 			ax1.xaxis.set_major_formatter(date_format)

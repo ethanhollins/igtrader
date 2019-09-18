@@ -649,7 +649,8 @@ class Backtester(object):
 		data['positions'] = {}
 		for i in self.closed_positions + self.positions:
 			opentime = mpl_dates.date2num(self.convertTimestampToDatetime(i.opentime))
-			data['positions'][opentime] = (i.direction, i.entryprice)
+			data['positions'][opentime] = (i.direction, i.entryprice, i.data)
+
 
 		data['quotes'] = []
 		overlays = [i for i in self.indicators if i.type == 'overlay']
