@@ -356,10 +356,10 @@ class RootAccount(object):
 
 							style = styles[(i % len(styles))] if styles else None
 
-							ax1.plot(dates, data, linestyle=style, color= colors[(i % len(colors))], alpha=0.7, linewidth=0.5)
+							ax1.plot(dates, data, linestyle=style, color= colors[(i % len(colors))], alpha=0.7, linewidth=0.75)
 					else:
 						style = styles[(i % len(styles))] if styles else None
-						ax1.plot(dates, overlay, linestyle=style, color= colors[(i % len(colors))], alpha=0.7, linewidth=0.5)
+						ax1.plot(dates, overlay, linestyle=style, color= colors[(i % len(colors))], alpha=0.7, linewidth=0.75)
 
 			for i in range(len(results[plan]['studies'])):
 				ax = plt.subplot2grid((4 + len(results[plan]['studies']),1), (4 + i,0), sharex=ax1)
@@ -367,7 +367,7 @@ class RootAccount(object):
 
 				s_type = None
 				if studies:
-					s_type = studies[i]
+					s_type = studies[i][0]
 
 				if len(study) > 0:
 					if type(study[0]) == np.ndarray:
@@ -378,22 +378,33 @@ class RootAccount(object):
 
 							if s_type == 'MACD':
 								if j == 2:
-									y = np.zeros(len(dates))
-									ax.plot(dates, y, alpha=0.5, linewidth=0.75)
+									for z in studies[i][1:]:
+										y = np.ones(len(dates)) * z
+										ax.plot(dates, y, color='black', alpha=0.5, linewidth=0.75)
 									ax.bar(dates, data, alpha=0.8, width=0.1)
 							else:
 								ax.plot(dates, data, alpha=0.8, linewidth=0.75)
 					else:
 						if s_type == 'RSI':
-							y = np.ones(len(dates)) * 50
-							ax.plot(dates, y, alpha=0.5, linewidth=0.75)
-							ax.plot(dates, study, alpha=0.8, linewidth=0.75)
+							for z in studies[i][1:]:
+								y = np.ones(len(dates)) * z
+								ax.plot(dates, y, color='black', alpha=0.5, linewidth=0.75)
+							ax.plot(dates, study, alpha=0.8, linewidth=1)
 						else:
-							ax.plot(dates, study, alpha=0.8, linewidth=0.75)
+							ax.plot(dates, study, alpha=0.8, linewidth=1)
 				
 				ax.xaxis_date()
 				ax.xaxis.set_major_formatter(date_format)
 				ax.autoscale(tight=True)
+
+			for i in results[plan]['positions']:
+				d = results[plan]['positions'][i][0]
+				ep = results[plan]['positions'][i][1]
+
+				if d == Constants.BUY:
+					ax1.arrow(i, ep + 0.002, 0, 0.005, color='blue', length_includes_head=True, head_width=0.075, head_length=0.002)
+				elif d == Constants.SELL:
+					ax1.arrow(i, ep - 0.002, 0, -0.005, color='orange', length_includes_head=True, head_width=0.075, head_length=0.002)
 
 			ax1.xaxis_date()
 			ax1.xaxis.set_major_formatter(date_format)

@@ -470,33 +470,7 @@ class Backtester(object):
 			all_charts.append(charts)
 
 		data = {}
-
-		if self.method == 'show':
-			data['quotes'] = []
-			overlays = [i for i in self.indicators if i.type == 'overlay']
-			studies = [i for i in self.indicators if i.type == 'study']
-			data['overlays'] = [[] for i in overlays]
-			data['studies'] = [[] for i in studies]
-
-			for i in range(all_ts.size):
-				self.c_ts = all_ts[i]
-				time = mpl_dates.date2num(self.convertTimestampToDatetime(self.c_ts))
-				
-				for chart in all_charts[i]:
-					ohlc = chart.getCurrentBidOHLC(self)
-				
-				for i in range(len(overlays)):
-					ind = overlays[i]
-					data['overlays'][i].append(ind.getCurrent(self, chart))
-
-				for i in range(len(studies)):
-					ind = studies[i]
-					data['studies'][i].append(ind.getCurrent(self, chart))
-					
-				data['quotes'].append([time, ohlc[0], ohlc[1], ohlc[2], ohlc[3]])
-			
-			return self.module, data
-		elif self.method == 'step':
+		if self.method == 'step':
 			self.plan_state = PlanState.STEP
 		else:
 			self.plan_state = PlanState.RUN
@@ -513,6 +487,8 @@ class Backtester(object):
 
 		if self.method == 'compare':
 			data = self.getCompletedData(data)
+		elif self.method == 'show':
+			data = self.getCompletedChartData(data, all_ts, all_charts)
 
 		print('Backtest DONE ({0}) {1:.2f}'.format(self.name, timer() - start))
 
@@ -666,6 +642,37 @@ class Backtester(object):
 		data[Constants.GAIN] = round(gain, 2)
 		data[Constants.LOSS] = round(loss, 2)
 		data[Constants.GPR] = round(gain/loss, 2)
+
+		return data
+
+	def getCompletedChartData(self, data, all_ts, all_charts):
+		data['positions'] = {}
+		for i in self.closed_positions + self.positions:
+			opentime = mpl_dates.date2num(self.convertTimestampToDatetime(i.opentime))
+			data['positions'][opentime] = (i.direction, i.entryprice)
+
+		data['quotes'] = []
+		overlays = [i for i in self.indicators if i.type == 'overlay']
+		studies = [i for i in self.indicators if i.type == 'study']
+		data['overlays'] = [[] for i in overlays]
+		data['studies'] = [[] for i in studies]
+
+		for i in range(all_ts.size):
+			self.c_ts = all_ts[i]
+			time = mpl_dates.date2num(self.convertTimestampToDatetime(self.c_ts))
+			
+			for chart in all_charts[i]:
+				ohlc = chart.getCurrentBidOHLC(self)
+			
+			for i in range(len(overlays)):
+				ind = overlays[i]
+				data['overlays'][i].append(ind.getCurrent(self, chart))
+
+			for i in range(len(studies)):
+				ind = studies[i]
+				data['studies'][i].append(ind.getCurrent(self, chart))
+				
+			data['quotes'].append([time, ohlc[0], ohlc[1], ohlc[2], ohlc[3]])
 
 		return data
 

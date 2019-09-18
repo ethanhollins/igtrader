@@ -57,6 +57,7 @@ def stitchData(product, period, data):
 
 			if lon_dt.hour in LONDON_FOUR_BARS:
 				if aus_ts:
+					stitch.append(data[ts])
 					new_ohlc = [0,0,0,0]
 					for i in range(len(stitch)):
 						ohlc = stitch[i]
@@ -79,14 +80,13 @@ def stitchData(product, period, data):
 				aus_ts = convertDatetimeToTimestamp(aus_dt)
 				stitch = []
 			else:
-				stitch.append(data[ts])
+				if aus_ts:
+					stitch.append(data[ts])
 
 		if product == MT_GBPUSD:
 			product = GBPUSD
 
-		with open('{0}MT_{1}_{2}.json'.format(DATA_PATH, product, FOUR_HOURS), 'w') as f:
-			f.write(json.dumps(new_data, indent=4))
-		print('DONE.')
+	return new_data
 
 def reformatData(f_name, product, period):
 	mt_path = '{0}{1}.json'.format(MT_PATH, f_name)
@@ -101,7 +101,10 @@ def reformatData(f_name, product, period):
 			s = s.replace(chr(0), '')
 			data = json.loads(s)
 			data = stitchData(product, period, data)
-			# print(data)
+
+			with open('{0}MT_{1}_{2}.json'.format(DATA_PATH, GBPUSD, FOUR_HOURS), 'w') as f:
+				f.write(json.dumps(data, indent=4))
+			print("DONE.")
 	else:
 		print('{0} does not exist.'.format(f_name))
 
