@@ -105,7 +105,7 @@ class Plan(object):
 		self.maximum_bank = float(info['accounts'][self.account.accountid]['maximum_bank'])
 		self.minimum_bank = float(info['accounts'][self.account.accountid]['minimum_bank'])
 		self.lotsize_min = float(info['accounts'][self.account.accountid]['lotsize_min'])
-		self.is_gslo = info['accounts'][self.account.accountid]['glso']
+		self.is_gslo = info['accounts'][self.account.accountid]['gslo']
 
 	def updatePositions(self):
 		result = self.account.manager.getPositions(self.account.accountid)
