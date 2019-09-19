@@ -366,6 +366,8 @@ def runSequence():
 	if reloop:
 		return runSequence()
 
+	setCtEntryBE()
+
 def preEntrySetup(trigger, blocked=False):
 
 	if trigger and (c_direction != trigger.direction or istemp) and not blocked:
@@ -724,6 +726,14 @@ def ctReverseEntryConfirmation(direction):
 			isMacdReverseConf(direction, reverse=True))
 	)
 
+def setCtEntryBE():
+	for pos in utils.positions:
+		if pos.data['type'] == EntryType.CtEntry.value:
+			if not pos.isBreakeven():
+				direction = Direction.LONG if pos.direction == Constants.BUY else Direction.SHORT
+				if isCloseABKSma(direction) and pos.getPipProfit() >= 30:
+					pos.breakeven()
+
 def isPosInDirection(direction, reverse=False):
 	for pos in utils.positions:
 		if reverse:
@@ -971,6 +981,21 @@ def isCloseABKMaeIn(direction, reverse=False):
 			return close < upper
 		else:
 			return close > lower
+
+def isCloseABKMaeOut(direction, reverse=False):
+	upper, lower = kelt_mae.getCurrent(utils, chart)
+	close = chart.getCurrentBidOHLC(utils)[3]
+
+	if reverse:
+		if direction == Direction.LONG:
+			return close < lower
+		else:
+			return close > upper
+	else:
+		if direction == Direction.LONG:
+			return close > upper
+		else:
+			return close < lower
 
 def isCloseABKeltOut(direction, reverse=False):
 	upper, _, lower = kelt_ch.getCurrent(utils, chart)
