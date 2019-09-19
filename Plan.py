@@ -105,6 +105,7 @@ class Plan(object):
 		self.maximum_bank = float(info['accounts'][self.account.accountid]['maximum_bank'])
 		self.minimum_bank = float(info['accounts'][self.account.accountid]['minimum_bank'])
 		self.lotsize_min = float(info['accounts'][self.account.accountid]['lotsize_min'])
+		self.is_gslo = info['accounts'][self.account.accountid]['glso']
 
 	def updatePositions(self):
 		result = self.account.manager.getPositions(self.account.accountid)
@@ -220,7 +221,8 @@ class Plan(object):
 			product, Constants.BUY, lotsize, 
 			orderType = orderType, 
 			slPrice = slPrice, slRange = slRange,
-			tpPrice = tpPrice, tpRange = tpRange
+			tpPrice = tpPrice, tpRange = tpRange,
+			is_gslo = self.is_gslo
 		)
 
 		orderid = result['dealId']
@@ -262,7 +264,8 @@ class Plan(object):
 			product, Constants.SELL, lotsize, 
 			orderType = orderType, 
 			slPrice = slPrice, slRange = slRange,
-			tpPrice = tpPrice, tpRange = tpRange
+			tpPrice = tpPrice, tpRange = tpRange,
+			is_gslo = self.is_gslo
 		)
 		
 		orderid = result['dealId']

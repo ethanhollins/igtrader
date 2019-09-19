@@ -310,7 +310,8 @@ class IGManager(object):
 		product, direction, lotsize, 
 		orderType = 'MARKET', 
 		slPrice = None, slRange = None,
-		tpPrice = None, tpRange = None
+		tpPrice = None, tpRange = None,
+		is_gslo = False
 	):
 		if not self.getTokens(accountid):
 			return None
@@ -324,7 +325,7 @@ class IGManager(object):
 			"orderType": orderType,
 			"timeInForce": "FILL_OR_KILL",
 			"level": None,
-			"guaranteedStop": "false",
+			"guaranteedStop": str(is_gslo).lower(),
 			"stopLevel": slPrice,
 			"stopDistance": slRange,
 			"trailingStop": "false",
