@@ -97,8 +97,8 @@ class RootAccount(object):
 						self.is_weekend = True
 						continue
 					else:
-						self.manager.reconnectLS(self.ls_client)
 						chart.last_update = datetime.datetime.now()
+						self.manager.reconnectLS(self.ls_client)
 
 	def isWeekend(self):
 		now = datetime.datetime.now()
