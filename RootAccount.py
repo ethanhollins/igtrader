@@ -79,6 +79,20 @@ class RootAccount(object):
 				self.is_weekend = self.isWeekend()
 				continue
 
+			for chart in self.manager.charts:
+				if not chart.last_update or (datetime.datetime.now() - chart.last_update).total_seconds() > TWO_MINUTES:
+					if self.isWeekend():
+						print('isWeekendReset')
+						chart.c_bid = []
+						chart.c_ask = []
+						self.is_weekend = True
+						continue
+					else:
+						print('isClientReconnect {0}'.format(datetime.datetime.now()))
+
+						chart.last_update = datetime.datetime.now()
+						self.ls_client = self.manager.reconnectLS(self.ls_client)
+			
 			for acc in self.accounts:
 				for plan in acc.plans:
 					if plan.plan_state == PlanState.STARTED:
@@ -88,17 +102,6 @@ class RootAccount(object):
 							if not 'onLoop' in str(e):
 								plan.plan_state = PlanState.STOPPED
 								print('PlanError ({0}):\n{1}'.format(acc.accountid, traceback.format_exc()))
-			
-			for chart in self.manager.charts:
-				if not chart.last_update or (datetime.datetime.now() - chart.last_update).total_seconds() > TWO_MINUTES:
-					if self.isWeekend():
-						chart.c_bid = []
-						chart.c_ask = []
-						self.is_weekend = True
-						continue
-					else:
-						chart.last_update = datetime.datetime.now()
-						self.manager.reconnectLS(self.ls_client)
 
 	def isWeekend(self):
 		now = datetime.datetime.now()

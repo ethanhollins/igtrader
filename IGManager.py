@@ -417,50 +417,53 @@ class IGManager(object):
 	'''
 
 	def connectLS(self):
-		if not self.getTokens():
-			return None
-
-		ls_client = LSClient(
-			self.root.root_name,
-			"CST-{0}|XST-{1}".format(
-				self.headers['CST'], 
-				self.headers['X-SECURITY-TOKEN']
-			),
-			self.ls_endpoint
-		)
-
+		count = 1
 		while True:
-			print("Attempting connection...")
+			if not self.getTokens():
+				return None
+
+			ls_client = LSClient(
+				self.root.root_name,
+				"CST-{0}|XST-{1}".format(
+					self.headers['CST'], 
+					self.headers['X-SECURITY-TOKEN']
+				),
+				self.ls_endpoint
+			)
+
+			print("Attempting to connect ({0})...".format(count))
 			try:
 				ls_client.connect()
 				return ls_client
 			except Exception as e:
+				count += 1
 				time.sleep(1)
 				pass
 
 	def reconnectLS(self, ls_client):
-		if not self.getTokens():
-			return None
-
 		subscriptions = ls_client._subscriptions
-	
 		ls_client.disconnect()
 
-		new_ls_client = LSClient(
-			self.root.root_name,
-			"CST-{0}|XST-{1}".format(
-				self.headers['CST'], 
-				self.headers['X-SECURITY-TOKEN']
-			),
-			self.ls_endpoint
-		)
-
+		count = 1
 		while True:
-			print("Attempting connection...")
+			if not self.getTokens():
+				return None
+			
+			new_ls_client = LSClient(
+				self.root.root_name,
+				"CST-{0}|XST-{1}".format(
+					self.headers['CST'], 
+					self.headers['X-SECURITY-TOKEN']
+				),
+				self.ls_endpoint
+			)
+
+			print("Attempting to reconnect ({0})...".format(count))
 			try:
 				new_ls_client.connect()
 				break
 			except Exception as e:
+				count += 1
 				time.sleep(1)
 				pass
 
