@@ -180,6 +180,8 @@ class IGManager(object):
 				self.headers['CST'] = ''
 				return False
 		else:
+			self.headers['X-SECURITY-TOKEN'] = ''
+			self.headers['CST'] = ''
 			return False
 
 	def getTokens(self, accountid=None):
@@ -206,6 +208,11 @@ class IGManager(object):
 				self.switchAccount(accountid)
 
 			return True
+		elif res.status_code == 504:
+			print('Retrieving tokens timed out:\n{0}'.format(res.json()))
+			self.headers['X-SECURITY-TOKEN'] = ''
+			self.headers['CST'] = ''
+			return self.getTokens(accountid)
 		else:
 			print('Error getting tokens:\n{0}'.format(res.json()))
 			return False
@@ -442,7 +449,6 @@ class IGManager(object):
 
 	def reconnectLS(self, ls_client):
 		subscriptions = ls_client._subscriptions
-		ls_client.disconnect()
 
 		count = 1
 		while True:
@@ -466,9 +472,17 @@ class IGManager(object):
 				count += 1
 				time.sleep(1)
 				pass
-
+				
 		for i in subscriptions:
-			new_ls_client.subscribe(subscriptions[i])
+			self.subscribe(
+				new_ls_client, 
+				subscriptions[i].mode, 
+				subscriptions[i].item_names, 
+				subscriptions[i].field_names,
+				subscriptions[i]._listeners[0]
+			)
+			
+		ls_client.disconnect()
 
 		return new_ls_client
 
