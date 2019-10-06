@@ -13,6 +13,10 @@ FOUR_HOURS = 4
 PRICE_FOUR_HOURS = 'HOUR_4'
 FOUR_HOURS_BARS = list(range(0,24,4))
 
+DAILY = 24
+PRICE_DAILY = 'DAY'
+DAILY_BARS = [0]
+
 '''
 Positions
 '''

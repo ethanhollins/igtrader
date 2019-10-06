@@ -41,6 +41,8 @@ class Chart(object):
 	def getPricePeriod(self):
 		if self.period == Constants.FOUR_HOURS:
 			self.price_period = Constants.PRICE_FOUR_HOURS
+		elif self.period == Constants.DAILY:
+			self.price_period = Constants.PRICE_DAILY
 
 	def loadData(self):
 
@@ -93,10 +95,14 @@ class Chart(object):
 		sorted_l = sorted(result['bids'].items(), key=lambda kv: kv[0])
 		latest_ts = sorted_l[-1][0]
 
-		self.c_bid = result['bids'][latest_ts]
-		self.c_ask = result['asks'][latest_ts]
-		result['bids'].pop(latest_ts, None)
-		result['asks'].pop(latest_ts, None)
+		if self.root.isWeekend():
+			self.c_bid = []
+			self.c_ask = []
+		else:
+			self.c_bid = result['bids'][latest_ts]
+			self.c_ask = result['asks'][latest_ts]
+			result['bids'].pop(latest_ts, None)
+			result['asks'].pop(latest_ts, None)
 
 		bids = {int(self.bids_ts[i]):[
 			round(float(self.bids_ohlc[i,0]), 5),
@@ -167,7 +173,7 @@ class Chart(object):
 
 	def getLiveData(self):
 		period = ''
-		if self.period == Constants.FOUR_HOURS:
+		if self.period == Constants.FOUR_HOURS or self.period == Constants.DAILY:
 			period = 'HOUR'
 
 		items = ['Chart:{0}:{1}'.format(self.product, period)]
@@ -247,33 +253,45 @@ class Chart(object):
 
 						new_ts = self.manager.utils.convertDatetimeToTimestamp(now - datetime.timedelta(hours=dist))
 						
-						print('Bid: {0}\nAsk: {1}'.format(self.c_bid, self.c_ask))
+						self.addNewBar(new_ts)
+				
+				elif self.period == Constants.DAILY:
+					now = self.nearestHour(now)
+					lon = self.nearestHour(lon)
+					if lon.hour in Constants.DAILY_BARS:
+						self.reset = True
+						new_ts = self.manager.utils.convertDatetimeToTimestamp(now - datetime.timedelta(hours=24))
+						
+						self.addNewBar(new_ts)
 
-						self.bids_ts = np.append(self.bids_ts, new_ts)
-						self.bids_ohlc = np.append(
-							self.bids_ohlc, 
-							np.round([self.c_bid], decimals=5), 
-							axis=0
-						)
+	def addNewBar(self, new_ts):
+		print('Bid: {0}\nAsk: {1}'.format(self.c_bid, self.c_ask))
 
-						self.asks_ts = np.append(self.asks_ts, new_ts)
-						self.asks_ohlc = np.append(
-							self.asks_ohlc,
-							np.round([self.c_ask], decimals=5),
-							axis=0
-						)
+		self.bids_ts = np.append(self.bids_ts, new_ts)
+		self.bids_ohlc = np.append(
+			self.bids_ohlc, 
+			np.round([self.c_bid], decimals=5), 
+			axis=0
+		)
 
-						for plan in self.subscribed_plans:
-							if plan.plan_state == PlanState.STARTED:
-								plan.c_ts = new_ts
-								try:
-									plan.module.onNewBar(self)
-								except Exception as e:
-									if not 'has no attribute \'onNewBar\'' in str(e):
-										plan.plan_state = PlanState.STOPPED
-										print('PlanError ({0}):\n {1}'.format(plan.account.accountid, traceback.format_exc()))
-								
-						self.saveValues()
+		self.asks_ts = np.append(self.asks_ts, new_ts)
+		self.asks_ohlc = np.append(
+			self.asks_ohlc,
+			np.round([self.c_ask], decimals=5),
+			axis=0
+		)
+
+		for plan in self.subscribed_plans:
+			if plan.plan_state == PlanState.STARTED:
+				plan.c_ts = new_ts
+				try:
+					plan.module.onNewBar(self)
+				except Exception as e:
+					if not 'has no attribute \'onNewBar\'' in str(e):
+						plan.plan_state = PlanState.STOPPED
+						print('PlanError ({0}):\n {1}'.format(plan.account.accountid, traceback.format_exc()))
+				
+		self.saveValues()
 
 	def nearestMinute(self, dt):
 		return (
