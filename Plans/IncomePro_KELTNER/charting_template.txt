@@ -1,0 +1,37 @@
+start_date: 20/9/18 13:00
+
+{
+	"name": "IncomePro_KELTNER/v1.3.17",
+	"variables": {"risk":1.0, "stoprange":130},
+	"colors": ["red", "orange", "red", "brown", "purple", "blue", "black", "grey"],
+	"styles": ["--", "-", "-", "-", "-.", "-.", "-", "-"],
+	"studies": [["RSI", 52, 50, 48], ["MACD", 0, 0.0006, -0.0006]],
+	"pos_data": ["type"]
+}
+
+
+
+
+
+
+
+{
+	"name": "IncomePro_DONCH/v1.2.0",
+	"variables": {"risk":1.0, "stoprange":25}
+},
+{
+	"name": "IncomePro_DONCH/v1.2.0",
+	"variables": {"risk":2.11, "stoprange":50}
+},
+{
+	"name": "IncomePro_DONCH/v1.2.0",
+	"variables": {"risk":3.61, "stoprange":80}
+},
+{
+	"name": "IncomePro_DONCH/v1.2.0",
+	"variables": {"risk":6.41, "stoprange":130}
+},
+{
+	"name": "IncomePro_DONCH/v1.2.0",
+	"variables": {"risk":10.75, "stoprange":200}
+}

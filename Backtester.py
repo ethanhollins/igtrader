@@ -20,6 +20,8 @@ from Indicators.MACD import MACD
 from Indicators.MAE import MAE
 from Indicators.RSI import RSI
 from Indicators.SMA import SMA
+from Indicators.DONCH import DONCH
+from Indicators.DONCH_CMC import DONCH_CMC
 
 class Chart(object):
 
@@ -430,7 +432,6 @@ class Backtester(object):
 	def backtest(self, start=None, end=None, method='run', plan=None):
 		print('Running backtest ({0})...'.format(self.name))
 		self.method = method
-		# 20/9/18 13:00
 		if not plan:
 			self.module = self.execPlan()
 			self.setPlanVariables()
@@ -973,6 +974,16 @@ class Backtester(object):
 		kelt = KELT(period, atr_period, multi)
 		self.indicators.append(kelt)
 		return kelt
+
+	def DONCH(self, period):
+		donch = DONCH(period)
+		self.indicators.append(donch)
+		return donch
+
+	def DONCH_CMC(self, period):
+		donch = DONCH_CMC(period)
+		self.indicators.append(donch)
+		return donch
 
 	def ATR(self, period):
 		atr = ATR(period)
