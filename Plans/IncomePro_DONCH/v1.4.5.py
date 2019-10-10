@@ -96,14 +96,17 @@ def setGlobalVars():
 
 def onNewBar(chart):
 	''' Function called on every new bar '''
-	utils.log("\nonNewBar",'')
-	utils.log('time', utils.getTime().strftime('%d/%m/%y %H:%M:%S'))
+	if utils.plan_state.value in (4,):
+		utils.log("\nonNewBar", utils.getTime().strftime('%d/%m/%y %H:%M:%S'))
+	elif utils.plan_state.value in (1,):
+		utils.log("\n[{0}] onNewBar ({1})".format(utils.account.accountid, utils.name), utils.getTime().strftime('%d/%m/%y %H:%M:%S'))
 	
 	checkTime()
 
 	runSequence()
 
-	report()
+	if utils.plan_state.value in (4,):
+		report()
 
 def onDownTime():
 	''' Function called outside of trading time '''
@@ -221,7 +224,7 @@ def entrySetup(trigger):
 			return confirmation(trigger, EntryType.REGULAR)
 
 def entryConfirmation(direction):
-	if utils.plan_state.value in (1,4):
+	if utils.plan_state.value in (4,):
 		utils.log('entryConfirmation', 'Entry Conf: {0}'.format(
 			isDonchRet(direction, reverse=True)
 		))

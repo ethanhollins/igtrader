@@ -2,7 +2,6 @@ import Constants
 from enum import Enum
 
 VARIABLES = {
-	'TIMEZONE': 'America/New_York',
 	'PRODUCT': Constants.GBPUSD,
 	'BANK': None,
 	'risk': 1.0,
@@ -152,8 +151,10 @@ def setGlobalVars():
 
 def onNewBar(chart):
 	''' Function called on every new bar '''
-	utils.log("\nonNewBar",'')
-	utils.log('time', utils.getTime().strftime('%d/%m/%y %H:%M:%S'))
+	if utils.plan_state.value in (4,):
+		utils.log("\nonNewBar", utils.getTime().strftime('%d/%m/%y %H:%M:%S'))
+	elif utils.plan_state.value in (1,):
+		utils.log("\n[{0}] onNewBar ({1})".format(utils.account.accountid, utils.name), utils.getTime().strftime('%d/%m/%y %H:%M:%S'))
 	
 	checkTime()
 

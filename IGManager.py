@@ -244,19 +244,22 @@ class IGManager(object):
 			return False
 
 	def accountInfo(self, accountid):
-		if not self.getTokens(accountid):
+		if not self.getTokens():
 			return None
 
-		endpoint = 'session'
-		self.headers['Version'] = '2'
-		res = requests.post(
+		endpoint = 'accounts'
+		self.headers['Version'] = '1'
+		res = requests.get(
 			self.url + endpoint, 
-			data=json.dumps(self.creds),
 			headers=self.headers
 		)
 
 		if res.status_code == 200:
-			return res.json()['accountInfo']
+			for account in res.json()['accounts']:
+				if account['accountId'] == accountid:
+					return account
+
+			print('Couldn\'t find account:\n{0}'.format(res.json()))
 		else:
 			print('Error getting tokens:\n{0}'.format(res.json()))
 			return False

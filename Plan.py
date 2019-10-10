@@ -456,7 +456,7 @@ class Plan(object):
 		return 0	
 
 	def getBank(self):
-		return self.account.manager.accountInfo(self.account.accountid)['balance']
+		return self.account.manager.accountInfo(self.account.accountid)['balance']['balance']
 
 	def getTotalBank(self):
 		return self.getBank() + self.external_bank
