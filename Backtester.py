@@ -123,7 +123,7 @@ class Position(object):
 		'backtester', 'orderid', 'product',
 		'direction', 'opentime', 'closetime',
 		'lotsize', 'entryprice', 'closeprice',
-		'sl', 'tp', 'data', 'is_dummy'
+		'sl', 'tp', 'data', 'is_dummy', 'risk'
 	)
 	def __init__(self, 
 		backtester, orderid, 
@@ -143,6 +143,8 @@ class Position(object):
 		self.closeprice = 0
 		self.sl = 0
 		self.tp = 0
+
+		self.risk = 0
 
 		self.is_dummy = False
 
@@ -339,7 +341,9 @@ class Position(object):
 		risk = variables['risk'] if 'risk' in variables else None
 		stoprange = variables['stoprange'] if 'stoprange' in variables else None
 		
-		if stoprange and risk:
+		if stoprange and self.risk:
+			profit = profit / stoprange * self.risk
+		elif stoprange and risk:
 			profit = profit / stoprange * risk
 		else:
 			profit = 0

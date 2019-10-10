@@ -25,6 +25,12 @@ SELL = 'SELL'
 MARKET = 'MARKET'
 
 '''
+Position Status
+'''
+ACCEPTED = 'ACCEPTED'
+REJECTED = 'REJECTED'
+
+'''
 Timestamps
 '''
 import datetime

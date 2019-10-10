@@ -159,7 +159,8 @@ def onNewBar(chart):
 
 	runSequence()
 
-	report()
+	if utils.plan_state.value in (4,):
+		report()
 
 def onDownTime():
 	''' Function called outside of trading time '''
@@ -287,7 +288,7 @@ def checkTime():
 
 def runSequence():
 	''' Main trade plan sequence '''
-	if utils.plan_state.value in (1,4):
+	if utils.plan_state.value in (4,):
 		utils.log(
 			'runSequence',
 			"\n OHLC: {0} SMA: {1} L_ONE: {2} L_TWO: {3}\n L_THREE: {4} B_ONE: {5} B_TWO: {6}\n MACD: {7} KELT_CH: {8} KELT_MAE: {9}".format(
@@ -421,7 +422,7 @@ def preEntrySetup(trigger, blocked=False):
 				return confirmation(trigger, EntryType.PreTEntry)
 
 def preEntryConfirmation(direction):
-	if utils.plan_state.value in (1,4):
+	if utils.plan_state.value in (4,):
 		utils.log('preEntryConfirmation', 'Pre T-Entry Conf: {0} {1} {2} {3} {4} {5}'.format(
 			isWithinKMae(direction), isWithinCtKelt(direction),
 			isMacdDirConf(direction), isRsiDirConf(direction),
@@ -438,7 +439,7 @@ def preEntryConfirmation(direction):
 	)
 
 def preEntryReverseConfirmation(direction, reverse=False):
-	if utils.plan_state.value in (1,4):
+	if utils.plan_state.value in (4,):
 		utils.log('preEntryReverseConfirmation', 'Pre T-Entry Reverse Conf: {0} ({1} or {2}) {3} {4}'.format(
 			isCloseABSma(direction, reverse=not reverse),
 			isCloseABLThreeOut(direction, reverse=not reverse),
@@ -498,7 +499,7 @@ def tEntrySetup(trigger, blocked=False):
 				return setCDirection(trigger.direction)
 
 def tEntryConfimation(direction):
-	if utils.plan_state.value in (1,4):
+	if utils.plan_state.value in (4,):
 		utils.log('tEntryConfimation', 'T-Entry Conf: {0} {1} {2} {3}'.format(
 			isMacdDirConf(direction), isRsiDirConf(direction),
 			isBB(direction), not isDoji()
@@ -609,7 +610,7 @@ def adEntryOne(trigger, blocked=False):
 			return
 
 def adEntryOneConfirmation(direction):
-	if utils.plan_state.value in (1,4):
+	if utils.plan_state.value in (4,):
 		utils.log('adEntryOneConfirmation', 'Ad Entry One Conf: {0} {1} {2} {3}'.format(
 			isCloseABLOneIn(direction, reverse=True),
 			isBB(direction), not isDoji(),
@@ -651,7 +652,7 @@ def adEntryTwo(trigger):
 				return adEntryTwo(trigger)
 
 def adEntryTwoConfirmation(direction):
-	if utils.plan_state.value in (1,4):
+	if utils.plan_state.value in (4,):
 		utils.log('adEntryTwoConfirmation', 'Ad Entry Two Conf: {0} {1}'.format(
 			isBollConfirmation(direction),
 			isCloseABLThreeOut(direction, reverse=True)
@@ -697,7 +698,7 @@ def ctEntry(trigger, blocked=False):
 
 
 def ctEntryConfirmation(direction):
-	if utils.plan_state.value in (1,4):
+	if utils.plan_state.value in (4,):
 		utils.log('ctEntryConfirmation', 'CT Entry Conf: {0} {1} {2} {3} {4} {5}'.format(
 			(isCloseABKeltIn(direction, reverse=True) or
 				isCloseABLThreeIn(direction, reverse=True)),
@@ -719,7 +720,7 @@ def ctEntryConfirmation(direction):
 	)
 
 def ctReverseEntryConfirmation(direction):
-	if utils.plan_state.value in (1,4):
+	if utils.plan_state.value in (4,):
 		utils.log('ctReverseEntryConfirmation', 'CT Reverse Entry Conf: {0} {1}'.format(
 			isConsecBBABKeltMAE(direction, reverse=True),
 			(isBB(direction, reverse=True) and

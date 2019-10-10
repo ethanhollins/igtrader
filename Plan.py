@@ -166,6 +166,11 @@ class Plan(object):
 
 	def onStopLoss(self, pos):
 		if self.plan_state == PlanState.STARTED:
+			if pos:
+				print('[{0}] StopLoss {1} at {2}'.format(
+					pos.orderid, pos.direction, pos.closeprice
+				))
+
 			try:
 				self.module.onStopLoss(pos)
 			except Exception as e:
@@ -175,6 +180,11 @@ class Plan(object):
 
 	def onTakeProfit(self, pos):
 		if self.plan_state == PlanState.STARTED:
+			if pos:
+				print('[{0}] TakeProfit {1} at {2}'.format(
+					pos.orderid, pos.direction, pos.closeprice
+				))
+
 			try:
 				self.module.onTakeProfit(pos)
 			except Exception as e:
@@ -184,6 +194,11 @@ class Plan(object):
 
 	def onClose(self, pos):
 		if self.plan_state == PlanState.STARTED:
+			if pos:
+				print('[{0}] Closed {1} at {2}'.format(
+					pos.orderid, pos.direction, pos.closeprice
+				))
+
 			try:
 				self.module.onClose(pos)
 			except Exception as e:
@@ -193,6 +208,11 @@ class Plan(object):
 
 	def onRejected(self, pos):
 		if self.plan_state == PlanState.STARTED:
+			if pos:
+				print('[{0}] Rejected {1}'.format(
+					pos.orderid, pos.direction
+				))
+
 			try:
 				self.module.onRejected(pos)
 			except Exception as e:
@@ -202,6 +222,11 @@ class Plan(object):
 
 	def onModified(self, pos):
 		if self.plan_state == PlanState.STARTED:
+			if pos:
+				print('[{0}] Modified {1} sl: {2} tp: {3}'.format(
+					pos.orderid, pos.direction, pos.sl, pos.tp
+				))
+
 			try:
 				self.module.onModified(pos)
 			except Exception as e:
@@ -216,7 +241,8 @@ class Plan(object):
 	def buy(self, 
 		product, lotsize, orderType='MARKET', 
 		slPrice=None, slRange=None, 
-		tpPrice=None, tpRange=None
+		tpPrice=None, tpRange=None,
+		attempts=0
 	):
 		result = self.account.manager.createPosition(
 			self.account.accountid,
@@ -228,23 +254,45 @@ class Plan(object):
 		)
 
 		orderid = result['dealId']
+		
 		pos = None
-		start = time.time()
-		while True:
-			for i in self.account.position_queue:
-				if i.orderid == orderid:
-					del self.account.position_queue[self.account.position_queue.index(i)]
-					self.positions.append(i)
-					i.plan = self
-					pos = i
-					break
+		if result['dealStatus'] == Constants.ACCEPTED:
+			start = time.time()
+			while True:
+				for i in self.account.position_queue:
+					if i.orderid == orderid:
+						del self.account.position_queue[self.account.position_queue.index(i)]
+						self.positions.append(i)
+						i.plan = self
+						pos = i
+						break
 
-			if pos:
-				break
-			elif time.time() - start > 10:
-				print('PlanError ({0}): Unable to retrieve position.'.format(self.account.accountid))
-				return None
-			time.sleep(0.01)
+				if pos:
+					break
+				elif time.time() - start > 10:
+					print('PlanError ({0}): Unable to retrieve position.'.format(self.account.accountid))
+					return None
+				time.sleep(0.01)
+
+		elif result['dealStatus'] == Constants.REJECTED:
+			if attempts >= 5:
+				raise Exception('PlanError ({0}): Exceeded max position attempts ({1}).\n{2}'.format(
+					self.account.accountid, attempts, result
+				))
+				return
+
+			elif 'RETRY_ON_REJECTED' in self.module.VARIABLES and self.module.VARIABLES['RETRY_ON_REJECTED']:
+				return self.buy(
+					product, lotsize, orderType=orderType, 
+					slPrice=slPrice, slRange=slRange, 
+					tpPrice=tpPrice, tpRange=tpRange,
+					attempts= attempts + 1
+				)
+
+		if pos:
+			print('[{0}] Confirmed {1} ({2}) at {3} sl: {4} tp: {5}'.format(
+				pos.orderid, pos.direction, pos.lotsize, pos.entryprice, pos.sl, pos.tp
+			))
 
 		try:
 			self.module.onEntry(pos)
@@ -259,7 +307,8 @@ class Plan(object):
 	def sell(self,
 		product, lotsize, orderType='MARKET', 
 		slPrice=None, slRange=None, 
-		tpPrice=None, tpRange=None
+		tpPrice=None, tpRange=None,
+		attempts=0
 	):
 		result = self.account.manager.createPosition(
 			self.account.accountid,
@@ -271,22 +320,45 @@ class Plan(object):
 		)
 		
 		orderid = result['dealId']
+
 		pos = None
-		start = time.time()
-		while True:
-			for i in self.account.position_queue:
-				if i.orderid == orderid:
-					del self.account.position_queue[self.account.position_queue.index(i)]
-					i.plan = self
-					self.positions.append(i)
-					pos = i
+		if result['dealStatus'] == Constants.ACCEPTED:
+			start = time.time()
+			while True:
+				for i in self.account.position_queue:
+					if i.orderid == orderid:
+						del self.account.position_queue[self.account.position_queue.index(i)]
+						i.plan = self
+						self.positions.append(i)
+						pos = i
+						break
+							
+				if pos:
 					break
-			if pos:
-				break
-			elif time.time() - start > 10:
-				print('PlanError ({0}): Unable to retrieve position.'.format(self.account.accountid))
-				return None
-			time.sleep(0.01)
+				elif time.time() - start > 10:
+					print('PlanError ({0}): Unable to retrieve position.'.format(self.account.accountid))
+					return None
+				time.sleep(0.01)
+
+		elif result['dealStatus'] == Constants.REJECTED:
+			if attempts >= 5:
+				raise Exception('PlanError ({0}): Exceeded max position attempts ({1}).\n{2}'.format(
+					self.account.accountid, attempts, result
+				))
+				return
+
+			elif 'RETRY_ON_REJECTED' in self.module.VARIABLES and self.module.VARIABLES['RETRY_ON_REJECTED']:
+				return self.sell(
+					product, lotsize, orderType=orderType, 
+					slPrice=slPrice, slRange=slRange, 
+					tpPrice=tpPrice, tpRange=tpRange,
+					attempts= attempts + 1
+				)
+
+		if pos:
+			print('[{0}] Confirmed {1} ({2}) at {3} sl: {4} tp: {5}'.format(
+				pos.orderid, pos.direction, pos.lotsize, pos.entryprice, pos.sl, pos.tp
+			))
 
 		try:
 			self.module.onEntry(pos)

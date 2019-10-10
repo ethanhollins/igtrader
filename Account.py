@@ -66,7 +66,6 @@ class Account(object):
 					if opu['limitLevel']:
 						pos.tp = float(opu['limitLevel'])
 
-					print(dict(pos))
 					self.position_queue.append(pos)
 
 				elif opu['status'] == 'DELETED':

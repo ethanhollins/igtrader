@@ -3,7 +3,8 @@ from enum import Enum
 import time
 
 VARIABLES = {
-	'PRODUCT': Constants.GBPUSD
+	'PRODUCT': Constants.GBPUSD,
+	'RETRY_ON_REJECTED': True
 }
 
 
@@ -36,7 +37,7 @@ def onLoop():
 	if count == 0:
 		if utils.plan_state.value == 1:
 
-			utils.sell(VARIABLES['PRODUCT'], 1, slRange=4, tpRange=4)
+			utils.sell(VARIABLES['PRODUCT'], 1, slRange=20, tpRange=20)
 			# utils.sell(VARIABLES['PRODUCT'], 2, slPrice=1.45, tpPrice=1.16)
 			# time.sleep(2)
 			# # print('modify')

@@ -21,6 +21,8 @@ class Position(object):
 		self.sl = 0
 		self.tp = 0
 
+		self.risk = 0
+
 		self.is_dummy = False
 
 		self.data = {}
