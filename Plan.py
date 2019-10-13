@@ -141,6 +141,7 @@ class Plan(object):
 		for pos in self.positions:
 			save.append({
 				'orderid': pos.orderid,
+				'direction': pos.direction,
 				'data': pos.data,
 				'is_dummy': pos.is_dummy
 			})
