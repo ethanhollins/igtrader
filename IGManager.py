@@ -40,6 +40,8 @@ class IGManager(object):
 			'encryptedPassword': None
 		}
 
+		self.attempts = 0;
+
 	def getRootDict(self):
 		root_path = 'Accounts/{0}.json'.format(self.root.root_name)
 		with open(root_path, 'r') as f:
@@ -203,19 +205,24 @@ class IGManager(object):
 			self.headers['CST'] = res.headers.get('CST')
 			self.saveTokens()
 			self.ls_endpoint = res.json().get('lightstreamerEndpoint')
+			self.attempts = 0
 
 			if accountid:
-				self.switchAccount(accountid)
+				if self.switchAccount(accountid):
+					return True
+				else:
+					return False
 
 			return True
-		elif res.status_code == 504:
-			print('Retrieving tokens timed out:\n{0}'.format(res.json()))
-			self.headers['X-SECURITY-TOKEN'] = ''
-			self.headers['CST'] = ''
-			return self.getTokens(accountid)
 		else:
 			print('Error getting tokens:\n{0}'.format(res.json()))
-			return False
+			if self.attempts >= 5:
+				return False
+			else:
+				self.headers['X-SECURITY-TOKEN'] = ''
+				self.headers['CST'] = ''
+				self.attempts += 1
+				return self.getTokens(accountid)
 
 	def switchAccount(self, accountid):
 		if self.current_account == accountid:
@@ -238,10 +245,15 @@ class IGManager(object):
 			if res.headers.get('X-SECURITY-TOKEN'):
 				self.headers['X-SECURITY-TOKEN'] = res.headers.get('X-SECURITY-TOKEN')
 			self.saveTokens()
+			self.attempts = 0
 			return True
 		else:
 			print('Error:\n{0}'.format(res.json()))
-			return False
+			if self.attempts >= 5:
+				return False
+			else:
+				self.attempts += 1
+				return self.switchAccount(accountid)
 
 	def accountInfo(self, accountid):
 		if not self.getTokens():
