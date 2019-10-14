@@ -211,6 +211,7 @@ class IGManager(object):
 			self.saveTokens()
 			self.ls_endpoint = res.json().get('lightstreamerEndpoint')
 			self.attempts = 0
+			self.current_account = None
 
 			if accountid:
 				if self.switchAccount(accountid):
@@ -344,40 +345,39 @@ class IGManager(object):
 		if not self.getTokens(accountid):
 			return None
 
-		print(accountid)
-		# endpoint = 'positions/otc'
-		# payload = {
-		# 	"epic": product,
-		# 	"expiry": "-",
-		# 	"direction": direction,
-		# 	"size": lotsize,
-		# 	"orderType": orderType,
-		# 	"timeInForce": "FILL_OR_KILL",
-		# 	"level": None,
-		# 	"guaranteedStop": str(is_gslo).lower(),
-		# 	"stopLevel": slPrice,
-		# 	"stopDistance": slRange,
-		# 	"trailingStop": "false",
-		# 	"trailingStopIncrement": None,
-		# 	"forceOpen": "true",
-		# 	"limitLevel": tpPrice,
-		# 	"limitDistance": tpRange,
-		# 	"quoteId": None,
-		# 	"currencyCode": "USD"
-		# }
+		endpoint = 'positions/otc'
+		payload = {
+			"epic": product,
+			"expiry": "-",
+			"direction": direction,
+			"size": lotsize,
+			"orderType": orderType,
+			"timeInForce": "FILL_OR_KILL",
+			"level": None,
+			"guaranteedStop": str(is_gslo).lower(),
+			"stopLevel": slPrice,
+			"stopDistance": slRange,
+			"trailingStop": "false",
+			"trailingStopIncrement": None,
+			"forceOpen": "true",
+			"limitLevel": tpPrice,
+			"limitDistance": tpRange,
+			"quoteId": None,
+			"currencyCode": "USD"
+		}
 
-		# self.headers['Version'] = '2'
-		# res = requests.post(
-		# 	self.url + endpoint, 
-		# 	data=json.dumps(payload),
-		# 	headers=self.headers
-		# )
+		self.headers['Version'] = '2'
+		res = requests.post(
+			self.url + endpoint, 
+			data=json.dumps(payload),
+			headers=self.headers
+		)
 
-		# if res.status_code == 200:
-		# 	return self.getReferenceDetails(accountid, res.json()['dealReference'])
-		# else:
-		# 	print('Error creating position ({0}):\n{1}'.format(res.status_code, res.json()))
-		# 	return None
+		if res.status_code == 200:
+			return self.getReferenceDetails(accountid, res.json()['dealReference'])
+		else:
+			print('Error creating position ({0}):\n{1}'.format(res.status_code, res.json()))
+			return None
 
 	def modifyPosition(self, accountid, orderid, slPrice=None, tpPrice=None):
 		if not self.getTokens(accountid):
