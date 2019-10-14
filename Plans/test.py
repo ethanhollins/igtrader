@@ -37,7 +37,9 @@ def onLoop():
 	if count == 0:
 		if utils.plan_state.value == 1:
 			print(utils.getBank())
-			# utils.sell(VARIABLES['PRODUCT'], 1, slRange=20, tpRange=20)
+			for pos in utils.positions:
+				pos.close()
+			utils.sell(VARIABLES['PRODUCT'], 1, slRange=20, tpRange=20)
 			# utils.sell(VARIABLES['PRODUCT'], 2, slPrice=1.45, tpPrice=1.16)
 			# time.sleep(2)
 			# # print('modify')

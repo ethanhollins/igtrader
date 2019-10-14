@@ -177,7 +177,7 @@ class IGManager(object):
 				self.headers['CST'] = ''
 				return False
 			else:
-				print('Error checking tokens:\n{0}'.format(res.json()))
+				print('Error checking tokens ({0}):\n{1}'.format(res.status_code, res.json()))
 				self.headers['X-SECURITY-TOKEN'] = ''
 				self.headers['CST'] = ''
 				return False
@@ -189,7 +189,10 @@ class IGManager(object):
 	def getTokens(self, accountid=None):
 		if self.checkTokens():
 			if accountid:
-				self.switchAccount(accountid)
+				if self.switchAccount(accountid):
+					return True
+				else:
+					return False
 			return True
 
 		endpoint = 'session'
@@ -201,6 +204,8 @@ class IGManager(object):
 		)
 
 		if res.status_code == 200:
+			print('Tokens retrieved ({0})'.format(res.status_code))
+
 			self.headers['X-SECURITY-TOKEN'] = res.headers.get('X-SECURITY-TOKEN')
 			self.headers['CST'] = res.headers.get('CST')
 			self.saveTokens()
@@ -215,7 +220,7 @@ class IGManager(object):
 
 			return True
 		else:
-			print('Error getting tokens:\n{0}'.format(res.json()))
+			print('Error getting tokens ({0}):\n{1}'.format(res.status_code, res.json()))
 			if self.attempts >= 5:
 				return False
 			else:
@@ -241,6 +246,7 @@ class IGManager(object):
 		)
 
 		if res.status_code == 200 or res.status_code == 412:
+			print('[{0}] Account switched ({1})'.format(accountid, res.status_code))
 			self.current_account = accountid
 			if res.headers.get('X-SECURITY-TOKEN'):
 				self.headers['X-SECURITY-TOKEN'] = res.headers.get('X-SECURITY-TOKEN')
@@ -248,7 +254,7 @@ class IGManager(object):
 			self.attempts = 0
 			return True
 		else:
-			print('Error:\n{0}'.format(res.json()))
+			print('Error switching account ({0}):\n{1}'.format(res.status_code, res.json()))
 			if self.attempts >= 5:
 				return False
 			else:
@@ -273,7 +279,7 @@ class IGManager(object):
 
 			print('Couldn\'t find account:\n{0}'.format(res.json()))
 		else:
-			print('Error getting tokens:\n{0}'.format(res.json()))
+			print('Error getting account info ({0}):\n{1}'.format(res.status_code, res.json()))
 			return False
 
 	def getPositions(self, accountid):
@@ -338,39 +344,40 @@ class IGManager(object):
 		if not self.getTokens(accountid):
 			return None
 
-		endpoint = 'positions/otc'
-		payload = {
-			"epic": product,
-			"expiry": "-",
-			"direction": direction,
-			"size": lotsize,
-			"orderType": orderType,
-			"timeInForce": "FILL_OR_KILL",
-			"level": None,
-			"guaranteedStop": str(is_gslo).lower(),
-			"stopLevel": slPrice,
-			"stopDistance": slRange,
-			"trailingStop": "false",
-			"trailingStopIncrement": None,
-			"forceOpen": "true",
-			"limitLevel": tpPrice,
-			"limitDistance": tpRange,
-			"quoteId": None,
-			"currencyCode": "USD"
-		}
+		print(accountid)
+		# endpoint = 'positions/otc'
+		# payload = {
+		# 	"epic": product,
+		# 	"expiry": "-",
+		# 	"direction": direction,
+		# 	"size": lotsize,
+		# 	"orderType": orderType,
+		# 	"timeInForce": "FILL_OR_KILL",
+		# 	"level": None,
+		# 	"guaranteedStop": str(is_gslo).lower(),
+		# 	"stopLevel": slPrice,
+		# 	"stopDistance": slRange,
+		# 	"trailingStop": "false",
+		# 	"trailingStopIncrement": None,
+		# 	"forceOpen": "true",
+		# 	"limitLevel": tpPrice,
+		# 	"limitDistance": tpRange,
+		# 	"quoteId": None,
+		# 	"currencyCode": "USD"
+		# }
 
-		self.headers['Version'] = '2'
-		res = requests.post(
-			self.url + endpoint, 
-			data=json.dumps(payload),
-			headers=self.headers
-		)
+		# self.headers['Version'] = '2'
+		# res = requests.post(
+		# 	self.url + endpoint, 
+		# 	data=json.dumps(payload),
+		# 	headers=self.headers
+		# )
 
-		if res.status_code == 200:
-			return self.getReferenceDetails(accountid, res.json()['dealReference'])
-		else:
-			print('Error:\n{0}'.format(res.json()))
-			return None
+		# if res.status_code == 200:
+		# 	return self.getReferenceDetails(accountid, res.json()['dealReference'])
+		# else:
+		# 	print('Error creating position ({0}):\n{1}'.format(res.status_code, res.json()))
+		# 	return None
 
 	def modifyPosition(self, accountid, orderid, slPrice=None, tpPrice=None):
 		if not self.getTokens(accountid):
@@ -431,7 +438,7 @@ class IGManager(object):
 		if res.status_code == 200:
 			return self.getReferenceDetails(accountid, res.json()['dealReference'])
 		else:
-			print('Error:\n{0}'.format(res.json()))
+			print('Error closing position ({0}):\n{1}'.format(res.status_code, res.json()))
 			return None
 
 	'''
