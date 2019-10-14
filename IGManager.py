@@ -223,11 +223,13 @@ class IGManager(object):
 		else:
 			print('Error getting tokens ({0}):\n{1}'.format(res.status_code, res.json()))
 			if self.attempts >= 5:
+				self.attempts = 0
 				return False
 			else:
 				self.headers['X-SECURITY-TOKEN'] = ''
 				self.headers['CST'] = ''
 				self.attempts += 1
+				print('Reattempting token retrieval ({1})'.format(self.attempts))
 				return self.getTokens(accountid)
 
 	def switchAccount(self, accountid):
@@ -257,9 +259,11 @@ class IGManager(object):
 		else:
 			print('Error switching account ({0}):\n{1}'.format(res.status_code, res.json()))
 			if self.attempts >= 5:
+				self.attempts = 0
 				return False
 			else:
 				self.attempts += 1
+				print('[{0}] Reattempting account switch ({1})'.format(accountid, self.attempts))
 				return self.switchAccount(accountid)
 
 	def accountInfo(self, accountid):
