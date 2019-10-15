@@ -17,6 +17,7 @@ import datetime
 import numpy as np
 
 TWO_MINUTES = 60 * 2
+ONE_HOUR = 60*60
 
 class RootAccount(object):
 	
@@ -78,6 +79,9 @@ class RootAccount(object):
 			if self.is_weekend:
 				self.is_weekend = self.isWeekend()
 				continue
+
+			if (datetime.datetime.now() - self.manager.last_token_update).total_seconds() > ONE_HOUR:
+				self.manager.getTokens()
 
 			for chart in self.manager.charts:
 				if not chart.last_update or (datetime.datetime.now() - chart.last_update).total_seconds() > TWO_MINUTES:

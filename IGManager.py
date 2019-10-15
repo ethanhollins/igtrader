@@ -7,6 +7,7 @@ import requests
 import json
 import traceback
 import time
+import datetime
 
 class IGManager(object):
 
@@ -33,14 +34,13 @@ class IGManager(object):
 		}
 
 		self.getSavedTokens()
+		self.last_token_update = None
 
 		self.creds = {
 			'identifier': self.root.username,
 			'password': self.root.password,
 			'encryptedPassword': None
 		}
-
-		self.attempts = 0;
 
 	def getRootDict(self):
 		root_path = 'Accounts/{0}.json'.format(self.root.root_name)
@@ -171,7 +171,6 @@ class IGManager(object):
 
 			if res.status_code == 200:
 				self.ls_endpoint = res.json()['lightstreamerEndpoint']
-				# self.current_account = res.json().get('currentAccountId')
 				return True
 			elif res.status_code == 401:
 				self.headers['X-SECURITY-TOKEN'] = ''
@@ -187,14 +186,14 @@ class IGManager(object):
 			self.headers['CST'] = ''
 			return False
 
-	def getTokens(self, accountid=None):
-		if self.checkTokens():
-			if accountid:
-				if self.switchAccount(accountid):
-					return True
-				else:
-					return False
-			return True
+	def getTokens(self, accountid=None, attempts=0):
+		# if self.checkTokens():
+		# 	if accountid:
+		# 		if self.switchAccount(accountid):
+		# 			return True
+		# 		else:
+		# 			return False
+		# 	return True
 
 		endpoint = 'session'
 		self.headers['Version'] = '2'
@@ -214,7 +213,7 @@ class IGManager(object):
 			self.saveTokens()
 			self.ls_endpoint = res.json().get('lightstreamerEndpoint')
 			self.current_account = res.json().get('currentAccountId')
-			self.attempts = 0
+			self.last_token_update = datetime.datetime.now()
 
 			if accountid:
 				if self.switchAccount(accountid):
@@ -225,17 +224,16 @@ class IGManager(object):
 			return True
 		else:
 			print('Error getting tokens ({0}):\n{1}'.format(res.status_code, res.json()))
-			if self.attempts >= 5:
-				self.attempts = 0
+			if attempts >= 5:
 				return False
 			else:
 				self.headers['X-SECURITY-TOKEN'] = ''
 				self.headers['CST'] = ''
-				self.attempts += 1
-				print('Reattempting token retrieval ({1})'.format(self.attempts))
-				return self.getTokens(accountid)
+				attempts += 1
+				print('Reattempting token retrieval ({0})'.format(attempts))
+				return self.getTokens(accountid, attempts=attempts+1)
 
-	def switchAccount(self, accountid):
+	def switchAccount(self, accountid, attempts=0):
 		if self.current_account == accountid:
 			print('[{0}] Is already currrent.'.format(accountid))
 			return True
@@ -258,20 +256,26 @@ class IGManager(object):
 			if res.headers.get('X-SECURITY-TOKEN'):
 				self.headers['X-SECURITY-TOKEN'] = res.headers.get('X-SECURITY-TOKEN')
 			self.saveTokens()
-			self.attempts = 0
 			return True
-		else:
-			print('Error switching account ({0}):\n{1}'.format(res.status_code, res.json()))
-			if self.attempts >= 5:
-				self.attempts = 0
+		elif res.status_code == 401:
+			if attempts >= 5:
 				return False
 			else:
-				self.attempts += 1
-				print('[{0}] Reattempting account switch ({1})'.format(accountid, self.attempts))
-				return self.switchAccount(accountid)
+				attempts += 1
+				print('Recollecting Tokens ({0})'.format(res.status_code))
+				return self.getTokens(accountid)
+
+		else:
+			print('Error switching account ({0}):\n{1}'.format(res.status_code, res.json()))
+			if attempts >= 5:
+				return False
+			else:
+				attempts += 1
+				print('[{0}] Reattempting account switch ({1})'.format(accountid, attempts))
+				return self.switchAccount(accountid, attempts=attempts+1)
 
 	def accountInfo(self, accountid):
-		if not self.getTokens():
+		if not self.switchAccount(accountid):
 			return None
 
 		endpoint = 'accounts'
@@ -292,7 +296,7 @@ class IGManager(object):
 			return False
 
 	def getPositions(self, accountid):
-		if not self.getTokens(accountid):
+		if not self.switchAccount(accountid):
 			return None
 
 		endpoint = 'positions'
@@ -309,7 +313,7 @@ class IGManager(object):
 			return None
 
 	def getPosition(self, accountid, orderid):
-		if not self.getTokens(accountid):
+		if not self.switchAccount(accountid):
 			return None
 
 		endpoint = 'positions/{0}'.format(orderid)
@@ -326,7 +330,7 @@ class IGManager(object):
 			return None
 
 	def getReferenceDetails(self, accountid, ref):
-		if not self.getTokens(accountid):
+		if not self.switchAccount(accountid):
 			return None
 
 		endpoint = 'confirms/{0}'.format(ref)
@@ -350,7 +354,7 @@ class IGManager(object):
 		tpPrice = None, tpRange = None,
 		is_gslo = False
 	):
-		if not self.getTokens(accountid):
+		if not self.switchAccount(accountid):
 			return None
 
 		endpoint = 'positions/otc'
@@ -388,7 +392,7 @@ class IGManager(object):
 			return None
 
 	def modifyPosition(self, accountid, orderid, slPrice=None, tpPrice=None):
-		if not self.getTokens(accountid):
+		if not self.switchAccount(accountid):
 			return None
 
 		endpoint = 'positions/otc/{0}'.format(orderid)
@@ -414,7 +418,7 @@ class IGManager(object):
 			return None
 
 	def closePosition(self, accountid, pos):
-		if not self.getTokens(accountid):
+		if not self.switchAccount(accountid):
 			return None
 
 		endpoint = 'positions/otc'
