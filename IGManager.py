@@ -171,7 +171,7 @@ class IGManager(object):
 
 			if res.status_code == 200:
 				self.ls_endpoint = res.json()['lightstreamerEndpoint']
-				self.current_account = res.json().get('currentAccountId')
+				# self.current_account = res.json().get('currentAccountId')
 				return True
 			elif res.status_code == 401:
 				self.headers['X-SECURITY-TOKEN'] = ''
