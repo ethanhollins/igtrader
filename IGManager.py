@@ -187,16 +187,11 @@ class IGManager(object):
 			return False
 
 	def getTokens(self, accountid=None):
-		if self.checkTokens():
-			if accountid:
-				if self.switchAccount(accountid):
-					return True
-				else:
-					return False
-			return True
-
+		
 		endpoint = 'session'
 		self.headers['Version'] = '2'
+		self.headers['X-SECURITY-TOKEN'] = ''
+		self.headers['CST'] = ''
 		res = requests.post(
 			self.url + endpoint, 
 			data=json.dumps(self.creds),
@@ -211,7 +206,7 @@ class IGManager(object):
 			self.saveTokens()
 			self.ls_endpoint = res.json().get('lightstreamerEndpoint')
 			self.attempts = 0
-			self.current_account = None
+			self.current_account = res.json().get('currentAccountId')
 
 			if accountid:
 				if self.switchAccount(accountid):
@@ -234,6 +229,7 @@ class IGManager(object):
 
 	def switchAccount(self, accountid):
 		if self.current_account == accountid:
+			print('[{0}] Is already currrent.'.format(accountid))
 			return True
 
 		endpoint = 'session'
