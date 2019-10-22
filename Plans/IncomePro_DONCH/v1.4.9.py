@@ -66,9 +66,11 @@ def init(utilities):
 
 	setup(utilities)
 
-	global donch
+	global donch, boll_one, boll_two
 
 	donch = utils.DONCH(VARIABLES['donch'])
+	boll_one = utils.BOLL(10, 2.2)
+	boll_two = utils.BOLL(20, 1.9)
 	
 	setGlobalVars()
 
@@ -211,8 +213,8 @@ def checkTime():
 def runSequence():
 
 	if time_state != TimeState.STOP:
-		if entrySetup(long_trigger): return
-		if entrySetup(short_trigger): return
+		entrySetup(long_trigger)
+		entrySetup(short_trigger)
 		adEntrySetup(long_trigger)
 		adEntrySetup(short_trigger)
 
@@ -230,7 +232,8 @@ def entryConfirmation(direction):
 		))
 
 	return (
-		isDonchRet(direction, reverse=True)
+		isDonchRet(direction, reverse=True) and
+		not isBollHit(direction)
 	)
 
 def adEntrySetup(trigger):
@@ -321,6 +324,43 @@ def isBB(direction, reverse=False):
 def isDoji():
 	_open, _, _, close = chart.getCurrentBidOHLC(utils)
 	return not utils.convertToPips(abs(round(_open - close, 5))) >= VARIABLES['doji_range']
+
+def isBollHit(direction):
+
+	return (
+		isHitBollOne(direction) and 
+		isHitBollTwo(direction)
+	)
+
+def isHitBollOne(direction, reverse=False):
+	upper, lower = boll_one.getCurrent(utils, chart)
+	_, high, low, _ = chart.getCurrentBidOHLC(utils)
+
+	if reverse:
+		if direction == Direction.LONG:
+			return low <= lower
+		else:
+			return high >= upper
+	else:
+		if direction == Direction.LONG:
+			return high >= upper
+		else:
+			return low <= lower
+
+def isHitBollTwo(direction, reverse=False):
+	upper, lower = boll_two.getCurrent(utils, chart)
+	_, high, low, _ = chart.getCurrentBidOHLC(utils)
+
+	if reverse:
+		if direction == Direction.LONG:
+			return low <= lower
+		else:
+			return high >= upper
+	else:
+		if direction == Direction.LONG:
+			return high >= upper
+		else:
+			return low <= lower
 
 def isPositionInDirection(direction, reverse=False):
 	for pos in utils.positions:

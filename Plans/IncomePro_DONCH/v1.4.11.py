@@ -270,10 +270,9 @@ def adEntryConfirmation(trigger):
 	trigger.ad_entry_line = getAdEntryLine(trigger)
 	return False	
 
-def resetOppositeTrigger(direction):
-	if direction == Direction.LONG:
+def resetOppositeTrigger(trigger):
+	if trigger.entry_type == EntryType.REGULAR:
 		short_trigger.ad_entry_state = AdEntryState.ONE
-	else:
 		long_trigger.ad_entry_state = AdEntryState.ONE
 
 def isDonchRet(direction, reverse=False):
@@ -342,8 +341,8 @@ def confirmation(trigger, entry_type, reverse=False):
 	global pending_entry
 
 	utils.log("confirmation", '{0} {1}'.format(trigger.direction, reverse))
-	resetOppositeTrigger(trigger.direction)
 	trigger.entry_type = entry_type
+	resetOppositeTrigger(trigger)
 	pending_entry = trigger
 	return True
 

@@ -66,9 +66,12 @@ def init(utilities):
 
 	setup(utilities)
 
-	global donch
+	global donch, boll_one, boll_two, kelt
 
 	donch = utils.DONCH(VARIABLES['donch'])
+	boll_one = utils.BOLL(10, 2.2)
+	boll_two = utils.BOLL(20, 1.9)
+	kelt = utils.KELT(20, 20, 1.5)
 	
 	setGlobalVars()
 
@@ -211,8 +214,8 @@ def checkTime():
 def runSequence():
 
 	if time_state != TimeState.STOP:
-		if entrySetup(long_trigger): return
-		if entrySetup(short_trigger): return
+		entrySetup(long_trigger)
+		entrySetup(short_trigger)
 		adEntrySetup(long_trigger)
 		adEntrySetup(short_trigger)
 
@@ -220,7 +223,7 @@ def entrySetup(trigger):
 
 	if trigger and not isPositionInDirection(trigger.direction):
 
-		if entryConfirmation(trigger.direction):
+		if entryConfirmation(trigger.direction) and not isKeltOutside():
 			return confirmation(trigger, EntryType.REGULAR)
 
 def entryConfirmation(direction):
@@ -245,7 +248,7 @@ def adEntrySetup(trigger):
 				return
 
 		elif trigger.ad_entry_state == AdEntryState.TWO:
-			if adEntryConfirmation(trigger):
+			if adEntryConfirmation(trigger) and not isKeltOutside():
 				trigger.ad_entry_state = AdEntryState.COMPLETE
 				return confirmation(trigger, EntryType.ADDITIONAL)
 
@@ -321,6 +324,54 @@ def isBB(direction, reverse=False):
 def isDoji():
 	_open, _, _, close = chart.getCurrentBidOHLC(utils)
 	return not utils.convertToPips(abs(round(_open - close, 5))) >= VARIABLES['doji_range']
+
+def isBollHit(direction):
+
+	return (
+		isHitBollOne(direction) and 
+		isHitBollTwo(direction)
+	)
+
+def isHitBollOne(direction, reverse=False):
+	upper, lower = boll_one.getCurrent(utils, chart)
+	_, high, low, _ = chart.getCurrentBidOHLC(utils)
+
+	if reverse:
+		if direction == Direction.LONG:
+			return low <= lower
+		else:
+			return high >= upper
+	else:
+		if direction == Direction.LONG:
+			return high >= upper
+		else:
+			return low <= lower
+
+def isHitBollTwo(direction, reverse=False):
+	upper, lower = boll_two.getCurrent(utils, chart)
+	_, high, low, _ = chart.getCurrentBidOHLC(utils)
+
+	if reverse:
+		if direction == Direction.LONG:
+			return low <= lower
+		else:
+			return high >= upper
+	else:
+		if direction == Direction.LONG:
+			return high >= upper
+		else:
+			return low <= lower
+
+def isKeltOutside():
+	boll_one_upper, boll_one_lower = boll_one.getCurrent(utils, chart)
+	boll_two_upper, boll_two_lower = boll_two.getCurrent(utils, chart)
+	donch_upper, donch_lower = donch.getCurrent(utils, chart)
+	k_upper, _, k_lower = kelt.getCurrent(utils, chart)
+
+	return (
+		k_upper > boll_one_upper and k_upper > boll_two_upper and k_upper > donch_upper and
+		k_lower < boll_one_lower and k_lower < boll_two_lower and k_lower < donch_lower
+	)
 
 def isPositionInDirection(direction, reverse=False):
 	for pos in utils.positions:
