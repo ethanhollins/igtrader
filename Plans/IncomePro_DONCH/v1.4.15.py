@@ -17,6 +17,11 @@ class Direction(Enum):
 	LONG = 1
 	SHORT = 2
 
+class EntryState(Enum):
+	ONE = 1
+	TWO = 2
+	COMPLETE = 3
+
 class AdEntryState(Enum):
 	ONE = 1
 	TWO = 2
@@ -47,6 +52,7 @@ class Trigger(dict):
 	def __init__(self, direction):
 		self.direction = direction
 		
+		self.entry_state = EntryState.ONE
 		self.ad_entry_state = AdEntryState.ONE
 		self.ad_entry_line = 0
 
@@ -213,24 +219,30 @@ def runSequence():
 	if time_state != TimeState.STOP:
 		if entrySetup(long_trigger): return
 		if entrySetup(short_trigger): return
-		# adEntrySetup(long_trigger)
-		# adEntrySetup(short_trigger)
+		adEntrySetup(long_trigger)
+		adEntrySetup(short_trigger)
 
 def entrySetup(trigger):
 
 	if trigger and not isPositionInDirection(trigger.direction):
 
-		if entryConfirmation(trigger.direction):
-			return confirmation(trigger, EntryType.REGULAR)
+		if trigger.entry_state == EntryState.ONE:
+			if isDonchRet(trigger.direction, reverse=True):
+				trigger.entry_state = EntryState.TWO
+				return entrySetup(trigger)
+
+		if trigger.entry_state == EntryState.TWO:
+			if entryConfirmation(trigger.direction):
+				return confirmation(trigger, EntryType.REGULAR)
 
 def entryConfirmation(direction):
 	if utils.plan_state.value in (4,):
 		utils.log('entryConfirmation', 'Entry Conf: {0}'.format(
-			isDonchRet(direction, reverse=True)
+			isDonchExc(direction)
 		))
 
 	return (
-		isDonchRet(direction, reverse=True)
+		isDonchExc(direction)
 	)
 
 def adEntrySetup(trigger):
@@ -272,6 +284,8 @@ def adEntryConfirmation(trigger):
 
 def resetOppositeTrigger(trigger):
 	if trigger.entry_type == EntryType.REGULAR:
+		short_trigger.entry_state = EntryState.ONE
+		long_trigger.entry_state = EntryState.ONE
 		short_trigger.ad_entry_state = AdEntryState.ONE
 		long_trigger.ad_entry_state = AdEntryState.ONE
 

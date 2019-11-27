@@ -213,8 +213,8 @@ def runSequence():
 	if time_state != TimeState.STOP:
 		if entrySetup(long_trigger): return
 		if entrySetup(short_trigger): return
-		# adEntrySetup(long_trigger)
-		# adEntrySetup(short_trigger)
+		adEntrySetup(long_trigger)
+		adEntrySetup(short_trigger)
 
 def entrySetup(trigger):
 
@@ -230,7 +230,8 @@ def entryConfirmation(direction):
 		))
 
 	return (
-		isDonchRet(direction, reverse=True)
+		isDonchRet(direction, reverse=True) and
+		not isDonchRet(direction, reverse=False)
 	)
 
 def adEntrySetup(trigger):
