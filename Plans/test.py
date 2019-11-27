@@ -22,7 +22,7 @@ def setup(utilities):
 	if len(utils.charts) > 0:
 		chart = utils.charts[0]
 	else:
-		chart = utils.getChart(VARIABLES['PRODUCT'], Constants.FOUR_HOURS)
+		chart = utils.getChart(VARIABLES['PRODUCT'], Constants.ONE_MINUTE)
 
 def onNewBar(chart):
 	''' Function called on every new bar '''
@@ -33,19 +33,19 @@ def onNewBar(chart):
 def onLoop():
 	''' Function called on every program iteration '''
 	# utils.log("onLoop",'')
-	global count
-	if count == 0:
-		if utils.plan_state.value == 1:
-			print(utils.getBank())
-			start = time.time()
+	# global count
+	# if count == 0:
+	# 	if utils.plan_state.value == 1:
+	# 		print(utils.getBank())
+	# 		start = time.time()
 
-			for pos in utils.positions:
-				pos.close()
-			print(str(time.time() - start))
+	# 		for pos in utils.positions:
+	# 			pos.close()
+	# 		print(str(time.time() - start))
 
-			start = time.time()
-			utils.sell(VARIABLES['PRODUCT'], 1, slRange=20, tpRange=20)
-			print(str(time.time() - start))
+	# 		start = time.time()
+	# 		utils.sell(VARIABLES['PRODUCT'], 1, slRange=20, tpRange=20)
+	# 		print(str(time.time() - start))
 			# utils.sell(VARIABLES['PRODUCT'], 2, slPrice=1.45, tpPrice=1.16)
 			# time.sleep(2)
 			# # print('modify')
@@ -72,7 +72,7 @@ def onLoop():
 			# # print(type(utils))
 			# print(dict(pos))
 			# utils.savePositions()
-			count += 1
+			# count += 1
 
 def onEntry(pos):
 	utils.log("onEntry", str(dict(pos)))
