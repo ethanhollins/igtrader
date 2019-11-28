@@ -6,6 +6,10 @@ GBPUSD = 'CS.D.GBPUSD.MINI.IP'
 '''
 Periods
 '''
+ONE_MINUTE = 0
+PRICE_LIVE_ONE_MINUTE = '1MINUTE'
+PRICE_ONE_MINUTE = 'MINUTE'
+
 ONE_HOUR = 1
 PRICE_ONE_HOUR = 'HOUR'
 
@@ -34,7 +38,7 @@ REJECTED = 'REJECTED'
 Timestamps
 '''
 import datetime
-DT_START_DATE = datetime.datetime(year=2014, month=1, day=1)
+DT_START_DATE = datetime.datetime(year=2019, month=11, day=24)
 MT_DT_START_DATE = datetime.datetime(year=1970, month=1, day=1)
 
 '''

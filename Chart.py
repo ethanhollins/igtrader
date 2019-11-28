@@ -19,7 +19,7 @@ class Chart(object):
 		self.c_bid = []
 		self.c_ask = []
 
-		if product and period:
+		if product and period != None:
 			self.product = product
 			self.period = period
 			self.loadData()
@@ -43,6 +43,8 @@ class Chart(object):
 			self.price_period = Constants.PRICE_FOUR_HOURS
 		elif self.period == Constants.DAILY:
 			self.price_period = Constants.PRICE_DAILY
+		elif self.period == Constants.ONE_MINUTE:
+			self.price_period = Constants.PRICE_ONE_MINUTE
 
 	def loadData(self):
 
@@ -174,7 +176,9 @@ class Chart(object):
 	def getLiveData(self):
 		period = ''
 		if self.period == Constants.FOUR_HOURS or self.period == Constants.DAILY:
-			period = 'HOUR'
+			period = Constants.PRICE_ONE_HOUR
+		elif self.period == Constants.ONE_MINUTE:
+			period = Constants.PRICE_LIVE_ONE_MINUTE
 
 		items = ['Chart:{0}:{1}'.format(self.product, period)]
 
@@ -263,6 +267,13 @@ class Chart(object):
 						new_ts = self.manager.utils.convertDatetimeToTimestamp(now - datetime.timedelta(hours=24))
 						
 						self.addNewBar(new_ts)
+
+				elif self.period == Constants.ONE_MINTUTE:
+					self.reset = True
+					now = self.nearestMinute(now)
+					new_ts = self.manager.utils.convertDatetimeToTimestamp(now - datetime.timedelta(seconds=60))
+
+					self.addNewBar(new_ts)
 
 	def addNewBar(self, new_ts):
 		print('Bid: {0}\nAsk: {1}'.format(self.c_bid, self.c_ask))

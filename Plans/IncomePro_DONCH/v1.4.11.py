@@ -10,7 +10,8 @@ VARIABLES = {
 	'tprange': 130.0,
 	'MISC': None,
 	'doji_range': 1,
-	'donch': 4
+	'donch': 4,
+	'is_ad': True 
 }
 
 class Direction(Enum):
@@ -213,8 +214,10 @@ def runSequence():
 	if time_state != TimeState.STOP:
 		if entrySetup(long_trigger): return
 		if entrySetup(short_trigger): return
-		# adEntrySetup(long_trigger)
-		# adEntrySetup(short_trigger)
+		
+		if VARIABLES['is_ad']:
+			adEntrySetup(long_trigger)
+			adEntrySetup(short_trigger)
 
 def entrySetup(trigger):
 
