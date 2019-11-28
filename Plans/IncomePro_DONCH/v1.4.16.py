@@ -10,8 +10,7 @@ VARIABLES = {
 	'tprange': 130.0,
 	'MISC': None,
 	'doji_range': 1,
-	'donch': 4,
-	'is_ad': True 
+	'donch': 4
 }
 
 class Direction(Enum):
@@ -214,10 +213,8 @@ def runSequence():
 	if time_state != TimeState.STOP:
 		if entrySetup(long_trigger): return
 		if entrySetup(short_trigger): return
-		
-		if VARIABLES['is_ad']:
-			adEntrySetup(long_trigger)
-			adEntrySetup(short_trigger)
+		adEntrySetup(long_trigger)
+		adEntrySetup(short_trigger)
 
 def entrySetup(trigger):
 
@@ -233,7 +230,8 @@ def entryConfirmation(direction):
 		))
 
 	return (
-		isDonchRet(direction, reverse=True)
+		isDonchRet(direction, reverse=True) and
+		not isDonchRet(direction, reverse=False)
 	)
 
 def adEntrySetup(trigger):

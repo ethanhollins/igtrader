@@ -10,18 +10,12 @@ VARIABLES = {
 	'tprange': 130.0,
 	'MISC': None,
 	'doji_range': 1,
-	'donch': 4,
-	'is_ad': True 
+	'min_entry': 2
 }
 
 class Direction(Enum):
 	LONG = 1
 	SHORT = 2
-
-class AdEntryState(Enum):
-	ONE = 1
-	TWO = 2
-	COMPLETE = 3
 
 class EntryType(Enum):
 	REGULAR = 1
@@ -42,19 +36,36 @@ class SortedList(list):
 	def getUnsorted(self):
 		return self
 
-class Trigger(dict):
-	static_count = 0
+class Pivot(dict):
 
-	def __init__(self, direction):
-		self.direction = direction
+	def __init__(self):
+		self.is_init = True
 		
-		self.ad_entry_state = AdEntryState.ONE
-		self.ad_entry_line = 0
+		self.high = 0
+		self.low = 0
+		self.close = 0
+
+	def set(self, high, low, close):
+		self.high = high
+		self.low = low
+		self.close = close
+
+	def __getattr__(self, key):
+		return self[key]
+
+	def __setattr__(self, key, value):
+		self[key] = value
+
+class Trigger(dict):
+
+	def __init__(self, direction=Direction.LONG):
+		self.direction = direction
+		self.pivot = Pivot()
 
 		self.entry_type = None
 
-		self.count = Trigger.static_count
-		Trigger.static_count += 1
+	def setDirection(self, direction):
+		self.direction = direction
 
 	def __getattr__(self, key):
 		return self[key]
@@ -66,11 +77,12 @@ def init(utilities):
 	''' Initialize utilities and indicators '''
 
 	setup(utilities)
-
-	global donch
-
-	donch = utils.DONCH(VARIABLES['donch'])
 	
+	global boll_one, boll_two
+
+	boll_one = utils.BOLL(10, 2.2)
+	boll_two = utils.BOLL(20, 1.9)
+
 	setGlobalVars()
 
 def setup(utilities):
@@ -82,12 +94,11 @@ def setup(utilities):
 		chart = utils.getChart(VARIABLES['PRODUCT'], Constants.FOUR_HOURS)
 
 def setGlobalVars():
-	global long_trigger, short_trigger
+	global trigger
 	global pending_entry, pending_breakevens, pending_exits
 	global time_state
 
-	long_trigger = Trigger(Direction.LONG)
-	short_trigger = Trigger(Direction.SHORT)
+	trigger = Trigger()
 
 	pending_entry = None
 	pending_breakevens = []
@@ -204,106 +215,75 @@ def checkTime():
 		utils.log('checkTime', 'is STOP!')
 		time_state = TimeState.STOP
 	elif london_time.hour == 20 and not london_time.weekday() == 6:
-		utils.log('checkTime', 'is TWENTY!')
 		time_state = TimeState.TWENTY
 	else:
 		time_state = TimeState.TRADING
 
 def runSequence():
 
-	if time_state != TimeState.STOP:
-		if entrySetup(long_trigger): return
-		if entrySetup(short_trigger): return
-		
-		if VARIABLES['is_ad']:
-			adEntrySetup(long_trigger)
-			adEntrySetup(short_trigger)
+	getPivot()
 
-def entrySetup(trigger):
+	if entrySetup(): return
 
-	if trigger and not isPositionInDirection(trigger.direction):
+def getPivot():
+	_, high, low, close = chart.getCurrentBidOHLC(utils)
+	if trigger.pivot.high == 0:
+		trigger.pivot.set(high, low, close)
 
-		if entryConfirmation(trigger.direction):
-			return confirmation(trigger, EntryType.REGULAR)
+	if trigger.direction == Direction.LONG:
+		if trigger.pivot.is_init:
+			if high < trigger.pivot.low:
+				if not isBB(trigger.direction) and not isInside() and not isDoji():
+					trigger.pivot.set(high, low, close)
+					trigger.pivot.is_init = False
+		else:
+			if close <= trigger.pivot.close and low <= trigger.pivot.low:
+				if not isBB(trigger.direction) and not isInside() and not isDoji():
+					trigger.pivot.set(high, low, close)
+	else:
+		if trigger.pivot.is_init:
+			if low > trigger.pivot.high:
+				if not isBB(trigger.direction) and not isInside() and not isDoji():
+					trigger.pivot.set(high, low, close)
+					trigger.pivot.is_init = False
+		else:
+			if close >= trigger.pivot.close and high >= trigger.pivot.high:
+				if not isBB(trigger.direction) and not isInside() and not isDoji():
+					trigger.pivot.set(high, low, close)
+
+def entrySetup():
+	if entryConfirmation(trigger.direction):
+		trigger.pivot.is_init = True
+		return confirmation(trigger, EntryType.REGULAR)
 
 def entryConfirmation(direction):
 	if utils.plan_state.value in (4,):
-		utils.log('entryConfirmation', 'Entry Conf: {0}'.format(
-			isDonchRet(direction, reverse=True)
+		utils.log('entryConfirmation', 'Entry Conf: {0} {1}'.format(
+			exceedsMin(direction),
+			time_state.value < TimeState.STOP.value
 		))
 
 	return (
-		isDonchRet(direction, reverse=True)
+		exceedsMin(direction) and
+		time_state.value < TimeState.STOP.value
 	)
 
-def adEntrySetup(trigger):
-
-	if trigger and isPositionInDirection(trigger.direction):
-
-		if trigger.ad_entry_state == AdEntryState.ONE:
-			trigger.ad_entry_line = 0
-			if isBB(trigger.direction, reverse=True) and not isDoji():
-				trigger.ad_entry_line = getAdEntryLine(trigger)
-				trigger.ad_entry_state = AdEntryState.TWO
-				return
-
-		elif trigger.ad_entry_state == AdEntryState.TWO:
-			if adEntryConfirmation(trigger):
-				trigger.ad_entry_state = AdEntryState.COMPLETE
-				return confirmation(trigger, EntryType.ADDITIONAL)
-
-def getAdEntryLine(trigger):
-	_, high, low, _ = chart.getCurrentBidOHLC(utils)
-
+def setOppDirection():
 	if trigger.direction == Direction.LONG:
-		return high if not trigger.ad_entry_line or high < trigger.ad_entry_line else trigger.ad_entry_line
+		trigger.setDirection(Direction.SHORT)
 	else:
-		return low if not trigger.ad_entry_line or low > trigger.ad_entry_line else trigger.ad_entry_line
+		trigger.setDirection(Direction.LONG)
 
-def adEntryConfirmation(trigger):
+def exceedsMin(direction):
 	close = chart.getCurrentBidOHLC(utils)[3]
-
-	if trigger.direction == Direction.LONG:
-		if close > trigger.ad_entry_line and time_state.value == TimeState.TRADING.value:
-			return True
+	# print('em: {0} {1} {2}'.format(close, trigger.pivot.high, trigger.pivot.low))
+	# print(close - trigger.pivot.high)
+	# print(trigger.pivot.low - close)
+	# print(round(VARIABLES['min_entry'] * 0.0001, 5))
+	if direction == Direction.LONG:
+		return (close - trigger.pivot.high) > round(VARIABLES['min_entry'] * 0.0001, 5)
 	else:
-		if close < trigger.ad_entry_line and time_state.value == TimeState.TRADING.value:
-			return True
-
-	trigger.ad_entry_line = getAdEntryLine(trigger)
-	return False	
-
-def resetOppositeTrigger(trigger):
-	if trigger.entry_type == EntryType.REGULAR:
-		short_trigger.ad_entry_state = AdEntryState.ONE
-		long_trigger.ad_entry_state = AdEntryState.ONE
-
-def isDonchRet(direction, reverse=False):
-	vals = donch.get(utils, chart, 0, 2)
-	if reverse:
-		if direction == Direction.LONG:
-			return vals[1][1] > vals[0][1]
-		else:
-			return vals[1][0] < vals[0][0]
-	else:
-		if direction == Direction.LONG:
-			return vals[1][0] < vals[0][0]
-		else:
-			return vals[1][1] > vals[0][1]
-
-def isDonchExc(direction, reverse=False):
-	vals = donch.get(utils, chart, 0, 2)
-
-	if reverse:
-		if direction == Direction.LONG:
-			return vals[1][1] < vals[0][1]
-		else:
-			return vals[1][0] > vals[0][0]
-	else:
-		if direction == Direction.LONG:
-			return vals[1][0] > vals[0][0]
-		else:
-			return vals[1][1] < vals[0][1]
+		return (trigger.pivot.low - close) > round(VARIABLES['min_entry'] * 0.0001, 5)
 
 def isBB(direction, reverse=False):
 	_open, _, _, close = chart.getCurrentBidOHLC(utils)
@@ -324,37 +304,26 @@ def isDoji():
 	_open, _, _, close = chart.getCurrentBidOHLC(utils)
 	return not utils.convertToPips(abs(round(_open - close, 5))) >= VARIABLES['doji_range']
 
-def isPositionInDirection(direction, reverse=False):
-	for pos in utils.positions:
-	
-		if reverse:
-			if pos.direction == Constants.BUY and direction == Direction.SHORT:
-				return True
-			elif pos.direction == Constants.SELL and direction == Direction.LONG:
-				return True
-		else:
-			if pos.direction == Constants.BUY and direction == Direction.LONG:
-				return True
-			elif pos.direction == Constants.SELL and direction == Direction.SHORT:
-				return True
+def isInside():
+	bids = chart.getBidOHLC(utils, 0, 2)
+	return bids[1][1] < bids[0][1] and bids[1][2] > bids[0][2]
 
 def confirmation(trigger, entry_type, reverse=False):
 	''' confirm entry '''
 
 	global pending_entry
 
-	utils.log("confirmation", '{0} {1}'.format(trigger.direction, reverse))
-	trigger.entry_type = entry_type
-	resetOppositeTrigger(trigger)
-	pending_entry = trigger
+	utils.log("confirmation", '{0} {1}'.format(trigger.direction, entry_type))
+	pending_entry = Trigger(direction=trigger.direction)
+	pending_entry.entry_type = entry_type
+	setOppDirection()
 	return True
 
 def report():
 	''' Prints report for debugging '''
 	utils.log('', "\n")
 
-	utils.log('', "L: {0}".format(long_trigger))
-	utils.log('', "S: {0}".format(short_trigger))
+	utils.log('', "T: {0}".format(trigger))
 
 	utils.log('', "CLOSED POSITIONS:")
 	count = 0

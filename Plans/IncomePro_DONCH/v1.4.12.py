@@ -10,8 +10,7 @@ VARIABLES = {
 	'tprange': 130.0,
 	'MISC': None,
 	'doji_range': 1,
-	'donch': 4,
-	'is_ad': True 
+	'donch': 4
 }
 
 class Direction(Enum):
@@ -67,9 +66,10 @@ def init(utilities):
 
 	setup(utilities)
 
-	global donch
+	global donch, macd
 
 	donch = utils.DONCH(VARIABLES['donch'])
+	macd = utils.MACD(4, 40, 3)
 	
 	setGlobalVars()
 
@@ -214,10 +214,8 @@ def runSequence():
 	if time_state != TimeState.STOP:
 		if entrySetup(long_trigger): return
 		if entrySetup(short_trigger): return
-		
-		if VARIABLES['is_ad']:
-			adEntrySetup(long_trigger)
-			adEntrySetup(short_trigger)
+		adEntrySetup(long_trigger)
+		adEntrySetup(short_trigger)
 
 def entrySetup(trigger):
 
@@ -233,7 +231,8 @@ def entryConfirmation(direction):
 		))
 
 	return (
-		isDonchRet(direction, reverse=True)
+		isDonchRet(direction, reverse=True) and
+		isMacdConf(direction)
 	)
 
 def adEntrySetup(trigger):
@@ -304,6 +303,20 @@ def isDonchExc(direction, reverse=False):
 			return vals[1][0] > vals[0][0]
 		else:
 			return vals[1][1] < vals[0][1]
+
+def isMacdConf(direction, reverse=False):
+	hist = macd.getCurrent(utils, chart)[2]
+
+	if reverse:
+		if direction == Direction.LONG:
+			return hist < 0
+		else:
+			return hist > 0
+	else:
+		if direction == Direction.LONG:
+			return hist > 0
+		else:
+			return hist < 0
 
 def isBB(direction, reverse=False):
 	_open, _, _, close = chart.getCurrentBidOHLC(utils)

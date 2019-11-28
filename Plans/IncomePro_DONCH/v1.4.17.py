@@ -10,8 +10,7 @@ VARIABLES = {
 	'tprange': 130.0,
 	'MISC': None,
 	'doji_range': 1,
-	'donch': 4,
-	'is_ad': True 
+	'donch': 4
 }
 
 class Direction(Enum):
@@ -214,10 +213,10 @@ def runSequence():
 	if time_state != TimeState.STOP:
 		if entrySetup(long_trigger): return
 		if entrySetup(short_trigger): return
-		
-		if VARIABLES['is_ad']:
-			adEntrySetup(long_trigger)
-			adEntrySetup(short_trigger)
+		if entryTwoSetup(long_trigger): return
+		if entryTwoSetup(short_trigger): return
+		adEntrySetup(long_trigger)
+		adEntrySetup(short_trigger)
 
 def entrySetup(trigger):
 
@@ -234,6 +233,23 @@ def entryConfirmation(direction):
 
 	return (
 		isDonchRet(direction, reverse=True)
+	)
+
+def entryTwoSetup(trigger):
+	
+	if trigger and not isPositionInDirection(trigger.direction):
+
+		if entryTwoConfirmation(trigger.direction):
+			return confirmation(trigger, EntryType.REGULAR)
+
+def entryTwoConfirmation(direction):
+	if utils.plan_state.value in (4,):
+		utils.log('entryConfirmation', 'Entry Conf: {0}'.format(
+			isCloseABDonch(direction)
+		))
+
+	return (
+		isCloseABDonch(direction)
 	)
 
 def adEntrySetup(trigger):
@@ -271,7 +287,7 @@ def adEntryConfirmation(trigger):
 			return True
 
 	trigger.ad_entry_line = getAdEntryLine(trigger)
-	return False	
+	return False
 
 def resetOppositeTrigger(trigger):
 	if trigger.entry_type == EntryType.REGULAR:
@@ -304,6 +320,21 @@ def isDonchExc(direction, reverse=False):
 			return vals[1][0] > vals[0][0]
 		else:
 			return vals[1][1] < vals[0][1]
+
+def isCloseABDonch(direction, reverse=False):
+	c_donch = donch.getCurrent(utils, chart)
+	close = chart.getCurrentBidOHLC(utils)[3]
+
+	if reverse:
+		if direction == Direction.LONG:
+			return close < c_donch[1]
+		else:
+			return close > c_donch[0]
+	else:
+		if direction == Direction.LONG:
+			return close > c_donch[0]
+		else:
+			return close < c_donch[1]
 
 def isBB(direction, reverse=False):
 	_open, _, _, close = chart.getCurrentBidOHLC(utils)

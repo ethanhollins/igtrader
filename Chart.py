@@ -177,7 +177,7 @@ class Chart(object):
 		period = ''
 		if self.period == Constants.FOUR_HOURS or self.period == Constants.DAILY:
 			period = Constants.PRICE_ONE_HOUR
-		if self.period == Constants.ONE_MINUTE:
+		elif self.period == Constants.ONE_MINUTE:
 			period = Constants.PRICE_LIVE_ONE_MINUTE
 
 		items = ['Chart:{0}:{1}'.format(self.product, period)]

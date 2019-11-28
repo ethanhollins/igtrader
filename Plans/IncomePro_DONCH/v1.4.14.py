@@ -11,7 +11,8 @@ VARIABLES = {
 	'MISC': None,
 	'doji_range': 1,
 	'donch': 4,
-	'is_ad': True 
+	'MACD': None,
+	'macd_conf': 50,
 }
 
 class Direction(Enum):
@@ -67,9 +68,10 @@ def init(utilities):
 
 	setup(utilities)
 
-	global donch
+	global donch, macd
 
 	donch = utils.DONCH(VARIABLES['donch'])
+	macd = utils.MACD(4, 40, 3)
 	
 	setGlobalVars()
 
@@ -214,10 +216,12 @@ def runSequence():
 	if time_state != TimeState.STOP:
 		if entrySetup(long_trigger): return
 		if entrySetup(short_trigger): return
-		
-		if VARIABLES['is_ad']:
-			adEntrySetup(long_trigger)
-			adEntrySetup(short_trigger)
+
+		if entryTwoSetup(long_trigger): return
+		if entryTwoSetup(short_trigger): return
+
+		adEntrySetup(long_trigger)
+		adEntrySetup(short_trigger)
 
 def entrySetup(trigger):
 
@@ -273,6 +277,26 @@ def adEntryConfirmation(trigger):
 	trigger.ad_entry_line = getAdEntryLine(trigger)
 	return False	
 
+def entryTwoSetup(trigger):
+
+	if trigger and not isPositionInDirection(trigger.direction):
+
+		if entryTwoConfirmation(trigger.direction):
+			return confirmation(trigger, EntryType.REGULAR)
+
+def entryTwoConfirmation(direction):
+	if utils.plan_state.value in (4,):
+		utils.log('entryTwoConfirmation', 'Entry Conf: {0} {1}'.format(
+			not isDonchRet(direction, reverse=False),
+			isMacdConf(direction)
+		))
+
+	return (
+		not isDonchRet(direction, reverse=False) and
+		isMacdConf(direction) and
+		isBB(direction) and not isDoji()
+	)
+
 def resetOppositeTrigger(trigger):
 	if trigger.entry_type == EntryType.REGULAR:
 		short_trigger.ad_entry_state = AdEntryState.ONE
@@ -304,6 +328,20 @@ def isDonchExc(direction, reverse=False):
 			return vals[1][0] > vals[0][0]
 		else:
 			return vals[1][1] < vals[0][1]
+
+def isMacdConf(direction, reverse=False):
+	hist = macd.getCurrent(utils, chart)[2]
+
+	if reverse:
+		if direction == Direction.LONG:
+			return hist < round(-VARIABLES['macd_conf'] * 0.00001, 5)
+		else:
+			return hist > round(VARIABLES['macd_conf'] * 0.00001, 5)
+	else:
+		if direction == Direction.LONG:
+			return hist > round(VARIABLES['macd_conf'] * 0.00001, 5)
+		else:
+			return hist < round(-VARIABLES['macd_conf'] * 0.00001, 5)
 
 def isBB(direction, reverse=False):
 	_open, _, _, close = chart.getCurrentBidOHLC(utils)
