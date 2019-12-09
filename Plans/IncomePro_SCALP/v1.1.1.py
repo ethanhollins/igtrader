@@ -7,13 +7,16 @@ VARIABLES = {
 	'BANK': None,
 	'risk': 1.0,
 	'stoprange': 17.0,
+	'target': 50,
+	'max_loss': -34,
 	'MISC': None,
 	'RSI': None,
 	'rsi_long': 52,
 	'rsi_short': 48,
 	'MACD': None,
-	'macdz_conf': 2,
 	'macd_conf': 2,
+	'macdz_conf': 2,
+	'macdt_conf': 2
 }
 
 class Direction(Enum):
@@ -24,7 +27,6 @@ class EntryState(Enum):
 	ONE = 1
 	TWO = 2
 	COMPLETE = 3
-	RENTER = 4
 
 class EntryType(Enum):
 	REGULAR = 1
@@ -32,8 +34,8 @@ class EntryType(Enum):
 
 class TimeState(Enum):
 	TRADING = 1
-	TWENTY = 2
-	STOP = 3
+	STOP = 2
+	EXIT = 3
 
 class SortedList(list):
 	def __getitem__(self, row):
@@ -75,11 +77,12 @@ def init(utilities):
 
 	setup(utilities)
 	
-	global rsi, macd, macd_z
+	global rsi, macd, macd_z, macd_t
 
 	rsi = utils.RSI(10)
 	macd = utils.MACD(12, 26, 9)
 	macd_z = utils.MACD(4, 40, 3)
+	macd_t = utils.MACD(35, 70, 24)
 
 	setGlobalVars()
 
@@ -134,10 +137,16 @@ def onLoop():
 
 def handleEntries():
 	''' Handle all pending entries '''
-	global pending_entry
+	global pending_entry, time_state
 
 	if pending_entry:
 		
+		if getCurrentProfit() <= VARIABLES['max_loss']:
+			closeAllPositions()
+			pending_entry = None
+			time_state = TimeState.EXIT
+			return
+
 		if isOppDirectionPositionExists(pending_entry.direction):
 			utils.log('handleEntries', "Attempting position enter {0}: stop and reverse".format(pending_entry.direction))
 			handleStopAndReverse(pending_entry)
@@ -213,58 +222,105 @@ def checkTime():
 	time = utils.convertTimestampToDatetime(utils.getLatestTimestamp())
 	london_time = utils.convertTimezone(time, 'Europe/London')
 	# utils.log('checkTime', 'London Time: {0}'.format(london_time))
-	if time_state != TimeState.TRADING and 7 <= london_time.hour <= 23:
+	if time_state != TimeState.TRADING and time_state != TimeState.EXIT and 7 <= london_time.hour <= 23:
 		time_state = TimeState.TRADING
-		global trigger
-		trigger = Trigger()
+		utils.positions = []
 	elif time_state != TimeState.STOP and 0 <= london_time.hour <= 6:
-		utils.log('checkTime', 'is STOP!')
 		time_state = TimeState.STOP
 
 def runSequence():
 
 	if utils.plan_state.value in (4,):
-		utils.log('OHLC:', chart.getCurrentBidOHLC(utils))
+		utils.log('OHLC', chart.getCurrentBidOHLC(utils))
 		
 		hist = macd.getCurrent(utils, chart)[2]
 		histz = macd_z.getCurrent(utils, chart)[2]
+		histt = macd_t.getCurrent(utils, chart)[2]
 		stridx = rsi.getCurrent(utils, chart)
 
-		utils.log('IND', 'MACDH: {} |MACDZ: {} |RSI {}'.format(round(float(hist), 5), round(float(histz), 5), stridx))
+		utils.log('IND', 'MACDH: {} |MACDZ: {} |MACDT: {} |RSI {}'.format(
+			round(float(hist), 5), 
+			round(float(histz), 5), 
+			round(float(histt), 5),
+			stridx)
+		)
+
+	global time_state
+	if time_state == TimeState.TRADING and isTakeProfit():
+		time_state = TimeState.EXIT
 
 	if time_state == TimeState.TRADING:
-		if utils.plan_state.value in (4,):
-			utils.log('time', 'TRADING')
 		getDirection()
 		if reEntrySetup(): return
 		if entrySetup(): return
-	else:
-		if utils.plan_state.value in (4,):
-			utils.log('time', 'DOWNTIME')
+
+	elif time_state == TimeState.STOP or time_state == TimeState.EXIT:
+		getDirection()
+		entrySetup()
 		exitSetup()
+
+def getCurrentProfit():
+	profit = 0
+	for pos in utils.closed_positions:
+		profit += pos.getPipProfit()
+	
+	close = chart.getCurrentBidOHLC(utils)[3]
+	for pos in utils.positions:
+		if pos.direction == Constants.BUY:
+			profit += utils.convertToPips(close - pos.entryprice)
+		else:
+			profit += utils.convertToPips(pos.entryprice - close)
+	return profit
+
+def isTakeProfit():
+	profit = 0
+	for pos in utils.closed_positions:
+		profit += pos.getPipProfit()
+
+	_, high, low, _ = chart.getCurrentBidOHLC(utils)
+
+	for pos in utils.positions:
+		if pos.direction == Constants.BUY:
+			profit += utils.convertToPips(high - pos.entryprice)
+		else:
+			profit += utils.convertToPips(pos.entryprice - low)
+	
+	return profit >= VARIABLES['target']
 
 def getDirection():
 
 	if trigger.direction == None:
-		if isMacdConf(Direction.LONG) and isMacdzZeroConf(Direction.LONG):
+		if isDirectionConf(Direction.LONG):
 			trigger.direction = Direction.LONG
-		elif isMacdConf(Direction.SHORT) and isMacdzZeroConf(Direction.SHORT):
+			trigger.entry_state = EntryState.ONE
+		elif isDirectionConf(Direction.SHORT):
 			trigger.direction = Direction.SHORT
+			trigger.entry_state = EntryState.ONE
 
-	elif isMacdConf(trigger.direction, reverse=True) and isMacdzZeroConf(trigger.direction, reverse=True):
+	elif isDirectionConf(trigger.direction, reverse=True):
 		trigger.entry_state = EntryState.ONE
 		trigger.setDirection(trigger.direction, reverse=True)
 		if trigger.direction != trigger.re_entry:
 			trigger.re_entry = None
 
+def isDirectionConf(direction, reverse=False):
+	return (
+		isMacdzPosConf(direction, reverse=reverse) and
+		isMacdPosConf(direction, reverse=reverse) and
+		isMacdtConf(direction, reverse=reverse)
+	)
 
 def entrySetup():
 
 	if trigger.direction:
+		if isMacdtPosConf(trigger.direction, reverse=True):
+			trigger.direction = None
+			return True
+
 		if trigger.entry_state == EntryState.ONE:
-			if isMacdzZeroConf(trigger.direction, reverse=True):
+			if isMacdzPosConf(trigger.direction, reverse=True):
 				trigger.entry_state = EntryState.TWO
-				return
+				return False
 
 		elif trigger.entry_state == EntryState.TWO:
 			if entryConfirmation(trigger.direction):
@@ -274,22 +330,26 @@ def entrySetup():
 
 def entryConfirmation(direction):
 	if utils.plan_state.value in (4,):
-		utils.log('entryConfirmation', 'Entry Conf: {0} {1}'.format(
-			isMacdzConf(trigger.direction),
+		utils.log('entryConfirmation', 'Entry Conf: {0} {1} {2} {3}'.format(
+			isMacdzPosConf(trigger.direction),
+			(isMacdzConf(trigger.direction) 
+				or isMacdConf(trigger.direction)),
+			not isMacdConf(trigger.direction, reverse=True),
 			isRsiConf(trigger.direction)
 		))
 
 	return (
-		isMacdzConf(trigger.direction) and
+		isMacdzPosConf(trigger.direction) and
+		(isMacdzConf(trigger.direction) 
+			or isMacdConf(trigger.direction)) and
+		not isMacdConf(trigger.direction, reverse=True) and
 		isRsiConf(trigger.direction)
 	)
 
 def reEntrySetup():
 	if trigger.re_entry != None:
-		if isMacdzConf(trigger.re_entry):
+		if isMacdzPosConf(trigger.re_entry):
 			return confirmation(trigger, EntryType.RE_ENTRY)
-		elif isMacdConf(trigger.re_entry, reverse=True):
-			trigger.re_entry = None
 
 def exitSetup():
 	if len(utils.positions) > 0:
@@ -299,21 +359,35 @@ def exitSetup():
 			closeAllPositions()
 
 def isMacdConf(direction, reverse=False):
-	hist = macd.getCurrent(utils, chart)[2]
+	hist = round(float(macd.getCurrent(utils, chart)[2]), 5)
 
 	if reverse:
 		if direction == Direction.LONG:
-			return hist < round(-VARIABLES['macd_conf'] * 0.00001, 5)
+			return hist <= round(-VARIABLES['macd_conf'] * 0.00001, 5)
 		else:
-			return hist > round(VARIABLES['macd_conf'] * 0.00001, 5)
+			return hist >= round(VARIABLES['macd_conf'] * 0.00001, 5)
 	else:
 		if direction == Direction.LONG:
-			return hist > round(VARIABLES['macd_conf'] * 0.00001, 5)
+			return hist >= round(VARIABLES['macd_conf'] * 0.00001, 5)
 		else:
-			return hist < round(-VARIABLES['macd_conf'] * 0.00001, 5)
+			return hist <= round(-VARIABLES['macd_conf'] * 0.00001, 5)
+
+def isMacdPosConf(direction, reverse=False):
+	hist = round(float(macd.getCurrent(utils, chart)[2]), 5)
+
+	if reverse:
+		if direction == Direction.LONG:
+			return hist < 0
+		else:
+			return hist > 0
+	else:
+		if direction == Direction.LONG:
+			return hist > 0
+		else:
+			return hist < 0
 
 def isMacdzConf(direction, reverse=False):
-	hist = macd_z.getCurrent(utils, chart)[2]
+	hist = round(float(macd_z.getCurrent(utils, chart)[2]), 5)
 
 	if reverse:
 		if direction == Direction.LONG:
@@ -327,7 +401,7 @@ def isMacdzConf(direction, reverse=False):
 			return hist < round(-VARIABLES['macdz_conf'] * 0.00001, 5)
 
 def isMacdzPosConf(direction, reverse=False):
-	hist = macd_z.getCurrent(utils, chart)[2]
+	hist = round(float(macd_z.getCurrent(utils, chart)[2]), 5)
 
 	if reverse:
 		if direction == Direction.LONG:
@@ -341,7 +415,7 @@ def isMacdzPosConf(direction, reverse=False):
 			return hist < 0
 
 def isMacdzZeroConf(direction, reverse=False):
-	hist = macd_z.getCurrent(utils, chart)[2]
+	hist = round(float(macd_z.getCurrent(utils, chart)[2]), 5)
 
 	if reverse:
 		if direction == Direction.LONG:
@@ -354,8 +428,36 @@ def isMacdzZeroConf(direction, reverse=False):
 		else:
 			return hist <= 0
 
+def isMacdtConf(direction, reverse=False):
+	hist = round(float(macd_t.getCurrent(utils, chart)[2]), 5)
+
+	if reverse:
+		if direction == Direction.LONG:
+			return hist < round(-VARIABLES['macdt_conf'] * 0.00001, 5)
+		else:
+			return hist > round(VARIABLES['macdt_conf'] * 0.00001, 5)
+	else:
+		if direction == Direction.LONG:
+			return hist > round(VARIABLES['macdt_conf'] * 0.00001, 5)
+		else:
+			return hist < round(-VARIABLES['macdt_conf'] * 0.00001, 5)
+
+def isMacdtPosConf(direction, reverse=False):
+	hist = round(float(macd_t.getCurrent(utils, chart)[2]), 5)
+
+	if reverse:
+		if direction == Direction.LONG:
+			return hist < 0
+		else:
+			return hist > 0
+	else:
+		if direction == Direction.LONG:
+			return hist > 0
+		else:
+			return hist < 0
+
 def isRsiConf(direction, reverse=False):
-	stridx = rsi.getCurrent(utils, chart)
+	stridx = round(float(rsi.getCurrent(utils, chart)), 2)
 
 	if reverse:
 		if direction == Direction.LONG:
@@ -401,17 +503,17 @@ def confirmation(trigger, entry_type, reverse=False):
 
 	global pending_entry
 
-	utils.log("confirmation", '{0} {1}'.format(trigger.direction, entry_type))
 
 	if entry_type == EntryType.REGULAR:
 		pending_entry = Trigger(direction=trigger.direction)
 	else:
 		pending_entry = Trigger(direction=trigger.re_entry)
 		
-	if isPosInDir(pending_entry.direction):
+	if time_state == TimeState.STOP or time_state == TimeState.EXIT or isPosInDir(pending_entry.direction):
 		pending_entry = None
 		return False
 		
+	utils.log("confirmation", '{0} {1}'.format(trigger.direction, entry_type))
 	pending_entry.entry_type = entry_type
 	return True
 
@@ -419,6 +521,7 @@ def report():
 	''' Prints report for debugging '''
 	utils.log('', "\n")
 
+	utils.log('', "Time State: {}".format(time_state))
 	utils.log('', "T: {0}".format(trigger))
 
 	utils.log('', "CLOSED POSITIONS:")
