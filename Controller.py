@@ -10,6 +10,7 @@ class Controller(object):
 		self.running = []
 		self.queue = []
 		self.complete = []
+		self.wait_list = []
 
 	def runQueue(self):
 		while True:
@@ -29,10 +30,9 @@ class Controller(object):
 
 	def getComplete(self, root_name):
 		try:
-			for i in range(len(self.complete)-1,-1,-1):
-				item = self.complete[i]
+			for item in self.complete:
 				if item[0] == root_name:
-					del self.complete[i]
+					del self.complete[self.complete.index(item)]
 					return item[1]
 			return False
 		except:
