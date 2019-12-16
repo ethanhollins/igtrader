@@ -26,7 +26,7 @@ class RootAccount(object):
 		self.root_name = root_name
 		self.cmd_queue = []
 		if self.root_name != "ethan_demo":
-			time.sleep(360)
+			time.sleep(180)
 
 		if self.root_name == 'backtester':
 			self.run_backtester(root_name)

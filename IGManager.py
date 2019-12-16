@@ -122,6 +122,7 @@ class IGManager(object):
 		)
 
 		if res.status_code == 200:
+			print('(200)')
 			data = res.json()
 			if not 'bids' in result:
 				result['bids'] = {}
@@ -150,6 +151,7 @@ class IGManager(object):
 			if page_number < total_pages:
 				return self.getPricesByDate(product, period, start_dt, end_dt, page_number+1, result)
 			else:
+				print('done')
 				return result
 
 		else:
