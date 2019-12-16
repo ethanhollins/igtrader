@@ -26,7 +26,6 @@ class Controller(object):
 		result = False
 		while not result:
 			result = self.getComplete(root_name)
-			print(result != False)
 		return result
 
 	def getComplete(self, root_name):
@@ -37,7 +36,6 @@ class Controller(object):
 					return item[1]
 			return False
 		except:
-			print('nope')
 			return self.getComplete(root_name)
 
 	def saveToFile(self, root_name, path, data):
