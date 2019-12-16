@@ -244,13 +244,20 @@ class RootAccount(object):
 			ax2.xaxis_date()
 
 			ax3.text(
-				0,len(results)*8-count*8-7, 
+				0,len(results)*10-count*10-9, 
 				'{0}:'.format(plan), 
 				fontsize=11, horizontalalignment='left',
 				fontweight='bold'
 			)
 			ax3.text(
-				0, len(results)*8-count*8-6, 
+				0, len(results)*10-count*10-8, 
+				'Trading DAYS: {}'.format(
+					results[plan][Constants.DAILY_WINS] + results[plan][Constants.DAILY_LOSSES]
+				), 
+				fontsize=10, horizontalalignment='left'
+			)
+			ax3.text(
+				0, len(results)*10-count*10-7, 
 				'% Ret: {0} | % DD: {1}'.format(
 					results[plan][Constants.POS_PERC_RET],
 					results[plan][Constants.POS_PERC_DD]
@@ -258,7 +265,7 @@ class RootAccount(object):
 				fontsize=10, horizontalalignment='left'
 			)
 			ax3.text(
-				0, len(results)*8-count*8-5, 
+				0, len(results)*10-count*10-6, 
 				'CMP % Ret: {0} | CMP % DD: {1}'.format(
 					results[plan][Constants.POS_COMPOUND_RET],
 					results[plan][Constants.POS_COMPOUND_DD]
@@ -266,14 +273,14 @@ class RootAccount(object):
 				fontsize=10, horizontalalignment='left'
 			)
 			ax3.text(
-				0, len(results)*8-count*8-4, 
+				0, len(results)*10-count*10-5, 
 				'PIP Ret: {0}'.format(
 					results[plan][Constants.POS_PIP_RET]
 				), 
 				fontsize=10, horizontalalignment='left'
 			)
 			ax3.text(
-				0, len(results)*8-count*8-3, 
+				0, len(results)*10-count*10-4, 
 				'Wins: {0} | Losses: {1}'.format(
 					results[plan][Constants.WINS],
 					results[plan][Constants.LOSSES]
@@ -281,7 +288,15 @@ class RootAccount(object):
 				fontsize=10, horizontalalignment='left'
 			)
 			ax3.text(
-				0, len(results)*8-count*8-2, 
+				0, len(results)*10-count*10-3, 
+				'Daily Wins: {0} | Daily Losses: {1}'.format(
+					results[plan][Constants.DAILY_WINS],
+					results[plan][Constants.DAILY_LOSSES]
+				), 
+				fontsize=10, horizontalalignment='left'
+			)
+			ax3.text(
+				0, len(results)*10-count*10-2, 
 				'Win %: {0} | Loss %: {1}'.format(
 					results[plan][Constants.WIN_PERC],
 					results[plan][Constants.LOSS_PERC]
@@ -289,7 +304,7 @@ class RootAccount(object):
 				fontsize=10, horizontalalignment='left'
 			)
 			ax3.text(
-				0, len(results)*8-count*8-1, 
+				0, len(results)*10-count*10-1, 
 				'Gain: {0} | Loss: {1}'.format(
 					results[plan][Constants.GAIN],
 					results[plan][Constants.LOSS]
@@ -297,7 +312,7 @@ class RootAccount(object):
 				fontsize=10, horizontalalignment='left'
 			)
 			ax3.text(
-				0, len(results)*8-count*8, 
+				0, len(results)*10-count*10, 
 				'GPR: {0}'.format(results[plan][Constants.GPR]), 
 				fontsize=10, horizontalalignment='left'
 			)

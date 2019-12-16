@@ -363,7 +363,7 @@ class Backtester(object):
 		'positions', 'closed_positions',
 		'c_ts', 'storage', 'method',
 		'external_bank', 'maximum_bank', 'minimum_bank',
-		'last_day', 'max_ret', 'source', 'plan_state'
+		'last_time', 'max_ret', 'source', 'plan_state'
 	)
 	def __init__(self, name, variables, source='ig'):
 		self.name = name
@@ -384,7 +384,7 @@ class Backtester(object):
 		self.maximum_bank = 10000
 		self.minimum_bank = 0
 
-		self.last_day = None
+		self.last_time = None
 		self.max_ret = None
 
 
@@ -433,7 +433,7 @@ class Backtester(object):
 			)
 			return chart
 
-	def backtest(self, start=None, end=None, method='run', plan=None):
+	def backtest(self, start=None, start_off=0, end=None, end_off=0, method='run', plan=None):
 		print('Running backtest ({0})...'.format(self.name))
 		self.method = method
 		if not plan:
@@ -455,12 +455,12 @@ class Backtester(object):
 		])))
 
 		if start:
-			start_idx = max(Chart.getClosestIndex(all_ts, start), self.getMinPeriod())
+			start_idx = max(Chart.getClosestIndex(all_ts, start) + start_off, self.getMinPeriod())
 		else:
 			start_idx = self.getMinPeriod()
 
 		if end:
-			end_idx = Chart.getClosestIndex(all_ts, end)+1
+			end_idx = Chart.getClosestIndex(all_ts, end)+end_off+1
 		else:
 			end_idx = all_ts.size
 
@@ -532,12 +532,12 @@ class Backtester(object):
 	def getInterimData(self, data):
 		time = self.convertTimestampToDatetime(self.c_ts)
 		new_day = False
-		if self.last_day:
-			if time.day != self.last_day:
-				self.last_day = time.day
+		if self.last_time:
+			if time.day != self.last_time.day and not time.weekday() in (5,6):
+				self.last_time = time
 				new_day = True
 		else:
-			self.last_day = time.day
+			self.last_time = time
 
 		if new_day:
 			perc_ret = 0
@@ -554,20 +554,31 @@ class Backtester(object):
 				self.max_ret = perc_ret
 
 			if Constants.DAILY_PERC_RET in data:
-				data[Constants.DAILY_PERC_RET][time] = perc_ret
+				data[Constants.DAILY_PERC_RET][self.last_time] = perc_ret
 			else:
-				data[Constants.DAILY_PERC_RET] = {time: perc_ret}
+				data[Constants.DAILY_PERC_RET] = {self.last_time: perc_ret}
 
 			if Constants.DAILY_PIP_RET in data:
-				data[Constants.DAILY_PIP_RET][time] = pip_ret
+				data[Constants.DAILY_PIP_RET][self.last_time] = pip_ret
 			else:
-				data[Constants.DAILY_PIP_RET] = {time: pip_ret}
+				data[Constants.DAILY_PIP_RET] = {self.last_time: pip_ret}
 
 			if Constants.DAILY_PERC_DD in data:
-				data[Constants.DAILY_PERC_DD][time] = self.max_ret - perc_ret
+				data[Constants.DAILY_PERC_DD][self.last_time] = self.max_ret - perc_ret
 			else:
-				data[Constants.DAILY_PERC_DD] = {time: self.max_ret - perc_ret}
+				data[Constants.DAILY_PERC_DD] = {self.last_time: self.max_ret - perc_ret}
 
+			if pip_ret >= 0:
+				if not Constants.DAILY_WINS in data:
+					data[Constants.DAILY_WINS] = 0
+
+				data[Constants.DAILY_WINS] += 1
+			else:
+				if not Constants.DAILY_LOSSES in data:
+					data[Constants.DAILY_LOSSES] = 0
+
+				data[Constants.DAILY_LOSSES] += 1
+			
 		return data
 
 	def getCompletedData(self, data):

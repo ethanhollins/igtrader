@@ -87,7 +87,8 @@ class Chart(object):
 		if pytz.timezone('Australia/Melbourne').dst(start_dt).seconds:
 			start_dt -= datetime.timedelta(seconds=3600)
 
-		# start_dt = datetime.datetime(year=2019, month=11, day=27)
+		# start_dt = datetime.datetime(year=2019, month=10, day=27)
+		# end_dt = datetime.datetime(year=2019, month=11, day=2)
 		end_dt = datetime.datetime.now()
 		print('{} {}'.format(start_dt, end_dt))
 		result = self.manager.getPricesByDate(self.product, self.price_period, start_dt, end_dt, 1, {})
@@ -270,7 +271,7 @@ class Chart(object):
 						self.addNewBar(new_ts)
 
 				elif self.period == Constants.ONE_MINUTE:
-					self.reset == True
+					self.reset = True
 					now = self.nearestMinute(now)
 					new_ts = self.manager.utils.convertDatetimeToTimestamp(now - datetime.timedelta(seconds=60))
 

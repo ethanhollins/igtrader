@@ -48,6 +48,8 @@ class Plan(object):
 	def initialize(self):
 		self.plan_state = PlanState.BACKTEST
 
+		self.getBankConfig()
+
 		self.module = self.execPlan()
 		self.setPlanVariables()
 		self.module.init(self)
@@ -55,12 +57,16 @@ class Plan(object):
 		bt = Backtester(self.name, self.variables)
 		self.module, _ = bt.backtest(plan=self)
 
-		self.getBankConfig()
 		self.updatePositions()
 		self.getSavedPositions()
 		self.savePositions()
 		
 		self.c_ts = bt.c_ts
+		while self.c_ts < self.getLatestChartTimestamp():
+			bt = Backtester(self.name, self.variables)
+			self.module, _ = bt.backtest(start=self.c_ts, start_off=1, plan=self)
+			self.c_ts = bt.c_ts
+
 		self.module.setup(self)
 
 		self.plan_state = PlanState.STARTED
@@ -492,6 +498,9 @@ class Plan(object):
 
 	def getLatestTimestamp(self):
 		return self.c_ts
+
+	def getLatestChartTimestamp(self):
+		return max([i.getLatestTimestamp() for i in self.charts])
 
 	def SMA(self, period):
 		sma = SMA(period)
