@@ -50,27 +50,26 @@ class Chart(object):
 		for i in ['bid', 'ask']:
 			path = 'Data/{0}_{1}_{2}.json'.format(self.product, self.period, i)
 			if os.path.exists(path):
-				with open(path, 'r') as f:
-					values = json.load(f)
+				values = self.root.getJsonFromFile(path)
 
-					if i == 'bid':
-						self.bids_ts = np.array(
-							[int(i[0]) for i in sorted(values.items(), key=lambda kv: kv[0])], 
-						dtype=np.int32)
-						self.bids_ohlc = np.round(np.array(
-							[i[1] for i in sorted(values.items(), key=lambda kv: kv[0])], 
-						dtype=np.float32), decimals=5)
+				if i == 'bid':
+					self.bids_ts = np.array(
+						[int(i[0]) for i in sorted(values.items(), key=lambda kv: kv[0])], 
+					dtype=np.int32)
+					self.bids_ohlc = np.round(np.array(
+						[i[1] for i in sorted(values.items(), key=lambda kv: kv[0])], 
+					dtype=np.float32), decimals=5)
 
-						for plan in self.subscribed_plans:
-							if self.bids_ts[-1] > plan.c_ts:
-								plan.c_ts = self.bids_ts[-1]
-					else:
-						self.asks_ts = np.array(
-							[int(i[0]) for i in sorted(values.items(), key=lambda kv: kv[0])],
-						dtype=np.int32)
-						self.asks_ohlc = np.round(np.array(
-							[i[1] for i in sorted(values.items(), key=lambda kv: kv[0])],
-						dtype=np.float32), decimals=5)
+					for plan in self.subscribed_plans:
+						if self.bids_ts[-1] > plan.c_ts:
+							plan.c_ts = self.bids_ts[-1]
+				else:
+					self.asks_ts = np.array(
+						[int(i[0]) for i in sorted(values.items(), key=lambda kv: kv[0])],
+					dtype=np.int32)
+					self.asks_ohlc = np.round(np.array(
+						[i[1] for i in sorted(values.items(), key=lambda kv: kv[0])],
+					dtype=np.float32), decimals=5)
 			else:
 				self.bids_ts = np.array([], dtype=np.int32)
 				self.bids_ohlc = np.array([], dtype=np.float32)
@@ -143,12 +142,10 @@ class Chart(object):
 		print('curr ask:', str(self.c_ask))
 
 		path = 'Data/{0}_{1}_bid.json'.format(self.product, self.period)
-		with open(path, 'w') as f:
-			f.write(json.dumps(bids, indent=4))
+		self.root.saveToFile(path, json.dumps(bids, indent=4))
 
 		path = 'Data/{0}_{1}_ask.json'.format(self.product, self.period)
-		with open(path, 'w') as f:
-			f.write(json.dumps(asks, indent=4))
+		self.root.saveToFile(path, json.dumps(asks, indent=4))
 
 	def saveValues(self):
 		bids = {int(self.bids_ts[i]):[
@@ -165,12 +162,10 @@ class Chart(object):
 		] for i in range(self.asks_ts.size)}
 
 		path = 'Data/{0}_{1}_bid.json'.format(self.product, self.period)
-		with open(path, 'w') as f:
-			f.write(json.dumps(bids, indent=4))
+		self.root.saveToFile(path, json.dumps(bids, indent=4))
 
 		path = 'Data/{0}_{1}_ask.json'.format(self.product, self.period)
-		with open(path, 'w') as f:
-			f.write(json.dumps(asks, indent=4))
+		self.root.saveToFile(path, json.dumps(asks, indent=4))
 
 	def isChart(self, product, period):
 		return product == self.product and period == self.period

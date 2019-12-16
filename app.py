@@ -6,7 +6,7 @@ import json
 
 
 def runAccount(root_name, running_accounts):
-	controller.running.append(RootAccount(root_name, running_accounts))
+	controller.running.append(RootAccount(controller, root_name, running_accounts))
 
 if __name__ == '__main__':
 	os.system('cls')
@@ -28,4 +28,6 @@ if __name__ == '__main__':
 						t.start()
 				else:
 					print('Account {0} does not exist.'.format(i))
+
+	controller.runQueue()
 

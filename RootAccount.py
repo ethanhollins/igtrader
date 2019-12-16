@@ -21,7 +21,8 @@ ONE_HOUR = 60*60
 
 class RootAccount(object):
 	
-	def __init__(self, root_name, running_accounts):
+	def __init__(self, controller, root_name, running_accounts):
+		self.controller = controller
 		self.root_name = root_name
 		self.cmd_queue = []
 		if self.root_name == 'backtester':
@@ -194,6 +195,13 @@ class RootAccount(object):
 		elif method == 'show':
 			self.showCharts(results, formatting)
 
+	def saveToFile(self, path, data):
+		self.controller.saveToFile(self.root_name, path, data)
+		return self.controller.wait(self.root_name)
+
+	def getJsonFromFile(self, path):
+		self.controller.getJsonFromFile(self.root_name, path)
+		return self.controller.wait(self.root_name)
 
 	def showGraphs(self, results):
 		plt.style.use('seaborn')
