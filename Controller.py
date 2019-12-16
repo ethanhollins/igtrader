@@ -10,7 +10,6 @@ class Controller(object):
 		self.running = []
 		self.queue = []
 		self.complete = []
-		self.wait_list = []
 
 	def runQueue(self):
 		while True:

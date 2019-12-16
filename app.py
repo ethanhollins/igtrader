@@ -29,8 +29,6 @@ if __name__ == '__main__':
 						t.start()
 				else:
 					print('Account {0} does not exist.'.format(i))
-				if i == "ethan_demo":
-					time.sleep(360)
 
 	controller.runQueue()
 
