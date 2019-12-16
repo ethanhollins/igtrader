@@ -26,6 +26,7 @@ class Controller(object):
 		result = False
 		while not result:
 			result = self.getComplete(root_name)
+			print(result)
 		return result
 
 	def getComplete(self, root_name):
