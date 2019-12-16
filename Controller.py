@@ -28,12 +28,15 @@ class Controller(object):
 		return result
 
 	def getComplete(self, root_name):
-		for i in range(len(self.complete)-1,-1,-1):
-			item = self.complete[i]
-			if item[0] == root_name:
-				del self.complete[i]
-				return item[1]
-		return False
+		try:
+			for i in range(len(self.complete)-1,-1,-1):
+				item = self.complete[i]
+				if item[0] == root_name:
+					del self.complete[i]
+					return item[1]
+			return False
+		except:
+			return self.getComplete(root_name)
 
 	def saveToFile(self, root_name, path, data):
 		self.queue.append((root_name, self.pSaveToFile, [path, data]))
