@@ -36,6 +36,7 @@ class Controller(object):
 					return item[1]
 			return False
 		except:
+			print('nope')
 			return self.getComplete(root_name)
 
 	def saveToFile(self, root_name, path, data):
