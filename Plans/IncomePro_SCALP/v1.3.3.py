@@ -115,8 +115,6 @@ def init(utilities):
 	donch = utils.DONCH(VARIABLES['donch'])
 
 	setGlobalVars()
-	print(bank)
-	print(utils.getLotsize(bank, VARIABLES['risk'], VARIABLES['stoprange']))
 
 def setup(utilities):
 	global utils, chart
@@ -280,19 +278,25 @@ def checkTime():
 
 	time = utils.convertTimestampToDatetime(utils.getLatestTimestamp())
 	london_time = utils.convertTimezone(time, 'Europe/London')
-	# utils.log('checkTime', 'London Time: {0}'.format(london_time))
+
 	if time_state == TimeState.STOP:
 		if london_time.hour == 6 and london_time.minute == 59:
+			global bank
 			bank = utils.getTradableBank()
+			
 			trigger.pivot_line = 0
 			getPivotLines()
+
 		elif 7 <= london_time.hour < 20:
 			time_state = TimeState.TRADING
+
 			global positions, trades
 			positions = []
 			trades = 0
+
 			trigger.est_direction = None
 			trigger.re_entry = None
+
 	elif time_state != TimeState.STOP and london_time.hour == 20:
 		time_state = TimeState.STOP
 
