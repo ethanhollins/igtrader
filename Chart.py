@@ -83,8 +83,8 @@ class Chart(object):
 		else:
 			start_dt = Constants.DT_START_DATE
 
-		if pytz.timezone('Australia/Melbourne').dst(start_dt).seconds:
-			start_dt -= datetime.timedelta(seconds=3600)
+		# if pytz.timezone('Australia/Melbourne').dst(start_dt).seconds:
+		# 	start_dt -= datetime.timedelta(seconds=3600)
 
 		# start_dt = datetime.datetime(year=2019, month=10, day=27)
 		# end_dt = datetime.datetime(year=2019, month=11, day=2)
