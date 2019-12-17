@@ -9,27 +9,33 @@ class Controller(object):
 
 	__slots__ = (
 		'running', 'queue', 'complete',
-		'ls_client', 'subscriptions'
+		'ls_client', 'subscriptions',
+		'is_queue'
 	)
 	def __init__(self):
 		self.running = []
 		self.queue = []
 		self.complete = []
 
+		self.is_queue = False
+
 		self.ls_client = None
 		self.subscriptions = []
 
 	def runQueue(self):
-		while True:
-			for i in range(len(self.queue)-1,-1,-1):
-				item = self.queue[i]
-				self.complete.append(
-					(item[0], item[1](*item[2]))
-				)
-				del self.queue[i]
-			time.sleep(0.1)
+		self.is_queue = True
+		for i in range(len(self.queue)-1,-1,-1):
+			item = self.queue[i]
+			self.complete.append(
+				(item[0], item[1](*item[2]))
+			)
+			del self.queue[i]
+		self.is_queue = False
 
 	def wait(self, root_name):
+		if not self.is_queue:
+			self.runQueue()
+		
 		result = False
 		while not result:
 			result = self.getComplete(root_name)

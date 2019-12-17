@@ -1,5 +1,11 @@
 info.json
-Lib
+
+!Lib/
+Lib/*
+!Lib/site-packages/
+Lib/site-packages/*
+!Lib/site-packages/lightstreamer_client/
+
 tcl
 Scripts
 Include
