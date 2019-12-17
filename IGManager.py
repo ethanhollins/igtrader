@@ -484,8 +484,7 @@ class IGManager(object):
 				time.sleep(1)
 				pass
 
-	def reconnectLS(self, ls_client):
-		subscriptions = ls_client._subscriptions
+	def reconnectLS(self, ls_client, subscriptions):
 
 		count = 1
 		while True:
@@ -513,10 +512,7 @@ class IGManager(object):
 		for i in subscriptions:
 			self.subscribe(
 				new_ls_client, 
-				subscriptions[i].mode, 
-				subscriptions[i].item_names, 
-				subscriptions[i].field_names,
-				subscriptions[i]._listeners[0]
+				*i
 			)
 			
 		ls_client.disconnect()

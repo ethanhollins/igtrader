@@ -21,8 +21,9 @@ ONE_HOUR = 60*60
 
 class RootAccount(object):
 	
-	def __init__(self, controller, root_name, running_accounts):
+	def __init__(self, controller, idx, root_name, running_accounts):
 		self.controller = controller
+		self.idx = idx
 		self.root_name = root_name
 		self.cmd_queue = []
 		# if self.root_name != "ethan_demo":
@@ -36,8 +37,8 @@ class RootAccount(object):
 				self.runloop()
 			except:
 				print(traceback.format_exc())
-				if self.ls_client:
-					self.ls_client.disconnect()
+				if self.controller.ls_client:
+					self.controller.ls_client.disconnect()
 				sys.exit()
 
 	def set_credentials(self, root_name, running_accounts):
@@ -50,9 +51,10 @@ class RootAccount(object):
 				self.key = info['key']
 				self.is_demo = info['isDemo']
 
-				self.ls_client = None
 				self.manager = IGManager(self)
-				self.ls_client = self.manager.connectLS()
+				
+				if self.idx == 0 and not self.controller.ls_client:
+					self.controller.ls_client = self.manager.connectLS()
 				
 				self.accounts = []
 
@@ -61,14 +63,10 @@ class RootAccount(object):
 						new_acc = Account(
 							self,
 							self.manager,
-							self.ls_client,
+							self.controller.ls_client,
 							name,
 							info['accounts'][name]['plans']
 						)
-
-						if not self.manager:
-							self.manager = new_acc.manager
-							self.ls_client = new_acc.ls_client
 
 						self.accounts.append(new_acc)
 
@@ -95,11 +93,14 @@ class RootAccount(object):
 						chart.c_ask = []
 						self.is_weekend = True
 						continue
-					else:
+					elif self.idx == 0:
 						print('isClientReconnect {0}'.format(datetime.datetime.now()))
 
 						chart.last_update = datetime.datetime.now()
-						self.ls_client = self.manager.reconnectLS(self.ls_client)
+						self.controller.ls_client = self.manager.reconnectLS(
+							self.controller.ls_client,
+							self.controller.subscriptions
+						)
 			
 			for acc in self.accounts:
 				for plan in acc.plans:

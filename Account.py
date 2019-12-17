@@ -40,6 +40,12 @@ class Account(object):
 			['OPU'], 
 			self.onOpuItemUpdate
 		)
+		self.root.controller.subscriptions.append((
+			'DISTINCT',
+			['TRADE:{0}'.format(self.accountid)], 
+			['OPU'], 
+			self.onOpuItemUpdate
+		))
 
 		self.manager.subscribe(
 			self.ls_client, 
@@ -48,6 +54,12 @@ class Account(object):
 			['BID'],
 			self.onAUDItemUpdate
 		)
+		self.root.controller.subscriptions.append((
+			'DISTINCT',
+			['CHART:CS.D.AUDUSD.CFD.IP:TICK'], 
+			['BID'], 
+			self.onAUDItemUpdate
+		))
 
 	def onOpuItemUpdate(self, item):
 		if 'OPU' in item['values'] and item['values']['OPU']:

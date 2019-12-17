@@ -7,10 +7,17 @@ class Controller(object):
 	Controls all prorgam operations
 	'''
 
+	__slots__ = (
+		'running', 'queue', 'complete',
+		'ls_client', 'subscriptions'
+	)
 	def __init__(self):
 		self.running = []
 		self.queue = []
 		self.complete = []
+
+		self.ls_client = None
+		self.subscriptions = []
 
 	def runQueue(self):
 		while True:

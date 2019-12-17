@@ -187,7 +187,8 @@ class Chart(object):
 		]
 
 		self.last_update = datetime.datetime.now()
-		return self.manager.subscribe(self.root.ls_client, 'MERGE', items, fields, self.onItemUpdate)
+		self.root.controller.subscriptions.append(('MERGE', items, fields, self.onItemUpdate)) 
+		return self.manager.subscribe(self.root.controller.ls_client, 'MERGE', items, fields, self.onItemUpdate)
 
 	def onItemUpdate(self, item):
 		self.last_update = datetime.datetime.now()
