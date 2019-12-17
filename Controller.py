@@ -27,7 +27,7 @@ class Controller(object):
 					(item[0], item[1](*item[2]))
 				)
 				del self.queue[i]
-			time.sleep(1)
+			time.sleep(0.1)
 
 	def wait(self, root_name):
 		result = False
