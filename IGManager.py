@@ -35,13 +35,14 @@ class IGManager(object):
 
 		self.getSavedTokens()
 		self.last_token_update = None
-		self.getTokens()
 
 		self.creds = {
 			'identifier': self.root.username,
 			'password': self.root.password,
 			'encryptedPassword': None
 		}
+		
+		self.getTokens()
 
 	def getRootDict(self):
 		root_path = 'Accounts/{0}.json'.format(self.root.root_name)
