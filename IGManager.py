@@ -35,6 +35,7 @@ class IGManager(object):
 
 		self.getSavedTokens()
 		self.last_token_update = None
+		self.getTokens()
 
 		self.creds = {
 			'identifier': self.root.username,
