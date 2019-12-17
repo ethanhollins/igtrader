@@ -26,8 +26,6 @@ class RootAccount(object):
 		self.idx = idx
 		self.root_name = root_name
 		self.cmd_queue = []
-		# if self.root_name != "ethan_demo":
-		# 	time.sleep(60)
 
 		if self.root_name == 'backtester':
 			self.run_backtester(root_name)
@@ -53,8 +51,11 @@ class RootAccount(object):
 
 				self.manager = IGManager(self)
 				
-				if self.idx == 0 and not self.controller.ls_client:
+				if self.idx == 0:
 					self.controller.ls_client = self.manager.connectLS()
+				else:
+					while not self.controller.ls_client:
+						pass
 				
 				self.accounts = []
 
