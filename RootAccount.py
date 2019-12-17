@@ -177,7 +177,7 @@ class RootAccount(object):
 
 				for i in range(len(plans_info)):
 					plan = plans_info[i]
-					plans.append(Backtester(plan['name'], plan['variables'], info['source']))
+					plans.append(Backtester(self, plan['name'], plan['variables'], info['source']))
 
 					name = plan['name'] + ' ({0})'.format(i)
 					formatting[name] = {}

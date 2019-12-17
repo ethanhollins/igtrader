@@ -358,14 +358,15 @@ class PlanState(Enum):
 class Backtester(object):
 
 	__slots__ = (
-		'name', 'variables', 
+		'root', 'name', 'variables', 
 		'module', 'indicators', 'charts',
 		'positions', 'closed_positions',
 		'c_ts', 'storage', 'method',
 		'external_bank', 'maximum_bank', 'minimum_bank',
 		'last_time', 'max_ret', 'source', 'plan_state'
 	)
-	def __init__(self, name, variables, source='ig'):
+	def __init__(self, root, name, variables, source='ig'):
+		self.root = root
 		self.name = name
 		self.variables = variables
 		self.source = source
@@ -387,21 +388,19 @@ class Backtester(object):
 		self.last_time = None
 		self.max_ret = None
 
-
 	def loadData(self, product, period):
 		if self.source == 'ig':
 			for i in ['bid', 'ask']:
 				path = 'Data/{0}_{1}_{2}.json'.format(product, period, i)
 				if os.path.exists(path):
-					with open(path, 'r') as f:
-						values = json.load(f)
+					values = self.getJsonFromFile(path)
 
-						if i == 'bid':
-							bids_ts = np.array([int(i[0]) for i in sorted(values.items(), key=lambda kv: kv[0])], dtype=np.int32)
-							bids_ohlc = np.array([i[1] for i in sorted(values.items(), key=lambda kv: kv[0])], dtype=np.float32)
-						else:
-							asks_ts = np.array([int(i[0]) for i in sorted(values.items(), key=lambda kv: kv[0])], dtype=np.int32)
-							asks_ohlc = np.array([i[1] for i in sorted(values.items(), key=lambda kv: kv[0])], dtype=np.float32)
+					if i == 'bid':
+						bids_ts = np.array([int(i[0]) for i in sorted(values.items(), key=lambda kv: kv[0])], dtype=np.int32)
+						bids_ohlc = np.array([i[1] for i in sorted(values.items(), key=lambda kv: kv[0])], dtype=np.float32)
+					else:
+						asks_ts = np.array([int(i[0]) for i in sorted(values.items(), key=lambda kv: kv[0])], dtype=np.int32)
+						asks_ohlc = np.array([i[1] for i in sorted(values.items(), key=lambda kv: kv[0])], dtype=np.float32)
 				else:
 					print('Error: Could not find data for chart product: {0}, period: {1}.'.format(product, period))
 					return None
@@ -414,15 +413,15 @@ class Backtester(object):
 		elif self.source == 'mt':
 			path = 'Data/MT_{0}_{1}.json'.format(product, period)
 			if os.path.exists(path):
-				with open(path, 'r') as f:
-					values = json.load(f)
-					bids_ts = np.array([int(i[0]) for i in sorted(values.items(), key=lambda kv: kv[0])], dtype=np.int32)
-					bids_ohlc = np.array([[
-						float(i[1][0]),
-						float(i[1][1]),
-						float(i[1][2]),
-						float(i[1][3])
-					] for i in sorted(values.items(), key=lambda kv: kv[0])], dtype=np.float32)
+				values = self.getJsonFromFile(path)
+					
+				bids_ts = np.array([int(i[0]) for i in sorted(values.items(), key=lambda kv: kv[0])], dtype=np.int32)
+				bids_ohlc = np.array([[
+					float(i[1][0]),
+					float(i[1][1]),
+					float(i[1][2]),
+					float(i[1][3])
+				] for i in sorted(values.items(), key=lambda kv: kv[0])], dtype=np.float32)
 			else:
 				print('Error: Could not find data for chart product: {0}, period: {1}.'.format(product, period))
 				return None
@@ -432,6 +431,14 @@ class Backtester(object):
 				bids_ts, bids_ohlc
 			)
 			return chart
+
+	def saveToFile(self, path, data):
+		self.root.controller.saveToFile(self.root.root_name, path, data)
+		return self.root.controller.wait(self.root.root_name)
+
+	def getJsonFromFile(self, path):
+		self.root.controller.getJsonFromFile(self.root.root_name, path)
+		return self.root.controller.wait(self.root.root_name)
 
 	def backtest(self, start=None, start_off=0, end=None, end_off=0, method='run', plan=None):
 		print('Running backtest ({0})...'.format(self.name))

@@ -209,17 +209,17 @@ def handleStopAndReverse(entry):
 	Handle stop and reverse entries 
 	and check if tradable conditions are met.
 	'''
-	if bank:
-		pos = utils.stopAndReverse(
-			VARIABLES['PRODUCT'], 
-			utils.getLotsize(bank, VARIABLES['risk'], VARIABLES['stoprange']), 
-			slRange = VARIABLES['stoprange'],
-			tpRange = getTargetProfit(VARIABLES['tp_target'], getCurrentProfit())
-		)
+	# if bank:
+	# 	pos = utils.stopAndReverse(
+	# 		VARIABLES['PRODUCT'], 
+	# 		utils.getLotsize(bank, VARIABLES['risk'], VARIABLES['stoprange']), 
+	# 		slRange = VARIABLES['stoprange'],
+	# 		tpRange = getTargetProfit(VARIABLES['tp_target'], getCurrentProfit())
+	# 	)
 
-		global trades
-		trades += 1
-		positions.append(pos)
+	# 	global trades
+	# 	trades += 1
+	# 	positions.append(pos)
 
 def handleRegularEntry(entry):
 	''' 
@@ -227,25 +227,25 @@ def handleRegularEntry(entry):
 	and check if tradable conditions are met.
 	'''
 
-	if bank:
-		if entry.direction == Direction.LONG:
-			pos = utils.buy(
-				VARIABLES['PRODUCT'], 
-				utils.getLotsize(bank, VARIABLES['risk'], VARIABLES['stoprange']), 
-				slRange = VARIABLES['stoprange'],
-				tpRange = getTargetProfit(VARIABLES['tp_target'], getCurrentProfit())
-			)
-		else:
-			pos = utils.sell(
-				VARIABLES['PRODUCT'], 
-				utils.getLotsize(bank, VARIABLES['risk'], VARIABLES['stoprange']), 
-				slRange = VARIABLES['stoprange'],
-				tpRange = getTargetProfit(VARIABLES['tp_target'], getCurrentProfit())
-			)
+	# if bank:
+	# 	if entry.direction == Direction.LONG:
+	# 		pos = utils.buy(
+	# 			VARIABLES['PRODUCT'], 
+	# 			utils.getLotsize(bank, VARIABLES['risk'], VARIABLES['stoprange']), 
+	# 			slRange = VARIABLES['stoprange'],
+	# 			tpRange = getTargetProfit(VARIABLES['tp_target'], getCurrentProfit())
+	# 		)
+	# 	else:
+	# 		pos = utils.sell(
+	# 			VARIABLES['PRODUCT'], 
+	# 			utils.getLotsize(bank, VARIABLES['risk'], VARIABLES['stoprange']), 
+	# 			slRange = VARIABLES['stoprange'],
+	# 			tpRange = getTargetProfit(VARIABLES['tp_target'], getCurrentProfit())
+	# 		)
 
-		global trades
-		trades += 1
-		positions.append(pos)
+	# 	global trades
+	# 	trades += 1
+	# 	positions.append(pos)
 
 
 def closeAllPositions():

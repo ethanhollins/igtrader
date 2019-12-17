@@ -59,7 +59,7 @@ class Plan(object):
 		chart = self.getLowestPeriodChart()
 		start_ts = chart.getTimestampAtOffset(max(chart.bids_ts.size-START_OFF, 0))
 
-		bt = Backtester(self.name, self.variables)
+		bt = Backtester(self.account.root, self.name, self.variables)
 		self.module, _ = bt.backtest(start=start_ts, plan=self)
 
 		self.updatePositions()
@@ -68,7 +68,7 @@ class Plan(object):
 		
 		self.c_ts = bt.c_ts
 		while self.c_ts < self.getLatestChartTimestamp():
-			bt = Backtester(self.name, self.variables)
+			bt = Backtester(self.account.root, self.name, self.variables)
 			self.module, _ = bt.backtest(start=self.c_ts, start_off=1, plan=self)
 			self.c_ts = bt.c_ts
 
