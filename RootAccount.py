@@ -30,6 +30,8 @@ class RootAccount(object):
 		if self.root_name == 'backtester':
 			self.run_backtester(root_name)
 		else:
+			if self.idx != 0:
+				time.sleep(60)
 			try:
 				self.set_credentials(root_name, running_accounts)
 				self.runloop()

@@ -33,7 +33,8 @@ class Chart(object):
 			raise Exception('Chart object requires a product and period or chart.')
 
 		self.getPricePeriod()
-		self.updateValues()
+		if self.root.idx == 0:
+			self.updateValues()
 		self.subscription = self.getLiveData()
 		self.last_update = None
 
