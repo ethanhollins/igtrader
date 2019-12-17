@@ -17,6 +17,8 @@ from Indicators.SMA import SMA
 from Indicators.DONCH import DONCH
 from Indicators.DONCH_CMC import DONCH_CMC
 
+START_OFF = 2000
+
 class PlanState(Enum):
 	STOPPED = 0
 	STARTED = 1
@@ -54,8 +56,11 @@ class Plan(object):
 		self.setPlanVariables()
 		self.module.init(self)
 
+		chart = self.getLowestPeriodChart()
+		start_ts = chart.getTimestampAtOffset(max(chart.bids_ts.size-START_OFF, 0))
+
 		bt = Backtester(self.name, self.variables)
-		self.module, _ = bt.backtest(plan=self)
+		self.module, _ = bt.backtest(start=start_ts, plan=self)
 
 		self.updatePositions()
 		self.getSavedPositions()

@@ -318,6 +318,9 @@ class Chart(object):
 	def getLatestTimestamp(self):
 		return self.bids_ts[-1]
 
+	def getTimestampAtOffset(self, off):
+		return self.bids_ts[off]
+
 	@jit
 	def getClosestIndex(l, search):
 		start = 0
