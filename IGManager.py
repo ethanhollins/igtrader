@@ -512,7 +512,7 @@ class IGManager(object):
 		for i in subscriptions:
 			self.subscribe(
 				new_ls_client, 
-				*i
+				i[0],i[1],i[2],i[3]
 			)
 			
 		ls_client.disconnect()

@@ -66,7 +66,6 @@ class RootAccount(object):
 						new_acc = Account(
 							self,
 							self.manager,
-							self.controller.ls_client,
 							name,
 							info['accounts'][name]['plans']
 						)

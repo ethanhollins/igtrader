@@ -7,12 +7,11 @@ import time
 class Account(object):
 	
 	def __init__(self, 
-		root, manager, ls_client,
+		root, manager,
 		accountid, plans
 	):
 		self.root = root
 		self.manager = manager
-		self.ls_client = ls_client
 
 		self.accountid = accountid
 		self.position_queue = []
@@ -34,7 +33,7 @@ class Account(object):
 
 	def getLiveData(self):
 		self.manager.subscribe(
-			self.ls_client, 
+			self.root.controller.ls_client, 
 			'DISTINCT', 
 			['TRADE:{0}'.format(self.accountid)], 
 			['OPU'], 
@@ -48,7 +47,7 @@ class Account(object):
 		))
 
 		self.manager.subscribe(
-			self.ls_client, 
+			self.root.controller.ls_client, 
 			'DISTINCT', 
 			['CHART:CS.D.AUDUSD.CFD.IP:TICK'], 
 			['BID'],
