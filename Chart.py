@@ -110,8 +110,8 @@ class Chart(object):
 		else:
 			self.c_bid = result['bids'][latest_ts]
 			self.c_ask = result['asks'][latest_ts]
-			result['bids'].pop(latest_ts, None)
-			result['asks'].pop(latest_ts, None)
+			del result['bids'][latest_ts]
+			del result['asks'][latest_ts]
 
 		# self.bids_ohlc = numpy.around(self.bids_ohlc, decimals=5)
 		# self.asks_ohlc = numpy.around(self.asks_ohlc, decimals=5)
