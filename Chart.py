@@ -113,17 +113,20 @@ class Chart(object):
 			result['bids'].pop(latest_ts, None)
 			result['asks'].pop(latest_ts, None)
 
+		self.bids_ohlc = numpy.around(self.bids_ohlc, decimals=5)
+		self.asks_ohlc = numpy.around(self.asks_ohlc, decimals=5)
+		
 		bids = {int(self.bids_ts[i]):[
-			round(float(self.bids_ohlc[i,0]), 5),
-			round(float(self.bids_ohlc[i,1]), 5),
-			round(float(self.bids_ohlc[i,2]), 5),
-			round(float(self.bids_ohlc[i,3]), 5)
+			float(self.bids_ohlc[i,0]),
+			float(self.bids_ohlc[i,1]),
+			float(self.bids_ohlc[i,2]),
+			float(self.bids_ohlc[i,3])
 		] for i in range(self.bids_ts.size)}
 		asks = {int(self.asks_ts[i]):[
-			round(float(self.asks_ohlc[i,0]), 5),
-			round(float(self.asks_ohlc[i,1]), 5),
-			round(float(self.asks_ohlc[i,2]), 5),
-			round(float(self.asks_ohlc[i,3]), 5) 
+			float(self.asks_ohlc[i,0]),
+			float(self.asks_ohlc[i,1]),
+			float(self.asks_ohlc[i,2]),
+			float(self.asks_ohlc[i,3]) 
 		] for i in range(self.asks_ts.size)}
 		bids = {**bids, **result['bids']}
 		asks = {**asks, **result['asks']}
