@@ -17,10 +17,15 @@ class Utilities(object):
 		return datetime.datetime.strptime(snapshot, '%Y/%m/%d %H:%M:%S')
 
 	def convertUTCSnapshotToTimestamp(self, snapshot):
+		print('1')
 		s_dt = datetime.datetime.strptime(snapshot.split('.')[0], '%Y-%m-%dT%H:%M:%S')
+		print('2')
 		s_dt = pytz.utc.localize(s_dt)
+		print('3')
 		s_dt = self.convertTimezone(s_dt, 'Australia/Melbourne')
+		print('4')
 		s_dt = s_dt.replace(tzinfo=None)
+		print('5')
 		return int((s_dt - Constants.DT_START_DATE).total_seconds())
 
 	def convertTimestampToDatetime(self, ts):
