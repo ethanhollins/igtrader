@@ -113,8 +113,8 @@ class Chart(object):
 			result['bids'].pop(latest_ts, None)
 			result['asks'].pop(latest_ts, None)
 
-		self.bids_ohlc = numpy.around(self.bids_ohlc, decimals=5)
-		self.asks_ohlc = numpy.around(self.asks_ohlc, decimals=5)
+		# self.bids_ohlc = numpy.around(self.bids_ohlc, decimals=5)
+		# self.asks_ohlc = numpy.around(self.asks_ohlc, decimals=5)
 		print('3')
 
 		bids = {int(self.bids_ts[i]):[
