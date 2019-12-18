@@ -129,7 +129,7 @@ class Chart(object):
 			float(self.asks_ohlc[i,3]) 
 		] for i in range(self.asks_ts.size)}
 		print('4')
-		print(sorted(bids.items(), key=lambda kv: kv[0])[-10:])
+		print(sorted(result['bids'].items(), key=lambda kv: kv[0])[-10:])
 		raise Exception('lol')
 		bids = {**bids, **result['bids']}
 		asks = {**asks, **result['asks']}
