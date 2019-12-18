@@ -99,8 +99,10 @@ class Chart(object):
 		if not result or len(result['bids']) == 0:
 			raise Exception("({}) Couldn't retrieve data.".format(self.root.idx))
 
+		print('1')
 		sorted_l = sorted(result['bids'].items(), key=lambda kv: kv[0])
 		latest_ts = sorted_l[-1][0]
+		print('2')
 
 		if self.root.isWeekend():
 			self.c_bid = []
@@ -126,6 +128,7 @@ class Chart(object):
 		bids = {**bids, **result['bids']}
 		asks = {**asks, **result['asks']}
 
+		print('3')
 		self.bids_ts = np.array(
 			[i[0] for i in sorted(bids.items(), key=lambda kv: kv[0])],
 		dtype=np.int32)

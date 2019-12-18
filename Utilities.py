@@ -26,9 +26,7 @@ class Utilities(object):
 
 	def convertUTCSnapshotToTimestamp(self, snapshot):
 		s_dt = datetime.datetime.strptime(snapshot.split('.')[0], '%Y-%m-%dT%H:%M:%S')
-		print('1')
 		s_dt = self.convertToMelbourneTimezone(s_dt)
-		print('2')
 		return int((s_dt - Constants.DT_START_DATE).total_seconds())
 
 	def convertTimestampToDatetime(self, ts):
