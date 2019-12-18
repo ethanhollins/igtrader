@@ -16,10 +16,11 @@ class Utilities(object):
 			6
 		)
 		if dst_end <= dt < dst_start:
-			print('10')
 			return dt + datetime.timedelta(hours=10)
 		else:
-			print('11')
+			print(dt)
+			print(dt + datetime.timedelta(hours=11))
+			print('----')
 			return dt + datetime.timedelta(hours=11)
 
 	def convertToLondonTimezone(self, dt):
