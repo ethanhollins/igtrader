@@ -110,7 +110,7 @@ class RootAccount(object):
 
 	def isWeekend(self):
 		now = datetime.datetime.now()
-		now = self.manager.utils.convertTimezone(now, 'Europe/London')
+		now = self.manager.utils.convertToLondonTimezone(now)
 		today = now.weekday() + 1
 		fri = 5
 		sun = 7

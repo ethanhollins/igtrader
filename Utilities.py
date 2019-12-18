@@ -7,12 +7,42 @@ class Utilities(object):
 		return dt.astimezone(pytz.timezone(tz))
 
 	def convertToMelbourneTimezone(self, dt):
-		dst_start = datetime.datetime(year=dt.year, month=10, day=5, hour=16)
-		dst_end = datetime.datetime(year=dt.year, month=4, day=6, hour=16)
+		dst_start = self.findFirstWeekday(
+			datetime.datetime(year=dt.year, month=10, day=1, hour=16),
+			6
+		)
+		dst_end = self.findFirstWeekday(
+			datetime.datetime(year=dt.year, month=4, day=1, hour=16),
+			6
+		)
 		if dst_end <= dt < dst_start:
 			return dt + datetime.timedelta(hours=10)
 		else:
 			return dt + datetime.timedelta(hours=11)
+
+	def convertToLondonTimezone(self, dt):
+		dst_start = self.findFirstWeekday(
+			datetime.datetime(year=dt.year, month=3, day=31, hour=1),
+			6,
+			reverse=True
+		)
+		dst_end = self.findFirstWeekday(
+			datetime.datetime(year=dt.year, month=10, day=31, hour=1),
+			6,
+			reverse=True
+		)
+		if dst_start <= dt < dst_end:
+			return dt + datetime.timedelta(hours=1)
+		else:
+			return dt
+
+	def findFirstWeekday(self, dt, weekday, reverse=False):
+		while dt.weekday() != weekday:
+			if reverse:
+				dt -= datetime.timedelta(days=1)
+			else:
+				dt += datetime.timedelta(days=1)
+		return dt
 
 	def setTimezone(self, dt, tz):
 		return pytz.timezone(tz).localize(dt)
