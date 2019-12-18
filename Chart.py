@@ -129,11 +129,11 @@ class Chart(object):
 			float(self.asks_ohlc[i,3]) 
 		] for i in range(self.asks_ts.size)}
 		print('4')
+		print(bids[-10:])
 		raise Exception('lol')
 		bids = {**bids, **result['bids']}
 		asks = {**asks, **result['asks']}
 
-		print('5')
 		self.bids_ts = np.array(
 			[i[0] for i in sorted(bids.items(), key=lambda kv: kv[0])],
 		dtype=np.int32)
@@ -152,6 +152,7 @@ class Chart(object):
 
 		print('curr bid:', str(self.c_bid))
 		print('curr ask:', str(self.c_ask))
+		
 
 		path = 'Data/{0}_{1}_bid.json'.format(self.product, self.period)
 		self.root.saveToFile(path, json.dumps(bids, indent=4))
