@@ -134,7 +134,8 @@ class IGManager(object):
 			for price in data['prices']:
 				print('1')
 				ts = self.utils.convertUTCSnapshotToTimestamp(price['snapshotTimeUTC'])
-				print('2')
+				print(price)
+
 				bid_open = price['openPrice']['bid']
 				print('3')
 				bid_high = price['highPrice']['bid']
