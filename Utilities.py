@@ -31,9 +31,6 @@ class Utilities(object):
 			6,
 			reverse=True
 		)
-		print('lon')
-		print(dst_start)
-		print(dst_end)
 		if dst_start <= dt < dst_end:
 			return dt + datetime.timedelta(hours=1)
 		else:
