@@ -100,18 +100,18 @@ class Chart(object):
 			raise Exception("({}) Couldn't retrieve data.".format(self.root.idx))
 
 		print('1')
-		sorted_l = sorted(result['bids'].items(), key=lambda kv: kv[0])
-		latest_ts = sorted_l[-1][0]
+		sorted_bids = sorted(result['bids'].items(), key=lambda kv: kv[0])
+		sorted_asks = sorted(result['asks'].items(), key=lambda kv: kv[0])
 		print('2')
 
 		if self.root.isWeekend():
 			self.c_bid = []
 			self.c_ask = []
 		else:
-			self.c_bid = result['bids'][latest_ts]
-			self.c_ask = result['asks'][latest_ts]
-			del result['bids'][latest_ts]
-			del result['asks'][latest_ts]
+			self.c_bid = sorted_bids[-1][1]
+			self.c_ask = sorted_asks[-1][1]
+			del sorted_bids[-1]
+			del sorted_asks[-1]
 
 		# self.bids_ohlc = numpy.around(self.bids_ohlc, decimals=5)
 		# self.asks_ohlc = numpy.around(self.asks_ohlc, decimals=5)
@@ -130,6 +130,7 @@ class Chart(object):
 			float(self.asks_ohlc[i,3]) 
 		] for i in range(self.asks_ts.size)}
 		print('4')
+		raise Exception('lol')
 		bids = {**bids, **result['bids']}
 		asks = {**asks, **result['asks']}
 
