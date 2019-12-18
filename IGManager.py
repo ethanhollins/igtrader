@@ -133,9 +133,6 @@ class IGManager(object):
 
 			for price in data['prices']:
 				ts = self.utils.convertUTCSnapshotToTimestamp(price['snapshotTimeUTC'])
-				print('1')
-				print(price)
-				print(price['openPrice'])
 
 				bid_open = price['openPrice']['bid']
 				bid_high = price['highPrice']['bid']
@@ -146,7 +143,6 @@ class IGManager(object):
 				ask_high = price['highPrice']['ask']
 				ask_low = price['lowPrice']['ask']
 				ask_close = price['closePrice']['ask']
-				print('3')
 
 				result['bids'][ts] = [
 					float(bid_open) if bid_open != None else float(ask_open),
@@ -154,15 +150,13 @@ class IGManager(object):
 					float(bid_low) if bid_low != None else float(ask_low),
 					float(bid_close) if bid_close != None else float(ask_close)
 				]
-				print('4')
 
 				result['asks'][ts] = [
-					float(price['openPrice']['ask']) if price['openPrice']['ask'] != None else float(price['openPrice']['bid']),
-					float(price['highPrice']['ask']) if price['highPrice']['ask'] != None else float(price['highPrice']['bid']),
-					float(price['lowPrice']['ask']) if price['lowPrice']['ask'] != None else float(price['lowPrice']['bid']),
-					float(price['closePrice']['ask']) if price['closePrice']['ask'] != None else float(price['closePrice']['bid'])
+					float(ask_open) if ask_open != None else float(bid_open),
+					float(ask_high) if ask_high != None else float(bid_high),
+					float(ask_low) if ask_low != None else float(bid_low),
+					float(ask_close) if ask_close != None else float(bid_close)
 				]
-				print('5')
 
 			page_number = data['metadata']['pageData']['pageNumber']
 			total_pages = data['metadata']['pageData']['totalPages']

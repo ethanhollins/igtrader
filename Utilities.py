@@ -6,6 +6,14 @@ class Utilities(object):
 	def convertTimezone(self, dt, tz):
 		return dt.astimezone(pytz.timezone(tz))
 
+	def convertToMelbourneTimezone(self, dt):
+		dst_start = datetime.datetime(year=dt.year, month=10, day=5, hour=16)
+		dst_end = datetime.datetime(year=dt.year, month=4, day=6, hour=16)
+		if dst_end <= dt < dst_start:
+			return dt + datetime.timedelta(hours=10)
+		else:
+			return dt + datetime.timedelta(hours=11)
+
 	def setTimezone(self, dt, tz):
 		return pytz.timezone(tz).localize(dt)
 
@@ -17,15 +25,10 @@ class Utilities(object):
 		return datetime.datetime.strptime(snapshot, '%Y/%m/%d %H:%M:%S')
 
 	def convertUTCSnapshotToTimestamp(self, snapshot):
-		print('1')
 		s_dt = datetime.datetime.strptime(snapshot.split('.')[0], '%Y-%m-%dT%H:%M:%S')
+		print('1')
+		s_dt = self.convertToMelbourneTimezone(s_dt)
 		print('2')
-		s_dt = pytz.utc.localize(s_dt)
-		print('3')
-		s_dt = self.convertTimezone(s_dt, 'Australia/Melbourne')
-		print('4')
-		s_dt = s_dt.replace(tzinfo=None)
-		print('5')
 		return int((s_dt - Constants.DT_START_DATE).total_seconds())
 
 	def convertTimestampToDatetime(self, ts):
