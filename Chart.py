@@ -113,8 +113,8 @@ class Chart(object):
 			del sorted_bids[-1]
 			del sorted_asks[-1]
 
-		self.bids_ohlc = numpy.around(self.bids_ohlc, decimals=5)
-		self.asks_ohlc = numpy.around(self.asks_ohlc, decimals=5)
+		self.bids_ohlc = np.around(self.bids_ohlc, decimals=5)
+		self.asks_ohlc = np.around(self.asks_ohlc, decimals=5)
 		print('3')
 
 		bids = {int(self.bids_ts[i]):[
