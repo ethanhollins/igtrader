@@ -30,15 +30,12 @@ class RootAccount(object):
 		if self.root_name == 'backtester':
 			self.run_backtester(root_name)
 		else:
-			if self.idx != 0:
-				time.sleep(60)
 			try:
 				self.set_credentials(root_name, running_accounts)
-				self.runloop()
 			except:
 				print(traceback.format_exc())
-				if self.controller.ls_client:
-					self.controller.ls_client.disconnect()
+				if self.controller.ls_clients[self.username]:
+					self.controller.ls_clients[self.username].disconnect()
 				sys.exit()
 
 	def set_credentials(self, root_name, running_accounts):
@@ -53,11 +50,8 @@ class RootAccount(object):
 
 				self.manager = IGManager(self)
 				
-				if self.idx == 0:
-					self.controller.ls_client = self.manager.connectLS()
-				else:
-					while not self.controller.ls_client:
-						pass
+				if not self.username in self.controller.ls_clients:
+					self.controller.ls_clients[self.username] = self.manager.connectLS()
 				
 				self.accounts = []
 
@@ -99,8 +93,8 @@ class RootAccount(object):
 						print('isClientReconnect {0}'.format(datetime.datetime.now()))
 
 						chart.last_update = datetime.datetime.now()
-						self.controller.ls_client = self.manager.reconnectLS(
-							self.controller.ls_client,
+						self.controller.ls_clients[self.username] = self.manager.reconnectLS(
+							self.controller.ls_clients[self.username],
 							self.controller.subscriptions
 						)
 			

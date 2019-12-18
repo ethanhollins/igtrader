@@ -7,7 +7,11 @@ import time
 
 
 def runAccount(idx, root_name, running_accounts):
-	controller.running.append(RootAccount(controller, idx, root_name, running_accounts))
+	acc = RootAccount(controller, idx, root_name, running_accounts)
+	controller.running.append(acc)
+	controller.run_next = True
+	acc.runloop()
+
 
 if __name__ == '__main__':
 	os.system('cls')
@@ -22,6 +26,9 @@ if __name__ == '__main__':
 		if 'running' in info:
 			count = 0
 			for i in info['running']:
+				while not controller.run_next:
+					pass
+					
 				path = 'Accounts/{0}.json'.format(i)
 				if os.path.exists(path):
 					with open(path, 'r') as f:
@@ -32,6 +39,7 @@ if __name__ == '__main__':
 					print('Account {0} does not exist.'.format(i))
 
 				count += 1
+				controller.run_next = False
 
 			controller.runQueue()
 

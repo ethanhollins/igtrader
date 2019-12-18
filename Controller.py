@@ -9,17 +9,18 @@ class Controller(object):
 
 	__slots__ = (
 		'running', 'queue', 'complete',
-		'ls_client', 'subscriptions',
-		'is_queue'
+		'ls_clients', 'subscriptions',
+		'is_queue', 'run_next'
 	)
 	def __init__(self):
 		self.running = []
+		self.run_next = True
 		self.queue = []
 		self.complete = []
 
 		self.is_queue = False
 
-		self.ls_client = None
+		self.ls_clients = {}
 		self.subscriptions = []
 
 	def runQueue(self):

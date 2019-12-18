@@ -33,8 +33,7 @@ class Chart(object):
 			raise Exception('Chart object requires a product and period or chart.')
 
 		self.getPricePeriod()
-		if self.root.idx == 0:
-			self.updateValues()
+		self.updateValues()
 		self.subscription = self.getLiveData()
 		self.last_update = None
 
@@ -79,6 +78,10 @@ class Chart(object):
 				break
 
 	def updateValues(self):
+
+		if self.findCurrentBar():
+			return
+
 		if self.bids_ts.size > 0:
 			start_dt = self.manager.utils.convertTimestampToDatetime(self.getLatestTimestamp())
 		else:
@@ -93,8 +96,8 @@ class Chart(object):
 		print('{} {}'.format(start_dt, end_dt))
 		result = self.manager.getPricesByDate(self.product, self.price_period, start_dt, end_dt, 1, {})
 
-		if len(result['bids']) == 0:
-			return
+		if not result or len(result['bids']) == 0:
+			raise Exception("({}) Couldn't retrieve data.".format(self.root.idx))
 
 		sorted_l = sorted(result['bids'].items(), key=lambda kv: kv[0])
 		latest_ts = sorted_l[-1][0]
@@ -168,6 +171,17 @@ class Chart(object):
 		path = 'Data/{0}_{1}_ask.json'.format(self.product, self.period)
 		self.root.saveToFile(path, json.dumps(asks, indent=4))
 
+	def findCurrentBar(self):
+		for root in self.root.controller.running:
+			for chart in root.manager.charts:
+				if chart.isChart(self.product, self.period):
+					self.c_bid = chart.c_bid
+					self.c_ask = chart.c_ask
+					print('curr bid:', str(self.c_bid))
+					print('curr ask:', str(self.c_ask))
+					return True
+		return False
+
 	def isChart(self, product, period):
 		return product == self.product and period == self.period
 
@@ -188,7 +202,11 @@ class Chart(object):
 
 		self.last_update = datetime.datetime.now()
 		self.root.controller.subscriptions.append(('MERGE', items, fields, self.onItemUpdate)) 
-		return self.manager.subscribe(self.root.controller.ls_client, 'MERGE', items, fields, self.onItemUpdate)
+		return self.manager.subscribe(
+			self.root.controller.ls_clients[self.root.username], 
+			'MERGE', items, fields, 
+			self.onItemUpdate
+		)
 
 	def onItemUpdate(self, item):
 		self.last_update = datetime.datetime.now()

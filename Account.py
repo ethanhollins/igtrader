@@ -33,7 +33,7 @@ class Account(object):
 
 	def getLiveData(self):
 		self.manager.subscribe(
-			self.root.controller.ls_client, 
+			self.root.controller.ls_clients[self.root.username], 
 			'DISTINCT', 
 			['TRADE:{0}'.format(self.accountid)], 
 			['OPU'], 
@@ -47,7 +47,7 @@ class Account(object):
 		))
 
 		self.manager.subscribe(
-			self.root.controller.ls_client, 
+			self.root.controller.ls_clients[self.root.username], 
 			'DISTINCT', 
 			['CHART:CS.D.AUDUSD.CFD.IP:TICK'], 
 			['BID'],
