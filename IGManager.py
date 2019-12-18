@@ -136,6 +136,7 @@ class IGManager(object):
 				ts = self.utils.convertUTCSnapshotToTimestamp(price['snapshotTimeUTC'])
 				print('2')
 				bid_open = price['openPrice']['bid']
+				print('3')
 				bid_high = price['highPrice']['bid']
 				bid_low = price['lowPrice']['bid']
 				bid_close = price['closePrice']['bid']
@@ -144,7 +145,6 @@ class IGManager(object):
 				ask_high = price['highPrice']['ask']
 				ask_low = price['lowPrice']['ask']
 				ask_close = price['closePrice']['ask']
-				print('3')
 
 				result['bids'][ts] = [
 					float(bid_open) if bid_open != None else float(ask_open),
