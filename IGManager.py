@@ -132,13 +132,16 @@ class IGManager(object):
 				result['asks'] = {}
 
 			for price in data['prices']:
+				print('1')
 				ts = self.utils.convertUTCSnapshotToTimestamp(price['snapshotTimeUTC'])
+				print('2')
 				result['bids'][ts] = [
 					float(price['openPrice']['bid']) if price['openPrice']['bid'] != None else float(price['openPrice']['ask']),
 					float(price['highPrice']['bid']) if price['highPrice']['bid'] != None else float(price['highPrice']['ask']),
 					float(price['lowPrice']['bid']) if price['lowPrice']['bid'] != None else float(price['lowPrice']['ask']),
 					float(price['closePrice']['bid']) if price['closePrice']['bid'] != None else float(price['closePrice']['ask'])
 				]
+				print('3')
 
 				result['asks'][ts] = [
 					float(price['openPrice']['ask']) if price['openPrice']['ask'] != None else float(price['openPrice']['bid']),
@@ -146,6 +149,7 @@ class IGManager(object):
 					float(price['lowPrice']['ask']) if price['lowPrice']['ask'] != None else float(price['lowPrice']['bid']),
 					float(price['closePrice']['ask']) if price['closePrice']['ask'] != None else float(price['closePrice']['bid'])
 				]
+				print('4')
 
 			page_number = data['metadata']['pageData']['pageNumber']
 			total_pages = data['metadata']['pageData']['totalPages']
