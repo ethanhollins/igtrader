@@ -777,6 +777,9 @@ class Backtester(object):
 	def convertTimezone(self, dt, tz):
 		return dt.astimezone(pytz.timezone(tz))
 
+	def convertToLondonTimezone(self, dt):
+		return self.convertTimezone(dt, 'Europe/London')
+
 	def setTimezone(self, dt, tz):
 		return pytz.timezone(tz).localize(dt)
 

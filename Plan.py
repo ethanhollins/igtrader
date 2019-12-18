@@ -483,6 +483,9 @@ class Plan(object):
 	def convertTimezone(self, dt, tz):
 		return self.account.manager.utils.convertTimezone(dt, tz)
 
+	def convertToLondonTimezone(self, dt):
+		return self.account.manager.utils.convertToLondonTimezone(dt)
+
 	def setTimezone(self, dt, tz):
 		return self.account.manager.utils.setTimezone(dt, tz)
 		
