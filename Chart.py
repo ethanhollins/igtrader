@@ -115,7 +115,8 @@ class Chart(object):
 
 		self.bids_ohlc = numpy.around(self.bids_ohlc, decimals=5)
 		self.asks_ohlc = numpy.around(self.asks_ohlc, decimals=5)
-		
+		print('3')
+
 		bids = {int(self.bids_ts[i]):[
 			float(self.bids_ohlc[i,0]),
 			float(self.bids_ohlc[i,1]),
@@ -128,10 +129,11 @@ class Chart(object):
 			float(self.asks_ohlc[i,2]),
 			float(self.asks_ohlc[i,3]) 
 		] for i in range(self.asks_ts.size)}
+		print('4')
 		bids = {**bids, **result['bids']}
 		asks = {**asks, **result['asks']}
 
-		print('3')
+		print('5')
 		self.bids_ts = np.array(
 			[i[0] for i in sorted(bids.items(), key=lambda kv: kv[0])],
 		dtype=np.int32)
