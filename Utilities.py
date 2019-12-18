@@ -15,9 +15,6 @@ class Utilities(object):
 			datetime.datetime(year=dt.year, month=4, day=1, hour=16),
 			6
 		)
-		print('aus')
-		print(dst_start)
-		print(dst_end)
 		if dst_end <= dt < dst_start:
 			return dt + datetime.timedelta(hours=10)
 		else:
