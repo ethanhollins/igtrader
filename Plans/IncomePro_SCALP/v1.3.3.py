@@ -146,7 +146,7 @@ def onNewBar(chart):
 	''' Function called on every new bar '''
 	if utils.plan_state.value in (4,):
 		time = utils.convertTimestampToDatetime(utils.getLatestTimestamp())
-		london_time = utils.convertToLondonTimezone(time, 'Europe/London')
+		london_time = utils.convertToLondonTimezone(time)
 		utils.log("\nTime", time.strftime('%d/%m/%y %H:%M:%S'))
 		utils.log("London Time", london_time.strftime('%d/%m/%y %H:%M:%S') + '\n')
 	elif utils.plan_state.value in (1,):
