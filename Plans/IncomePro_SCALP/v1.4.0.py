@@ -565,7 +565,7 @@ def entrySetup():
 				return entrySetup()
 
 		elif trigger.entry_state == EntryState.THREE:
-			if isBB(trigger.direction):
+			if isBB(trigger.est_direction):
 				if entryConfirmation(trigger.est_direction):
 					trigger.entry_state = EntryState.COMPLETE
 					trigger.re_entry = None
@@ -639,14 +639,14 @@ def isCciConf(direction, reverse=False):
 
 	if reverse:
 		if direction == Direction.LONG:
-			return chidx <= VARIABLES['cci_conf']
+			return chidx <= -VARIABLES['cci_conf']
 		else:
 			return chidx >= VARIABLES['cci_conf']
 	else:
 		if direction == Direction.LONG:
 			return chidx >= VARIABLES['cci_conf']
 		else:
-			return chidx <= VARIABLES['cci_conf']
+			return chidx <= -VARIABLES['cci_conf']
 
 def isRsiConf(direction, reverse=False):
 	stridx = round(float(rsi.getCurrent(utils, chart)), 2)

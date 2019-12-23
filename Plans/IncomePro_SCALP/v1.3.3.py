@@ -526,7 +526,7 @@ def entrySetup():
 				return entrySetup()
 
 		elif trigger.entry_state == EntryState.THREE:
-			if isBB(trigger.direction):
+			if isBB(trigger.est_direction):
 				if entryConfirmation(trigger.est_direction):
 					trigger.entry_state = EntryState.COMPLETE
 					trigger.re_entry = None
