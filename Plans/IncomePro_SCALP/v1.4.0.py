@@ -69,8 +69,11 @@ class Trigger(dict):
 	def __init__(self, direction=None):
 		self.direction = direction
 		
-		self.ds_long = DirectionState.ONE
-		self.ds_short = DirectionState.ONE
+		self.macd_ds_long = DirectionState.ONE
+		self.macd_ds_short = DirectionState.ONE
+
+		self.cci_ds_long = DirectionState.ONE
+		self.cci_ds_short = DirectionState.ONE
 
 		self.est_direction = None
 
@@ -325,14 +328,18 @@ def runSequence():
 		# 	setSL17()
 
 	if time_state == TimeState.TRADING:
-		directionSetup(Direction.LONG)
-		directionSetup(Direction.SHORT)
+		macdDirectionSetup(Direction.LONG)
+		macdDirectionSetup(Direction.SHORT)
+		cciDirectionSetup(Direction.LONG)
+		cciDirectionSetup(Direction.SHORT)
 		if entrySetup(): return
 		if reEntrySetup(): return
 
 	elif time_state == TimeState.STOP or time_state == TimeState.EXIT:
-		directionSetup(Direction.LONG)
-		directionSetup(Direction.SHORT)
+		macdDirectionSetup(Direction.LONG)
+		macdDirectionSetup(Direction.SHORT)
+		cciDirectionSetup(Direction.LONG)
+		cciDirectionSetup(Direction.SHORT)
 		entrySetup()
 		exitSetup()
 
@@ -462,41 +469,81 @@ def setPivotLine():
 			trigger.pivot_line = close
 			return
 
-def directionSetup(direction):
+def macdDirectionSetup(direction):
 
-	if getDirectionState(direction) == DirectionState.ONE:
-		if isRsiConf(direction) and isCciConf(direction):
-			setDirectionState(direction, DirectionState.TWO)
+	if getMacdDirectionState(direction) == DirectionState.ONE:
+		if isRsiConf(direction) and isMacdzPosConf(direction):
+			setMacdDirectionState(direction, DirectionState.TWO)
 			return
 
-	elif getDirectionState(direction) == DirectionState.TWO:
-		if isCciConf(direction, reverse=True):
-			setDirectionState(direction, DirectionState.THREE)
+	elif getMacdDirectionState(direction) == DirectionState.TWO:
+		if isMacdzPosConf(direction, reverse=True):
+			setMacdDirectionState(direction, DirectionState.THREE)
 			return
 
-	elif getDirectionState(direction) == DirectionState.THREE:
-		if isCciConf(direction):
+	elif getMacdDirectionState(direction) == DirectionState.THREE:
+		if isMacdzPosConf(direction):
 			if isRsiConf(direction):
-				setDirectionState(direction, DirectionState.ONE)
-				trigger.entry_state = EntryState.ONE
-				if time_state == TimeState.TRADING:
-					trigger.est_direction = direction
+				setMacdDirectionState(direction, DirectionState.ONE)
+				
+				if trigger.est_direction != direction:
+					trigger.entry_state = EntryState.ONE
+					if time_state == TimeState.TRADING and trigger.pivot_line:
+						trigger.est_direction = direction
 				return
 			else:
-				setDirectionState(direction, DirectionState.ONE)
+				setMacdDirectionState(direction, DirectionState.ONE)
 				return
 
-def setDirectionState(direction, state):
-	if direction == Direction.LONG:
-		trigger.ds_long = state
-	else:
-		trigger.ds_short = state
+def cciDirectionSetup(direction):
 
-def getDirectionState(direction):
+	if getCciDirectionState(direction) == DirectionState.ONE:
+		if isRsiConf(direction) and isCciConf(direction):
+			setCciDirectionState(direction, DirectionState.TWO)
+			return
+
+	elif getCciDirectionState(direction) == DirectionState.TWO:
+		if isCciConf(direction, reverse=True):
+			setCciDirectionState(direction, DirectionState.THREE)
+			return
+
+	elif getCciDirectionState(direction) == DirectionState.THREE:
+		if isCciConf(direction):
+			if isRsiConf(direction):
+				setCciDirectionState(direction, DirectionState.ONE)
+
+				if trigger.est_direction != direction:
+					trigger.entry_state = EntryState.ONE
+					if time_state == TimeState.TRADING and trigger.pivot_line:
+						trigger.est_direction = direction
+				return
+			else:
+				setCciDirectionState(direction, DirectionState.ONE)
+				return
+
+def setMacdDirectionState(direction, state):
 	if direction == Direction.LONG:
-		return trigger.ds_long
+		trigger.macd_ds_long = state
 	else:
-		return trigger.ds_short
+		trigger.macd_ds_short = state
+
+def getMacdDirectionState(direction):
+	if direction == Direction.LONG:
+		return trigger.macd_ds_long
+	else:
+		return trigger.macd_ds_short
+
+def setCciDirectionState(direction, state):
+	if direction == Direction.LONG:
+		trigger.cci_ds_long = state
+	else:
+		trigger.cci_ds_short = state
+
+def getCciDirectionState(direction):
+	if direction == Direction.LONG:
+		return trigger.cci_ds_long
+	else:
+		return trigger.cci_ds_short
 
 def entrySetup():
 
@@ -592,14 +639,14 @@ def isCciConf(direction, reverse=False):
 
 	if reverse:
 		if direction == Direction.LONG:
-			return chidx < VARIABLES['cci_conf']
+			return chidx <= VARIABLES['cci_conf']
 		else:
-			return chidx > VARIABLES['cci_conf']
+			return chidx >= VARIABLES['cci_conf']
 	else:
 		if direction == Direction.LONG:
-			return chidx > VARIABLES['cci_conf']
+			return chidx >= VARIABLES['cci_conf']
 		else:
-			return chidx < VARIABLES['cci_conf']
+			return chidx <= VARIABLES['cci_conf']
 
 def isRsiConf(direction, reverse=False):
 	stridx = round(float(rsi.getCurrent(utils, chart)), 2)

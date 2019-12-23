@@ -487,7 +487,7 @@ def directionSetup(direction):
 			if isRsiConf(direction):
 				setDirectionState(direction, DirectionState.ONE)
 				trigger.entry_state = EntryState.ONE
-				if time_state == TimeState.TRADING:
+				if time_state == TimeState.TRADING and trigger.pivot_line:
 					trigger.est_direction = direction
 				return
 			else:
