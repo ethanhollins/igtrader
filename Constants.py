@@ -40,6 +40,7 @@ Timestamps
 import datetime
 DT_START_DATE = datetime.datetime(year=2014, month=1, day=1)
 MT_DT_START_DATE = datetime.datetime(year=1970, month=1, day=1)
+IG_START_DATE = datetime.datetime(year=1970, month=1, day=1, hour=11)
 
 '''
 Backtester

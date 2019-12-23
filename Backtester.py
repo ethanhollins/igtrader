@@ -15,6 +15,7 @@ from matplotlib import dates as mpl_dates
 
 from Indicators.ATR import ATR
 from Indicators.BOLL import BOLL
+from Indicators.CCI import CCI
 from Indicators.KELT import KELT
 from Indicators.MACD import MACD
 from Indicators.MAE import MAE
@@ -1014,6 +1015,11 @@ class Backtester(object):
 		atr = ATR(period)
 		self.indicators.append(atr)
 		return atr
+		
+	def CCI(self, period):
+		cci = CCI(period)
+		self.indicators.append(cci)
+		return cci
 
 	def RSI(self, period):
 		rsi = RSI(period)

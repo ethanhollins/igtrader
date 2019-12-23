@@ -196,7 +196,7 @@ class Chart(object):
 		items = ['Chart:{0}:{1}'.format(self.product, period)]
 
 		fields = [
-			'CONS_END',
+			'CONS_END', 'UTM',
 			'BID_OPEN', 'BID_HIGH', 'BID_LOW', 'BID_CLOSE',
 			'OFR_OPEN', 'OFR_HIGH', 'OFR_LOW', 'OFR_CLOSE'
 		]
@@ -288,8 +288,8 @@ class Chart(object):
 
 				elif self.period == Constants.ONE_MINUTE:
 					self.reset = True
-					now = self.nearestMinute(now)
-					new_ts = self.manager.utils.convertDatetimeToTimestamp(now - datetime.timedelta(seconds=60))
+					now = Constants.IG_START_DATE + datetime.timedelta(milliseconds=int(item['values']['UTM']))
+					new_ts = self.manager.utils.convertDatetimeToTimestamp(now)
 
 					self.addNewBar(new_ts)
 

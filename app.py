@@ -8,10 +8,13 @@ import time
 
 def runAccount(idx, root_name, running_accounts):
 	acc = RootAccount(controller, idx, root_name, running_accounts)
-	controller.running.append(acc)
-	controller.run_next = True
-	acc.runloop()
-
+	
+	if root_name != 'backtester': 
+		controller.running.append(acc)
+		controller.run_next = True
+		acc.runloop()
+	else:
+		os._exit(1)
 
 if __name__ == '__main__':
 	os.system('cls')
