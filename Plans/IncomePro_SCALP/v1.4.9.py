@@ -110,13 +110,14 @@ def init(utilities):
 
 	setup(utilities)
 	
-	global rsi, macd_z, boll_one, donch, cci
+	global rsi, macd_z, boll_one, donch, cci, sma
 
 	rsi = utils.RSI(10)
 	macd_z = utils.MACD(4, 40, 3)
 	boll_one = utils.BOLL(10, VARIABLES['boll'])
 	donch = utils.DONCH(VARIABLES['donch'])
 	cci = utils.CCI(5)
+	sma = utils.SMA(10)
 
 	setGlobalVars()
 
@@ -566,7 +567,7 @@ def entrySetup():
 					return
 
 		elif trigger.entry_state == EntryState.TWO:
-			if isDonchRet(trigger.est_direction):
+			if isSmaRet(trigger.est_direction):
 				trigger.entry_state = EntryState.THREE
 				return entrySetup()
 
@@ -697,6 +698,21 @@ def isDonchRet(direction, reverse=False):
 			return low < mid
 		else:
 			return high > mid
+
+def isSmaRet(direction, reverse=False):
+	val = sma.getCurrent(utils, chart)
+	_, high, low, _ = chart.getCurrentBidOHLC(utils)
+
+	if reverse:
+		if direction == Direction.LONG:
+			return high > val
+		else:
+			return low < val
+	else:
+		if direction == Direction.LONG:
+			return low < val
+		else:
+			return high > val
 
 def isABPivotLine(direction, reverse=False):
 	close = chart.getCurrentBidOHLC(utils)[3]

@@ -483,7 +483,7 @@ def macdDirectionSetup(direction):
 			return
 
 	elif getMacdDirectionState(direction) == DirectionState.TWO:
-		if isMacdzPosConf(direction, reverse=True):
+		if isMacdzZeroConf(direction, reverse=True):
 			setMacdDirectionState(direction, DirectionState.THREE)
 			return
 
@@ -639,6 +639,20 @@ def isMacdzPosConf(direction, reverse=False):
 			return hist > 0
 		else:
 			return hist < 0
+
+def isMacdzZeroConf(direction, reverse=False):
+	hist = round(float(macd_z.getCurrent(utils, chart)[2]), 5)
+
+	if reverse:
+		if direction == Direction.LONG:
+			return hist <= 0
+		else:
+			return hist >= 0
+	else:
+		if direction == Direction.LONG:
+			return hist >= 0
+		else:
+			return hist <= 0
 
 def isCciConf(direction, reverse=False):
 	chidx = round(float(cci.getCurrent(utils, chart)), 2)

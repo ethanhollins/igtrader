@@ -411,7 +411,7 @@ def getPivotLines():
 		return
 
 	for i in range(len(ohlc_vals)-1, -1, -1):
-		close = ohlc_vals[i][3]
+		_, high, low, _ = ohlc_vals[i]
 		stridx = rsi_vals[i]
 
 		if not Direction.LONG in obos_hist and stridx >= VARIABLES['overbought']:
@@ -423,8 +423,8 @@ def getPivotLines():
 
 		if len(obos_hist) > 0:
 			if curr_obos == Direction.LONG:
-				if curr_ex == 0 or close > curr_ex:
-					curr_ex = close
+				if curr_ex == 0 or high > curr_ex:
+					curr_ex = high
 
 				if stridx <= 50:
 					curr_obos = None
@@ -439,8 +439,8 @@ def getPivotLines():
 						return
 
 			elif curr_obos == Direction.SHORT:
-				if curr_ex == 0 or close < curr_ex:
-					curr_ex = close
+				if curr_ex == 0 or low < curr_ex:
+					curr_ex = low
 
 				if stridx >= 50:
 					curr_obos = None
