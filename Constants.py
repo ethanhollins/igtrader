@@ -51,6 +51,9 @@ DAILY_PERC_DD = 'd_dd'
 DAILY_WINS = 'd_wins'
 DAILY_LOSSES = 'd_losses'
 
+DAY_COMPOUND_RET = 'd_compound_ret'
+DAY_COMPOUND_DD = 'd_compound_dd'
+
 POS_EQUITY_RET = 'pos_equity_ret'
 POS_EQUITY_DD = 'pos_equity_dd'
 

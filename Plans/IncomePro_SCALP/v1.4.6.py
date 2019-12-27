@@ -302,7 +302,11 @@ def checkTime():
 			trigger.est_direction = None
 			trigger.re_entry = None
 
-	elif time_state != TimeState.STOP and london_time.hour == 20:
+	elif (
+		time_state != TimeState.STOP 
+		and ((london_time.hour == 19 and london_time.minute == 59) or
+			london_time.hour == 20)
+	):
 		time_state = TimeState.STOP
 
 def runSequence():

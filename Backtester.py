@@ -364,7 +364,8 @@ class Backtester(object):
 		'positions', 'closed_positions',
 		'c_ts', 'storage', 'method',
 		'external_bank', 'maximum_bank', 'minimum_bank',
-		'last_time', 'max_ret', 'source', 'plan_state'
+		'last_time', 'max_ret', 'source', 'plan_state',
+		'last_ret'
 	)
 	def __init__(self, root, name, variables, source='ig'):
 		self.root = root
@@ -388,6 +389,7 @@ class Backtester(object):
 
 		self.last_time = None
 		self.max_ret = None
+		self.last_ret = None
 
 	def loadData(self, product, period):
 		if self.source == 'ig':
@@ -540,8 +542,9 @@ class Backtester(object):
 	def getInterimData(self, data):
 		time = self.convertTimestampToDatetime(self.c_ts)
 		new_day = False
+
 		if self.last_time:
-			if time.day != self.last_time.day and not time.weekday() in (5,6):
+			if time.day != self.last_time.day and not time.weekday() in (6,0):
 				self.last_time = time
 				new_day = True
 		else:
@@ -576,16 +579,30 @@ class Backtester(object):
 			else:
 				data[Constants.DAILY_PERC_DD] = {self.last_time: self.max_ret - perc_ret}
 
-			if pip_ret >= 0:
-				if not Constants.DAILY_WINS in data:
-					data[Constants.DAILY_WINS] = 0
+			if self.last_ret:
+				if pip_ret - self.last_ret >= 0:
+					if not Constants.DAILY_WINS in data:
+						data[Constants.DAILY_WINS] = 0
 
-				data[Constants.DAILY_WINS] += 1
+					data[Constants.DAILY_WINS] += 1
+				else:
+					if not Constants.DAILY_LOSSES in data:
+						data[Constants.DAILY_LOSSES] = 0
+
+					data[Constants.DAILY_LOSSES] += 1
 			else:
-				if not Constants.DAILY_LOSSES in data:
-					data[Constants.DAILY_LOSSES] = 0
+				if pip_ret >= 0:
+					if not Constants.DAILY_WINS in data:
+						data[Constants.DAILY_WINS] = 0
 
-				data[Constants.DAILY_LOSSES] += 1
+					data[Constants.DAILY_WINS] += 1
+				else:
+					if not Constants.DAILY_LOSSES in data:
+						data[Constants.DAILY_LOSSES] = 0
+
+					data[Constants.DAILY_LOSSES] += 1
+
+			self.last_ret = pip_ret
 			
 		return data
 
@@ -649,6 +666,25 @@ class Backtester(object):
 					compound_positions = []
 			compound_positions.append(i)
 
+		d_bank = 100000
+		d_max_bank = d_bank
+		d_max_cmp_dd = 0
+		last_ret = None
+
+		for k, perc in data[Constants.DAILY_PERC_RET].items():
+			if last_ret:
+				d_ret = perc - last_ret
+				print('{}\n{}\n----'.format(perc, d_ret))
+				d_bank += (d_bank * (d_ret/100))
+
+				if d_bank > d_max_bank:
+					d_max_bank = d_bank
+				else:
+					dd = (d_max_bank - d_bank) / d_max_bank
+					d_max_cmp_dd = dd if dd > d_max_cmp_dd else d_max_cmp_dd
+
+			last_ret = perc
+
 		data[Constants.POS_PERC_RET] = round(perc_ret, 2)
 		data[Constants.POS_PIP_RET] = round(pip_ret, 1)
 		data[Constants.POS_PERC_DD] = round(perc_dd, 2)
@@ -658,6 +694,9 @@ class Backtester(object):
 
 		data[Constants.POS_COMPOUND_RET] = round(((bank / 100000) - 1) * 100, 2)
 		data[Constants.POS_COMPOUND_DD] = round(max_cmp_dd * 100, 2)
+
+		data[Constants.DAY_COMPOUND_RET] = round(((d_bank / 100000) - 1) * 100, 2)
+		data[Constants.DAY_COMPOUND_DD] = round(d_max_cmp_dd * 100, 2)
 
 		data[Constants.WINS] = wins
 		data[Constants.LOSSES] = losses
@@ -779,7 +818,28 @@ class Backtester(object):
 		return dt.astimezone(pytz.timezone(tz))
 
 	def convertToLondonTimezone(self, dt):
-		return self.convertTimezone(dt, 'Europe/London')
+		dst_start = self.findFirstWeekday(
+			datetime.datetime(year=dt.year, month=3, day=31, hour=1),
+			6,
+			reverse=True
+		)
+		dst_end = self.findFirstWeekday(
+			datetime.datetime(year=dt.year, month=10, day=31, hour=1),
+			6,
+			reverse=True
+		)
+		if dst_start <= dt < dst_end:
+			return dt + datetime.timedelta(hours=1)
+		else:
+			return dt
+
+	def findFirstWeekday(self, dt, weekday, reverse=False):
+		while dt.weekday() != weekday:
+			if reverse:
+				dt -= datetime.timedelta(days=1)
+			else:
+				dt += datetime.timedelta(days=1)
+		return dt
 
 	def setTimezone(self, dt, tz):
 		return pytz.timezone(tz).localize(dt)
