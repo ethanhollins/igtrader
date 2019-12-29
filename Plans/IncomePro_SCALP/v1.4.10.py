@@ -422,12 +422,18 @@ def getPivotLines():
 		stridx = rsi_vals[i]
 
 		if not Direction.LONG in obos_hist:
-			if stridx >= VARIABLES['overbought']:
+			if not is_long_start:
+				if stridx <= 50:
+					is_long_start = True
+			elif stridx >= VARIABLES['overbought']:
 				obos_hist.append(Direction.LONG)
 				curr_obos = Direction.LONG
 
 		if not Direction.SHORT in obos_hist:
-			if stridx <= VARIABLES['oversold']:
+			if not is_short_start:
+				if stridx >= 50:
+					is_short_start = True
+			elif stridx <= VARIABLES['oversold']:
 				obos_hist.append(Direction.SHORT)
 				curr_obos = Direction.SHORT
 

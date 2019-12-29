@@ -674,7 +674,6 @@ class Backtester(object):
 		for k, perc in data[Constants.DAILY_PERC_RET].items():
 			if last_ret:
 				d_ret = perc - last_ret
-				print('{}\n{}\n----'.format(perc, d_ret))
 				d_bank += (d_bank * (d_ret/100))
 
 				if d_bank > d_max_bank:
