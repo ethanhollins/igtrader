@@ -257,7 +257,7 @@ class Plan(object):
 		tpPrice=None, tpRange=None,
 		attempts=0
 	):
-		result = self.account.manager.createPosition(
+		ref = self.account.manager.createPosition(
 			self.account.accountid,
 			product, Constants.BUY, lotsize, 
 			orderType = orderType, 
@@ -265,42 +265,45 @@ class Plan(object):
 			tpPrice = tpPrice, tpRange = tpRange,
 			is_gslo = self.is_gslo
 		)
-
-		orderid = result['dealId']
 		
 		pos = None
-		if result['dealStatus'] == Constants.ACCEPTED:
-			start = time.time()
-			while True:
-				for i in self.account.position_queue:
-					if i.orderid == orderid:
-						del self.account.position_queue[self.account.position_queue.index(i)]
-						self.positions.append(i)
-						i.plan = self
-						pos = i
-						break
-
-				if pos:
+		start = time.time()
+		while True:
+			for i in self.account.position_queue:
+				if i.ref == ref:
+					del self.account.position_queue[self.account.position_queue.index(i)]
+					self.positions.append(i)
+					i.plan = self
+					pos = i
 					break
-				elif time.time() - start > 10:
-					print('PlanError ({0}): Unable to retrieve position.'.format(self.account.accountid))
-					return None
-				time.sleep(0.01)
+			
+			for i in self.account.rejected_queue:
+				if i == ref:
+					if attempts >= 5:
+						raise Exception('PlanError ({0}): Exceeded max position attempts ({1}).\n{2}'.format(
+							self.account.accountid, attempts, result
+						))
+						return
 
-		elif result['dealStatus'] == Constants.REJECTED:
-			if attempts >= 5:
-				raise Exception('PlanError ({0}): Exceeded max position attempts ({1}).\n{2}'.format(
-					self.account.accountid, attempts, result
-				))
-				return
+					elif 'RETRY_ON_REJECTED' in self.module.VARIABLES and self.module.VARIABLES['RETRY_ON_REJECTED']:
+						return self.buy(
+							product, lotsize, orderType=orderType, 
+							slPrice=slPrice, slRange=slRange, 
+							tpPrice=tpPrice, tpRange=tpRange,
+							attempts= attempts + 1
+						)
+					else:
+						raise Exception('PlanError ({0}): Position REJECTED.\n{2}'.format(
+							self.account.accountid, result
+						))
+						return
 
-			elif 'RETRY_ON_REJECTED' in self.module.VARIABLES and self.module.VARIABLES['RETRY_ON_REJECTED']:
-				return self.buy(
-					product, lotsize, orderType=orderType, 
-					slPrice=slPrice, slRange=slRange, 
-					tpPrice=tpPrice, tpRange=tpRange,
-					attempts= attempts + 1
-				)
+			if pos:
+				break
+			elif time.time() - start > 10:
+				print('PlanError ({0}): Unable to retrieve position.'.format(self.account.accountid))
+				return None
+			time.sleep(0.01)
 
 		if pos:
 			print('[{0}] Confirmed {1} ({2}) at {3} sl: {4} tp: {5}'.format(
@@ -323,7 +326,7 @@ class Plan(object):
 		tpPrice=None, tpRange=None,
 		attempts=0
 	):
-		result = self.account.manager.createPosition(
+		ref = self.account.manager.createPosition(
 			self.account.accountid,
 			product, Constants.SELL, lotsize, 
 			orderType = orderType, 
@@ -331,42 +334,45 @@ class Plan(object):
 			tpPrice = tpPrice, tpRange = tpRange,
 			is_gslo = self.is_gslo
 		)
-		
-		orderid = result['dealId']
 
 		pos = None
-		if result['dealStatus'] == Constants.ACCEPTED:
-			start = time.time()
-			while True:
-				for i in self.account.position_queue:
-					if i.orderid == orderid:
-						del self.account.position_queue[self.account.position_queue.index(i)]
-						i.plan = self
-						self.positions.append(i)
-						pos = i
-						break
-							
-				if pos:
+		start = time.time()
+		while True:
+			for i in self.account.position_queue:
+				if i.ref == ref:
+					del self.account.position_queue[self.account.position_queue.index(i)]
+					i.plan = self
+					self.positions.append(i)
+					pos = i
 					break
-				elif time.time() - start > 10:
-					print('PlanError ({0}): Unable to retrieve position.'.format(self.account.accountid))
-					return None
-				time.sleep(0.01)
+			
+			for i in self.account.rejected_queue:
+				if i == ref:
+					if attempts >= 5:
+						raise Exception('PlanError ({0}): Exceeded max position attempts ({1}).\n{2}'.format(
+							self.account.accountid, attempts, result
+						))
+						return
 
-		elif result['dealStatus'] == Constants.REJECTED:
-			if attempts >= 5:
-				raise Exception('PlanError ({0}): Exceeded max position attempts ({1}).\n{2}'.format(
-					self.account.accountid, attempts, result
-				))
-				return
+					elif 'RETRY_ON_REJECTED' in self.module.VARIABLES and self.module.VARIABLES['RETRY_ON_REJECTED']:
+						return self.sell(
+							product, lotsize, orderType=orderType, 
+							slPrice=slPrice, slRange=slRange, 
+							tpPrice=tpPrice, tpRange=tpRange,
+							attempts= attempts + 1
+						)
+					else:
+						raise Exception('PlanError ({0}): Position REJECTED.\n{2}'.format(
+							self.account.accountid, result
+						))
+						return
 
-			elif 'RETRY_ON_REJECTED' in self.module.VARIABLES and self.module.VARIABLES['RETRY_ON_REJECTED']:
-				return self.sell(
-					product, lotsize, orderType=orderType, 
-					slPrice=slPrice, slRange=slRange, 
-					tpPrice=tpPrice, tpRange=tpRange,
-					attempts= attempts + 1
-				)
+			if pos:
+				break
+			elif time.time() - start > 10:
+				print('PlanError ({0}): Unable to retrieve position.'.format(self.account.accountid))
+				return None
+			time.sleep(0.01)
 
 		if pos:
 			print('[{0}] Confirmed {1} ({2}) at {3} sl: {4} tp: {5}'.format(

@@ -349,7 +349,7 @@ class RootAccount(object):
 		ax2.legend(results.keys())
 		ax2.xaxis.set_major_formatter(date_format)
 
-		ax3.set_ylim(max((count)*8, 2*8),0)
+		ax3.set_ylim(max((count)*11, 2*11),0)
 
 		plt.gcf().autofmt_xdate()
 		plt.tight_layout()

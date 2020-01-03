@@ -9,6 +9,7 @@ class Position(object):
 		self.product = product
 		self.direction = direction
 
+		self.ref = None
 		self.plan = None
 
 		self.opentime = None

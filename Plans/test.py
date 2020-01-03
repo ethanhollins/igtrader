@@ -33,46 +33,48 @@ def onNewBar(chart):
 def onLoop():
 	''' Function called on every program iteration '''
 	# utils.log("onLoop",'')
-	# global count
-	# if count == 0:
-	# 	if utils.plan_state.value == 1:
-	# 		print(utils.getBank())
-	# 		start = time.time()
+	global count
+	if count == 0:
+		if utils.plan_state.value == 1:
+			# print(utils.getBank())
+			# start = time.time()
 
-	# 		for pos in utils.positions:
-	# 			pos.close()
-	# 		print(str(time.time() - start))
+			# for pos in utils.positions:
+			# 	pos.close()
+			# print(str(time.time() - start))
 
-	# 		start = time.time()
-	# 		utils.sell(VARIABLES['PRODUCT'], 1, slRange=20, tpRange=20)
-	# 		print(str(time.time() - start))
-			# utils.sell(VARIABLES['PRODUCT'], 2, slPrice=1.45, tpPrice=1.16)
+			start = time.time()
+			pos = utils.sell(VARIABLES['PRODUCT'], 1, slRange=20, tpRange=20)
+			print(str(time.time() - start))
+			pos.close()
+			print(str(time.time() - start))
+			utils.buy(VARIABLES['PRODUCT'], 2, slRange=20, tpRange=20)
+			print(str(time.time() - start))
+			# print('modify')
+			# pos.modify(sl=1.3, tp=1.2)
 			# time.sleep(2)
-			# # print('modify')
-			# # pos.modify(sl=1.3, tp=1.2)
-			# # time.sleep(2)
-			# # print('modifySL')
-			# # pos.modifySL(1.4)
-			# # time.sleep(2)
-			# # print('modifyTP')
-			# # pos.modifyTP(1.1)
-			# # time.sleep(2)
-			# # print('removeSL')
-			# # pos.removeSL()
-			# # time.sleep(2)
-			# # print('removeTP')
-			# # pos.removeTP()
-			# # time.sleep(2)
-			# # print('breakeven')
-			# # pos.breakeven()
-			# # time.sleep(2)
+			# print('modifySL')
+			# pos.modifySL(1.4)
+			# time.sleep(2)
+			# print('modifyTP')
+			# pos.modifyTP(1.1)
+			# time.sleep(2)
+			# print('removeSL')
+			# pos.removeSL()
+			# time.sleep(2)
+			# print('removeTP')
+			# pos.removeTP()
+			# time.sleep(2)
+			# print('breakeven')
+			# pos.breakeven()
+			# time.sleep(2)
 			# print('sar')
 			# pos = utils.stopAndReverse(VARIABLES['PRODUCT'], 1.5, slPrice='1.2', tpPrice='1.3')
 			# pos.data['hello'] = 'lolol'
 			# # print(type(utils))
 			# print(dict(pos))
 			# utils.savePositions()
-			# count += 1
+			count += 1
 
 def onEntry(pos):
 	utils.log("onEntry", str(dict(pos)))

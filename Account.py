@@ -15,6 +15,7 @@ class Account(object):
 
 		self.accountid = accountid
 		self.position_queue = []
+		self.rejected_queue = []
 
 		self.audusd_bid = None
 		self.getLiveData()
@@ -69,6 +70,7 @@ class Account(object):
 						self, opu['dealId'],
 						opu['epic'], opu['direction']
 					)
+					pos.ref = opu['dealReference']
 					pos.lotsize = float(opu['size'])
 					pos.entryprice = float(opu['level'])
 					pos.opentime = self.manager.utils.convertUTCSnapshotToTimestamp(opu['timestamp'])
@@ -149,6 +151,8 @@ class Account(object):
 					for pos in plan.positions:
 						if pos.orderid == opu['dealId']:
 							plan.onRejected(pos)
+							return
+				self.rejected_queue.append(opu['dealReference'])
 
 	def onAUDItemUpdate(self, item):
 		if item['values'] and item['values']['BID']:

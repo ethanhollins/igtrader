@@ -402,7 +402,7 @@ class IGManager(object):
 		)
 
 		if res.status_code == 200:
-			return self.getReferenceDetails(accountid, res.json()['dealReference'])
+			return res.json()['dealReference']
 		else:
 			print('Error creating position ({0}):\n{1}'.format(res.status_code, res.json()))
 			return None
@@ -428,7 +428,7 @@ class IGManager(object):
 		)
 
 		if res.status_code == 200:
-			return self.getReferenceDetails(accountid, res.json()['dealReference'])
+			return res.json()['dealReference']
 		else:
 			print('Error:\n{0}'.format(res.json()))
 			return None
@@ -464,7 +464,7 @@ class IGManager(object):
 		self.headers.pop('_method', None)
 
 		if res.status_code == 200:
-			return self.getReferenceDetails(accountid, res.json()['dealReference'])
+			return res.json()['dealReference']
 		else:
 			print('Error closing position ({0}):\n{1}'.format(res.status_code, res.json()))
 			return None
