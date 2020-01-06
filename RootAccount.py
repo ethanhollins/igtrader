@@ -195,13 +195,13 @@ class RootAccount(object):
 		elif method == 'show':
 			self.showCharts(results, formatting)
 
-	def saveToFile(self, path, data, **kwargs):
-		if self.controller.saveToFile(self.root_name, path, data, **kwargs):
+	def saveToFile(self, path, data, priority=0, **kwargs):
+		if self.controller.saveToFile(self.root_name, path, data, priority=priority, **kwargs):
 			return self.controller.wait(self.root_name)
 		return False
 
-	def getJsonFromFile(self, path, **kwargs):
-		self.controller.getJsonFromFile(self.root_name, path, **kwargs)
+	def getJsonFromFile(self, path, priority=0, **kwargs):
+		self.controller.getJsonFromFile(self.root_name, path, priority=priority, **kwargs)
 		return self.controller.wait(self.root_name)
 
 	def showGraphs(self, results):

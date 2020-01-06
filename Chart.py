@@ -36,7 +36,6 @@ class Chart(object):
 		self.updateValues()
 		self.subscription = self.getLiveData()
 		self.last_update = None
-		# self.is_updated = False
 
 	def getPricePeriod(self):
 		if self.period == Constants.FOUR_HOURS:
@@ -168,10 +167,10 @@ class Chart(object):
 		] for i in range(self.asks_ts.size)}
 
 		path = 'Data/{0}_{1}_bid.json'.format(self.product, self.period)
-		self.root.saveToFile(path, json.dumps(bids, indent=4), info='onNewBar', period=self.period, type='bid')
+		self.root.saveToFile(path, json.dumps(bids, indent=4), priority=1, info='onNewBar', period=self.period, type='bid')
 
-		path = 'Data/{0}_{1}_ask.json'.format(self.product, self.period, info='onNewBar', period=self.period, type='ask')
-		self.root.saveToFile(path, json.dumps(asks, indent=4))
+		path = 'Data/{0}_{1}_ask.json'.format(self.product, self.period)
+		self.root.saveToFile(path, json.dumps(asks, indent=4), priority=1, info='onNewBar', period=self.period, type='ask')
 
 	def findCurrentBar(self):
 		for root in self.root.controller.running:
@@ -321,9 +320,7 @@ class Chart(object):
 						plan.plan_state = PlanState.STOPPED
 						print('PlanError ({0}):\n {1}'.format(plan.account.accountid, traceback.format_exc()))
 		
-		# self.is_updated = True
 		self.saveValues()
-		# self.is_updated = False
 
 	def nearestMinute(self, dt):
 		return (

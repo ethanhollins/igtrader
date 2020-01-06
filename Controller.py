@@ -26,6 +26,7 @@ class Controller(object):
 	def runQueue(self):
 		self.is_queue = True
 		update_charts = []
+		sorted_queue = sorted(self.queue, key=lambda x: x[3], reverse=True)
 		for i in range(len(self.queue)-1,-1,-1):
 			item = self.queue[i]
 			
@@ -68,20 +69,20 @@ class Controller(object):
 		except:
 			return self.getComplete(root_name)
 
-	def saveToFile(self, root_name, path, data, **kwargs):
+	def saveToFile(self, root_name, path, data, priority=0, **kwargs):
 		if 'info' in kwargs and kwargs['info'] == 'onNewBar':
 			period = kwargs['period']
 			type_ = kwargs['type']
 			for i in self.queue:
-				if 'info' in i[3] and i[3]['info'] == 'onNewBar':
-					if period == i[3]['period'] and type_ == i[3]['type']:
+				if 'info' in i[4] and i[4]['info'] == 'onNewBar':
+					if period == i[4]['period'] and type_ == i[4]['type']:
 						return False
 
-		self.queue.append((root_name, self.pSaveToFile, [path, data], kwargs))
+		self.queue.append((root_name, self.pSaveToFile, [path, data], priority, kwargs))
 		return True
 
-	def getJsonFromFile(self, root_name, path, **kwargs):
-		self.queue.append((root_name, self.pGetJsonFromFile, [path], kwargs))
+	def getJsonFromFile(self, root_name, path, priority=0, **kwargs):
+		self.queue.append((root_name, self.pGetJsonFromFile, [path], priority, kwargs))
 
 	def pSaveToFile(self, path, data):
 		with open(path, 'w') as f:
