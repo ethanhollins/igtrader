@@ -27,6 +27,16 @@ class Controller(object):
 		self.is_queue = True
 		for i in range(len(self.queue)-1,-1,-1):
 			item = self.queue[i]
+			
+			if 'info' in item[3]:
+				info = item[3]['info']
+
+				if info == 'onNewBar':
+					charts = [chart for root in self.running for chart in root.manager.charts]
+					while not all(i.is_updated == True for i in charts):
+						time.sleep(1)
+						pass
+
 			self.complete.append(
 				(item[0], item[1](*item[2]))
 			)
@@ -52,11 +62,11 @@ class Controller(object):
 		except:
 			return self.getComplete(root_name)
 
-	def saveToFile(self, root_name, path, data):
-		self.queue.append((root_name, self.pSaveToFile, [path, data]))
+	def saveToFile(self, root_name, path, data, **kwargs):
+		self.queue.append((root_name, self.pSaveToFile, [path, data], kwargs))
 
-	def getJsonFromFile(self, root_name, path):
-		self.queue.append((root_name, self.pGetJsonFromFile, [path]))
+	def getJsonFromFile(self, root_name, path, **kwargs):
+		self.queue.append((root_name, self.pGetJsonFromFile, [path], kwargs))
 
 	def pSaveToFile(self, path, data):
 		with open(path, 'w') as f:
