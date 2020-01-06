@@ -67,7 +67,7 @@ class IGManager(object):
 	Chart helper functions
 	'''
 	def subscribeChart(self, plan, product, period):
-		for chart in self.charts:
+		for chart in self.root.controller.charts:
 			if chart.isChart(product, period):
 				if not account in chart.subscribed_accounts:
 					chart.subscribed_plans.append(plan)
@@ -75,7 +75,7 @@ class IGManager(object):
 		return None
 
 	def unsubscribeChart(self, plan, product, period):
-		for chart in self.charts:
+		for chart in self.root.controller.charts:
 			if chart.isChart(product, period):
 				if account in chart.subscribed_accounts:
 					del chart.subscribed_accounts[
@@ -85,24 +85,25 @@ class IGManager(object):
 		return None
 
 	def getChart(self, plan, product, period):
-		for chart in self.charts:
+		for chart in self.root.controller.charts:
 			if chart.isChart(product, period):
 				chart.subscribed_plans.append(plan)
 				return chart
-		
+
 		chart = self.createChart(product, period)
 		chart.subscribed_plans.append(plan)
 		return chart
 
 	def getChartFromChart(self, plan, chart):
 		chart = Chart(self.root, chart=chart)
-		self.charts.append(chart)
+		self.root.controller.charts.append(chart)
 		chart.subscribed_plans.append(plan)
 		return chart
 
 	def createChart(self, product, period):
 		chart = Chart(self.root, product=product, period=period)
-		self.charts.append(chart)
+		# self.charts.append(chart)
+		self.root.controller.charts.append(chart)
 		return chart
 
 	def getPricesByDate(self, product, period, start_dt, end_dt, page_number, result):

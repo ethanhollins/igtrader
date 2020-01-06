@@ -10,7 +10,7 @@ class Controller(object):
 	__slots__ = (
 		'running', 'queue', 'complete',
 		'ls_clients', 'subscriptions',
-		'is_queue', 'run_next'
+		'is_queue', 'run_next', 'charts'
 	)
 	def __init__(self):
 		self.running = []
@@ -21,6 +21,7 @@ class Controller(object):
 		self.is_queue = False
 
 		self.ls_clients = {}
+		self.charts = []
 		self.subscriptions = []
 
 	def runQueue(self):
@@ -29,25 +30,12 @@ class Controller(object):
 		sorted_queue = sorted(self.queue, key=lambda x: x[3], reverse=True)
 		for i in range(len(self.queue)-1,-1,-1):
 			item = self.queue[i]
-			
-			# if 'info' in item[3]:
-			# 	info = item[3]['info']
-
-			# 	if info == 'onNewBar':
-			# 		period = item[3]['period']
-			# 		charts = [chart for root in self.running for chart in root.manager.charts if chart.period == period]
-			# 		update_charts += charts
-			# 		while not all(i.is_updated == True for i in charts):
-			# 			time.sleep(1)
-			# 			pass
 
 			self.complete.append(
 				(item[0], item[1](*item[2]))
 			)
 			del self.queue[i]
 
-		# for chart in update_charts:
-		# 	chart.is_updated = False
 		self.is_queue = False
 
 	def wait(self, root_name):
@@ -70,14 +58,6 @@ class Controller(object):
 			return self.getComplete(root_name)
 
 	def saveToFile(self, root_name, path, data, priority=0, **kwargs):
-		if 'info' in kwargs and kwargs['info'] == 'onNewBar':
-			period = kwargs['period']
-			type_ = kwargs['type']
-			for i in self.queue:
-				if 'info' in i[4] and i[4]['info'] == 'onNewBar':
-					if period == i[4]['period'] and type_ == i[4]['type']:
-						return False
-
 		self.queue.append((root_name, self.pSaveToFile, [path, data], priority, kwargs))
 		return True
 

@@ -7,6 +7,7 @@ import datetime
 import pytz
 import Constants
 import traceback
+from threading import Thread
 
 class Chart(object):
 	
@@ -144,7 +145,6 @@ class Chart(object):
 
 		print('curr bid:', str(self.c_bid))
 		print('curr ask:', str(self.c_ask))
-		
 
 		path = 'Data/{0}_{1}_bid.json'.format(self.product, self.period)
 		self.root.saveToFile(path, json.dumps(bids, indent=4))
@@ -167,10 +167,10 @@ class Chart(object):
 		] for i in range(self.asks_ts.size)}
 
 		path = 'Data/{0}_{1}_bid.json'.format(self.product, self.period)
-		self.root.saveToFile(path, json.dumps(bids, indent=4), priority=1, info='onNewBar', period=self.period, type='bid')
+		self.root.saveToFile(path, json.dumps(bids, indent=4), priority=1)
 
 		path = 'Data/{0}_{1}_ask.json'.format(self.product, self.period)
-		self.root.saveToFile(path, json.dumps(asks, indent=4), priority=1, info='onNewBar', period=self.period, type='ask')
+		self.root.saveToFile(path, json.dumps(asks, indent=4), priority=1)
 
 	def findCurrentBar(self):
 		for root in self.root.controller.running:
@@ -187,6 +187,7 @@ class Chart(object):
 		return product == self.product and period == self.period
 
 	def getLiveData(self):
+		print('get live data')
 		period = ''
 		if self.period == Constants.FOUR_HOURS or self.period == Constants.DAILY:
 			period = Constants.PRICE_ONE_HOUR
@@ -310,17 +311,26 @@ class Chart(object):
 			axis=0
 		)
 
+		threads = []
 		for plan in self.subscribed_plans:
-			if plan.plan_state == PlanState.STARTED:
-				plan.c_ts = new_ts
-				try:
-					plan.module.onNewBar(self)
-				except Exception as e:
-					if not 'has no attribute \'onNewBar\'' in str(e):
-						plan.plan_state = PlanState.STOPPED
-						print('PlanError ({0}):\n {1}'.format(plan.account.accountid, traceback.format_exc()))
+			t = Thread(target=self.onNewBar, args=(plan, new_ts))
+			t.start()
+			threads.append(t)
 		
+		for t in threads:
+			t.join()
+
 		self.saveValues()
+
+	def onNewBar(self, plan, new_ts):
+		if plan.plan_state == PlanState.STARTED:
+			plan.c_ts = new_ts
+			try:
+				plan.module.onNewBar(self)
+			except Exception as e:
+				if not 'has no attribute \'onNewBar\'' in str(e):
+					plan.plan_state = PlanState.STOPPED
+					print('PlanError ({0}):\n {1}'.format(plan.account.accountid, traceback.format_exc()))
 
 	def nearestMinute(self, dt):
 		return (
