@@ -30,6 +30,7 @@ if __name__ == '__main__':
 			count = 0
 			for i in info['running']:
 				while not controller.run_next:
+					time.sleep(1)
 					pass
 					
 				path = 'Accounts/{0}.json'.format(i)
