@@ -36,7 +36,7 @@ class Chart(object):
 		self.updateValues()
 		self.subscription = self.getLiveData()
 		self.last_update = None
-		self.is_updated = False
+		# self.is_updated = False
 
 	def getPricePeriod(self):
 		if self.period == Constants.FOUR_HOURS:
@@ -321,7 +321,7 @@ class Chart(object):
 						plan.plan_state = PlanState.STOPPED
 						print('PlanError ({0}):\n {1}'.format(plan.account.accountid, traceback.format_exc()))
 		
-		self.is_updated = True
+		# self.is_updated = True
 		self.saveValues()
 		# self.is_updated = False
 

@@ -29,24 +29,24 @@ class Controller(object):
 		for i in range(len(self.queue)-1,-1,-1):
 			item = self.queue[i]
 			
-			if 'info' in item[3]:
-				info = item[3]['info']
+			# if 'info' in item[3]:
+			# 	info = item[3]['info']
 
-				if info == 'onNewBar':
-					period = item[3]['period']
-					charts = [chart for root in self.running for chart in root.manager.charts if chart.period == period]
-					update_charts += charts
-					while not all(i.is_updated == True for i in charts):
-						time.sleep(1)
-						pass
+			# 	if info == 'onNewBar':
+			# 		period = item[3]['period']
+			# 		charts = [chart for root in self.running for chart in root.manager.charts if chart.period == period]
+			# 		update_charts += charts
+			# 		while not all(i.is_updated == True for i in charts):
+			# 			time.sleep(1)
+			# 			pass
 
 			self.complete.append(
 				(item[0], item[1](*item[2]))
 			)
 			del self.queue[i]
 
-		for chart in update_charts:
-			chart.is_updated = False
+		# for chart in update_charts:
+		# 	chart.is_updated = False
 		self.is_queue = False
 
 	def wait(self, root_name):
