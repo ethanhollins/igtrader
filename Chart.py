@@ -168,9 +168,9 @@ class Chart(object):
 		] for i in range(self.asks_ts.size)}
 
 		path = 'Data/{0}_{1}_bid.json'.format(self.product, self.period)
-		self.root.saveToFile(path, json.dumps(bids, indent=4), info='onNewBar')
+		self.root.saveToFile(path, json.dumps(bids, indent=4), info='onNewBar', period=self.period, type='bid')
 
-		path = 'Data/{0}_{1}_ask.json'.format(self.product, self.period, info='onNewBar')
+		path = 'Data/{0}_{1}_ask.json'.format(self.product, self.period, info='onNewBar', period=self.period, type='ask')
 		self.root.saveToFile(path, json.dumps(asks, indent=4))
 
 	def findCurrentBar(self):

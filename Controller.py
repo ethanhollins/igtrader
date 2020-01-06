@@ -32,7 +32,8 @@ class Controller(object):
 				info = item[3]['info']
 
 				if info == 'onNewBar':
-					charts = [chart for root in self.running for chart in root.manager.charts]
+					period = item[3]['period']
+					charts = [chart for root in self.running for chart in root.manager.charts if chart.period == period]
 					while not all(i.is_updated == True for i in charts):
 						time.sleep(1)
 						pass
@@ -63,7 +64,16 @@ class Controller(object):
 			return self.getComplete(root_name)
 
 	def saveToFile(self, root_name, path, data, **kwargs):
+		if 'info' in kwargs and kwargs['info'] == 'onNewBar':
+			period = kwargs['period']
+			type_ = kwargs['type']
+			for i in self.queue:
+				if 'info' in i[3] and i[3]['info'] == 'onNewBar':
+					if period == i[3]['period'] and type_ == i[3]['type']:
+						return False
+
 		self.queue.append((root_name, self.pSaveToFile, [path, data], kwargs))
+		return True
 
 	def getJsonFromFile(self, root_name, path, **kwargs):
 		self.queue.append((root_name, self.pGetJsonFromFile, [path], kwargs))

@@ -196,8 +196,9 @@ class RootAccount(object):
 			self.showCharts(results, formatting)
 
 	def saveToFile(self, path, data, **kwargs):
-		self.controller.saveToFile(self.root_name, path, data, **kwargs)
-		return self.controller.wait(self.root_name)
+		if self.controller.saveToFile(self.root_name, path, data, **kwargs):
+			return self.controller.wait(self.root_name)
+		return False
 
 	def getJsonFromFile(self, path, **kwargs):
 		self.controller.getJsonFromFile(self.root_name, path, **kwargs)
