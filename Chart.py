@@ -323,7 +323,7 @@ class Chart(object):
 		
 		self.is_updated = True
 		self.saveValues()
-		self.is_updated = False
+		# self.is_updated = False
 
 	def nearestMinute(self, dt):
 		return (
