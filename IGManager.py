@@ -1,7 +1,4 @@
-from lightstreamer_client import LightstreamerClient as LSClient
-from lightstreamer_client import LightstreamerSubscription as Subscription
 from Chart import Chart
-from Utilities import Utilities
 
 import requests
 import json
@@ -9,12 +6,13 @@ import traceback
 import time
 import datetime
 
+ONE_HOUR = 60*60
+
 class IGManager(object):
 
 	def __init__(self, root):
 		self.root = root
-		self.utils = Utilities()
-		self.charts = []
+		self.utils = self.root.utils
 
 		self.current_account = None
 		self.ls_endpoint = None
@@ -33,7 +31,6 @@ class IGManager(object):
 			'CST': ''
 		}
 
-		# self.getSavedTokens()
 		self.last_token_update = None
 
 		self.creds = {
@@ -49,11 +46,6 @@ class IGManager(object):
 		with open(root_path, 'r') as f:
 			root_dict = json.load(f)
 		return root_dict
-
-	def getSavedTokens(self):
-		info = self.getRootDict()
-		self.headers['X-SECURITY-TOKEN'] = info['tokens']['X-SECURITY-TOKEN']
-		self.headers['CST'] = info['tokens']['CST']
 
 	def saveTokens(self):
 		info = self.getRootDict()
@@ -102,7 +94,6 @@ class IGManager(object):
 
 	def createChart(self, product, period):
 		chart = Chart(self.root, product=product, period=period)
-		# self.charts.append(chart)
 		self.root.controller.charts.append(chart)
 		return chart
 
@@ -202,6 +193,10 @@ class IGManager(object):
 			self.headers['X-SECURITY-TOKEN'] = ''
 			self.headers['CST'] = ''
 			return False
+
+	def refreshTokens(self):
+		if (datetime.datetime.now() - self.last_token_update).total_seconds() > ONE_HOUR:
+			self.getTokens()
 
 	def getTokens(self, accountid=None, attempts=0):
 		# if self.checkTokens():
@@ -470,76 +465,4 @@ class IGManager(object):
 			print('Error closing position ({0}):\n{1}'.format(res.status_code, res.json()))
 			return None
 
-	'''
-	Lightstreamer helper functions
-	'''
-
-	def connectLS(self):
-		count = 1
-		while True:
-			if not self.getTokens():
-				return None
-
-			ls_client = LSClient(
-				self.root.root_name,
-				"CST-{0}|XST-{1}".format(
-					self.headers['CST'], 
-					self.headers['X-SECURITY-TOKEN']
-				),
-				self.ls_endpoint
-			)
-
-			print("Attempting to connect ({0})...".format(count))
-			try:
-				ls_client.connect()
-				return ls_client
-			except Exception as e:
-				count += 1
-				time.sleep(1)
-				pass
-
-	def reconnectLS(self, ls_client, subscriptions):
-
-		count = 1
-		while True:
-			if not self.getTokens():
-				return None
-			
-			new_ls_client = LSClient(
-				self.root.root_name,
-				"CST-{0}|XST-{1}".format(
-					self.headers['CST'], 
-					self.headers['X-SECURITY-TOKEN']
-				),
-				self.ls_endpoint
-			)
-
-			print("Attempting to reconnect ({0})...".format(count))
-			try:
-				new_ls_client.connect()
-				break
-			except Exception as e:
-				count += 1
-				time.sleep(1)
-				pass
-				
-		for i in subscriptions:
-			self.subscribe(
-				new_ls_client, 
-				i[0],i[1],i[2],i[3]
-			)
-			
-		ls_client.disconnect()
-
-		return new_ls_client
-
-	def subscribe(self, ls_client, mode, items, fields, listener):
-		subscription = Subscription(
-			mode=mode, 
-			items= items,
-			fields= fields
-		)
-
-		subscription.addlistener(listener)
-		ls_client.subscribe(subscription)
-		return subscription
+	

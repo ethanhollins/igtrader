@@ -7,6 +7,9 @@ from matplotlib import pyplot as plt
 from matplotlib import dates as mpl_dates
 from matplotlib import gridspec as gridspec
 from mpl_finance import candlestick_ohlc
+from threading import Thread
+from lightstreamer_client import LightstreamerClient as LSClient
+from lightstreamer_client import LightstreamerSubscription as Subscription
 import Constants
 import os
 import sys
@@ -46,12 +49,12 @@ class RootAccount(object):
 				self.username = info['username']
 				self.password = info['password']
 				self.key = info['key']
-				self.is_demo = info['isDemo']
-
+				self.is_demo = info['isDemo']	
+				self.utils = Utilities()			
 				self.manager = IGManager(self)
 				
 				if not self.username in self.controller.ls_clients:
-					self.controller.ls_clients[self.username] = self.manager.connectLS()
+					self.controller.ls_clients[self.username] = self.connectLS()
 				
 				self.accounts = []
 
@@ -59,7 +62,6 @@ class RootAccount(object):
 					if name in running_accounts:
 						new_acc = Account(
 							self,
-							self.manager,
 							name,
 							info['accounts'][name]['plans']
 						)
@@ -78,10 +80,7 @@ class RootAccount(object):
 				self.is_weekend = self.isWeekend()
 				continue
 
-			if (datetime.datetime.now() - self.manager.last_token_update).total_seconds() > ONE_HOUR:
-				self.manager.getTokens()
-
-			for chart in self.manager.charts:
+			for chart in self.controller.charts:
 				if not chart.last_update or (datetime.datetime.now() - chart.last_update).total_seconds() > TWO_MINUTES:
 					if self.isWeekend():
 						print('isWeekendReset')
@@ -93,20 +92,32 @@ class RootAccount(object):
 						print('isClientReconnect {0}'.format(datetime.datetime.now()))
 
 						chart.last_update = datetime.datetime.now()
-						self.controller.ls_clients[self.username] = self.manager.reconnectLS(
+						self.controller.ls_clients[self.username] = self.reconnectLS(
 							self.controller.ls_clients[self.username],
 							self.controller.subscriptions
 						)
 			
+			threads = []
 			for acc in self.accounts:
-				for plan in acc.plans:
-					if plan.plan_state == PlanState.STARTED:
-						try:
-							plan.module.onLoop()
-						except Exception as e:
-							if not 'onLoop' in str(e):
-								plan.plan_state = PlanState.STOPPED
-								print('PlanError ({0}):\n{1}'.format(acc.accountid, traceback.format_exc()))
+				t = Thread(target=self.onLoop, args=(acc,))
+				t.start()
+				threads.append(t)
+			
+			for t in threads:
+				t.join()
+				
+			self.manager.refreshTokens()
+
+	def onLoop(self, account):
+		for plan in account.plans:
+			if plan.plan_state == PlanState.STARTED:
+				try:
+					plan.module.onLoop()
+				except Exception as e:
+					if not 'onLoop' in str(e):
+						plan.plan_state = PlanState.STOPPED
+						print('PlanError ({0}):\n{1}'.format(acc.accountid, traceback.format_exc()))
+		account.refreshTokens()
 
 	def isWeekend(self):
 		now = datetime.datetime.now()
@@ -480,3 +491,71 @@ class RootAccount(object):
 		
 	def addToQueue(self, item):
 		self.cmd_queue.append(item)
+
+		'''
+	Lightstreamer helper functions
+	'''
+
+	def connectLS(self):
+		count = 1
+		while True:
+			ls_client = LSClient(
+				self.root_name,
+				"CST-{0}|XST-{1}".format(
+					self.manager.headers['CST'], 
+					self.manager.headers['X-SECURITY-TOKEN']
+				),
+				self.manager.ls_endpoint
+			)
+
+			print("Attempting to connect ({0})...".format(count))
+			try:
+				ls_client.connect()
+				return ls_client
+			except Exception as e:
+				count += 1
+				time.sleep(1)
+				pass
+
+	def reconnectLS(self, ls_client, subscriptions):
+
+		count = 1
+		while True:
+			new_ls_client = LSClient(
+				self.root_name,
+				"CST-{0}|XST-{1}".format(
+					self.manager.headers['CST'], 
+					self.manager.headers['X-SECURITY-TOKEN']
+				),
+				self.manager.ls_endpoint
+			)
+
+			print("Attempting to reconnect ({0})...".format(count))
+			try:
+				new_ls_client.connect()
+				break
+			except Exception as e:
+				count += 1
+				time.sleep(1)
+				pass
+				
+		for i in subscriptions:
+			self.subscribe(
+				new_ls_client, 
+				i[0],i[1],i[2],i[3]
+			)
+			
+		ls_client.disconnect()
+
+		return new_ls_client
+
+	def subscribe(self, ls_client, mode, items, fields, listener):
+		subscription = Subscription(
+			mode=mode, 
+			items= items,
+			fields= fields
+		)
+
+		subscription.addlistener(listener)
+		ls_client.subscribe(subscription)
+		return subscription

@@ -1,5 +1,6 @@
 from Position import Position
 from Plan import Plan
+from IGManager import IGManager
 import Constants
 import json
 import time
@@ -7,11 +8,10 @@ import time
 class Account(object):
 	
 	def __init__(self, 
-		root, manager,
-		accountid, plans
+		root, accountid, plans
 	):
 		self.root = root
-		self.manager = manager
+		self.manager = IGManager(self.root)
 
 		self.accountid = accountid
 		self.position_queue = []
@@ -33,7 +33,7 @@ class Account(object):
 		return root_dict
 
 	def getLiveData(self):
-		self.manager.subscribe(
+		self.root.subscribe(
 			self.root.controller.ls_clients[self.root.username], 
 			'DISTINCT', 
 			['TRADE:{0}'.format(self.accountid)], 
@@ -47,7 +47,7 @@ class Account(object):
 			self.onOpuItemUpdate
 		))
 
-		self.manager.subscribe(
+		self.root.subscribe(
 			self.root.controller.ls_clients[self.root.username], 
 			'DISTINCT', 
 			['CHART:CS.D.AUDUSD.CFD.IP:TICK'], 
@@ -157,3 +157,6 @@ class Account(object):
 	def onAUDItemUpdate(self, item):
 		if item['values'] and item['values']['BID']:
 			self.audusd_bid = float(item['values']['BID'])
+
+	def refreshTokens(self):
+		self.manager.refreshTokens()

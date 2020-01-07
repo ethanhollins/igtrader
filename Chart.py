@@ -80,7 +80,7 @@ class Chart(object):
 
 	def updateValues(self):
 		if self.bids_ts.size > 0:
-			start_dt = self.manager.utils.convertTimestampToDatetime(self.getLatestTimestamp())
+			start_dt = self.root.utils.convertTimestampToDatetime(self.getLatestTimestamp())
 		else:
 			start_dt = Constants.DT_START_DATE
 
@@ -168,17 +168,6 @@ class Chart(object):
 		path = 'Data/{0}_{1}_ask.json'.format(self.product, self.period)
 		self.root.saveToFile(path, json.dumps(asks, indent=4), priority=1)
 
-	# def findCurrentBar(self):
-	# 	for root in self.root.controller.running:
-	# 		for chart in root.manager.charts:
-	# 			if chart.isChart(self.product, self.period):
-	# 				self.c_bid = chart.c_bid
-	# 				self.c_ask = chart.c_ask
-	# 				print('curr bid:', str(self.c_bid))
-	# 				print('curr ask:', str(self.c_ask))
-	# 				return True
-	# 	return False
-
 	def isChart(self, product, period):
 		return product == self.product and period == self.period
 
@@ -200,7 +189,7 @@ class Chart(object):
 
 		self.last_update = datetime.datetime.now()
 		self.root.controller.subscriptions.append(('MERGE', items, fields, self.onItemUpdate)) 
-		return self.manager.subscribe(
+		return self.root.subscribe(
 			self.root.controller.ls_clients[self.root.username], 
 			'MERGE', items, fields, 
 			self.onItemUpdate
@@ -257,8 +246,8 @@ class Chart(object):
 
 			if int(item['values']['CONS_END']) == 1:
 				now = datetime.datetime.now()
-				now = self.manager.utils.setTimezone(now, 'Australia/Melbourne')
-				lon = self.manager.utils.convertTimezone(now, 'Europe/London')
+				now = self.root.utils.setTimezone(now, 'Australia/Melbourne')
+				lon = self.root.utils.convertTimezone(now, 'Europe/London')
 				now = now.replace(tzinfo=None)
 
 				if self.period == Constants.FOUR_HOURS:
@@ -270,7 +259,7 @@ class Chart(object):
 						prev_hour = Constants.FOUR_HOURS_BARS[Constants.FOUR_HOURS_BARS.index(lon.hour)-1]
 						dist = 24 - (prev_hour - lon.hour) % 24
 
-						new_ts = self.manager.utils.convertDatetimeToTimestamp(now - datetime.timedelta(hours=dist))
+						new_ts = self.root.utils.convertDatetimeToTimestamp(now - datetime.timedelta(hours=dist))
 						
 						self.addNewBar(new_ts)
 				
@@ -279,14 +268,14 @@ class Chart(object):
 					lon = self.nearestHour(lon)
 					if lon.hour in Constants.DAILY_BARS:
 						self.reset = True
-						new_ts = self.manager.utils.convertDatetimeToTimestamp(now - datetime.timedelta(hours=24))
+						new_ts = self.root.utils.convertDatetimeToTimestamp(now - datetime.timedelta(hours=24))
 						
 						self.addNewBar(new_ts)
 
 				elif self.period == Constants.ONE_MINUTE:
 					self.reset = True
 					now = Constants.IG_START_DATE + datetime.timedelta(milliseconds=int(item['values']['UTM']))
-					new_ts = self.manager.utils.convertDatetimeToTimestamp(now)
+					new_ts = self.root.utils.convertDatetimeToTimestamp(now)
 
 					self.addNewBar(new_ts)
 
