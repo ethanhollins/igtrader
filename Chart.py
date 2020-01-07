@@ -79,10 +79,6 @@ class Chart(object):
 				break
 
 	def updateValues(self):
-
-		if self.findCurrentBar():
-			return
-
 		if self.bids_ts.size > 0:
 			start_dt = self.manager.utils.convertTimestampToDatetime(self.getLatestTimestamp())
 		else:
@@ -172,16 +168,16 @@ class Chart(object):
 		path = 'Data/{0}_{1}_ask.json'.format(self.product, self.period)
 		self.root.saveToFile(path, json.dumps(asks, indent=4), priority=1)
 
-	def findCurrentBar(self):
-		for root in self.root.controller.running:
-			for chart in root.manager.charts:
-				if chart.isChart(self.product, self.period):
-					self.c_bid = chart.c_bid
-					self.c_ask = chart.c_ask
-					print('curr bid:', str(self.c_bid))
-					print('curr ask:', str(self.c_ask))
-					return True
-		return False
+	# def findCurrentBar(self):
+	# 	for root in self.root.controller.running:
+	# 		for chart in root.manager.charts:
+	# 			if chart.isChart(self.product, self.period):
+	# 				self.c_bid = chart.c_bid
+	# 				self.c_ask = chart.c_ask
+	# 				print('curr bid:', str(self.c_bid))
+	# 				print('curr ask:', str(self.c_ask))
+	# 				return True
+	# 	return False
 
 	def isChart(self, product, period):
 		return product == self.product and period == self.period

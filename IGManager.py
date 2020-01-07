@@ -33,7 +33,7 @@ class IGManager(object):
 			'CST': ''
 		}
 
-		self.getSavedTokens()
+		# self.getSavedTokens()
 		self.last_token_update = None
 
 		self.creds = {
@@ -227,7 +227,7 @@ class IGManager(object):
 
 			self.headers['X-SECURITY-TOKEN'] = res.headers.get('X-SECURITY-TOKEN')
 			self.headers['CST'] = res.headers.get('CST')
-			self.saveTokens()
+			# self.saveTokens()
 			self.ls_endpoint = res.json().get('lightstreamerEndpoint')
 			self.current_account = res.json().get('currentAccountId')
 			self.last_token_update = datetime.datetime.now()
@@ -272,7 +272,7 @@ class IGManager(object):
 			self.current_account = accountid
 			if res.headers.get('X-SECURITY-TOKEN'):
 				self.headers['X-SECURITY-TOKEN'] = res.headers.get('X-SECURITY-TOKEN')
-			self.saveTokens()
+			# self.saveTokens()
 			return True
 		elif res.status_code == 401:
 			if attempts >= 5:
