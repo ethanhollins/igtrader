@@ -436,12 +436,10 @@ class Backtester(object):
 			return chart
 
 	def saveToFile(self, path, data):
-		self.root.controller.saveToFile(self.root.root_name, path, data)
-		return self.root.controller.wait(self.root.root_name)
+		return self.root.saveToFile(path, data)
 
 	def getJsonFromFile(self, path):
-		self.root.controller.getJsonFromFile(self.root.root_name, path)
-		return self.root.controller.wait(self.root.root_name)
+		return self.root.getJsonFromFile(path)
 
 	def backtest(self, start=None, start_off=0, end=None, end_off=0, method='run', plan=None):
 		print('Running backtest ({0})...'.format(self.name))
@@ -455,7 +453,7 @@ class Backtester(object):
 			self.indicators = plan.indicators
 
 			for chart in plan.charts:
-				self.getChartFromChart(chart)
+				chart = self.getChartFromChart(chart)
 
 			self.module.setup(self)
 

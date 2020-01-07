@@ -62,10 +62,6 @@ class Plan(object):
 
 		bt = Backtester(self.account.root, self.name, self.variables)
 		self.module, _ = bt.backtest(start=start_ts, plan=self)
-
-		self.updatePositions()
-		self.getSavedPositions()
-		self.savePositions()
 		
 		self.c_ts = bt.c_ts
 		while self.c_ts < self.getLatestChartTimestamp():
@@ -73,8 +69,11 @@ class Plan(object):
 			self.module, _ = bt.backtest(start=self.c_ts, start_off=1, plan=self)
 			self.c_ts = bt.c_ts
 
-		self.module.setup(self)
+			self.module.setup(self)
 
+		self.updatePositions()
+		self.getSavedPositions()
+		self.savePositions()
 		self.plan_state = PlanState.STARTED
 
 	def execPlan(self):
