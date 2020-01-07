@@ -196,7 +196,7 @@ class IGManager(object):
 
 	def refreshTokens(self):
 		if (datetime.datetime.now() - self.last_token_update).total_seconds() > ONE_HOUR:
-			self.getTokens()
+			self.getTokens(accountid=self.current_account)
 
 	def getTokens(self, accountid=None, attempts=0):
 		# if self.checkTokens():

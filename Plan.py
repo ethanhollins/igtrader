@@ -72,7 +72,6 @@ class Plan(object):
 
 			self.module.setup(self)
 
-
 		self.updatePositions()
 		self.getSavedPositions()
 		self.savePositions()
