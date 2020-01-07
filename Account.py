@@ -11,7 +11,7 @@ class Account(object):
 		root, accountid, plans
 	):
 		self.root = root
-		self.manager = IGManager(self.root)
+		self.manager = root.manager
 
 		self.accountid = accountid
 		self.position_queue = []
