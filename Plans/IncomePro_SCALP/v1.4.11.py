@@ -107,7 +107,10 @@ class Trigger(dict):
 
 def init(utilities):
 	''' Initialize utilities and indicators '''
+	global utils
+	utils = utilities
 
+	setGlobalVars()
 	setup(utilities)
 	
 	global rsi, macd_z, boll_one, donch, cci
@@ -118,15 +121,22 @@ def init(utilities):
 	donch = utils.DONCH(VARIABLES['donch'])
 	cci = utils.CCI(5)
 
-	setGlobalVars()
-
 def setup(utilities):
-	global utils, chart
+	global utils, chart, bank
 	utils = utilities
 	if len(utils.charts) > 0:
 		chart = utils.charts[0]
 	else:
 		chart = utils.getChart(VARIABLES['PRODUCT'], Constants.ONE_MINUTE)
+
+	bank = utils.getTradableBank()
+
+	global positions
+	for pos in positions:
+		if not pos.closeprice:
+			del positions[positions.index(pos)]
+	for pos in utils.positions:
+		positions.append(pos)
 
 def setGlobalVars():
 	global trigger

@@ -30,7 +30,8 @@ class Position(object):
 
 	def __iter__(self):
 		for key in self.__dict__:
-			if key != 'account' or key != 'utils':
+			ignore = ['account', 'utils', 'plan']
+			if not key in ignore:
 				yield (key, self.__dict__[key])
 
 	def copy(self):

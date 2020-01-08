@@ -124,7 +124,7 @@ class Position(object):
 		'backtester', 'orderid', 'product',
 		'direction', 'opentime', 'closetime',
 		'lotsize', 'entryprice', 'closeprice',
-		'sl', 'tp', 'data', 'is_dummy', 'risk'
+		'sl', 'tp', 'data', 'is_dummy', 'risk', 'ref'
 	)
 	def __init__(self, 
 		backtester, orderid, 
@@ -138,6 +138,7 @@ class Position(object):
 		self.opentime = None
 		self.closetime = None
 
+		self.ref = None
 		self.lotsize = 0
 
 		self.entryprice = 0
@@ -150,6 +151,16 @@ class Position(object):
 		self.is_dummy = False
 
 		self.data = {}
+
+	def __iter__(self):
+		for key in self.__dict__:
+			ignore = ['account', 'utils', 'plan']
+			if not key in ignore:
+				yield (key, self.__dict__[key])
+
+	def setDict(self, pos):
+		for key in pos:
+			self.__dict__[key] = pos[key]
 
 	def stopAndReverse(self, 
 		lotsize, 
@@ -453,7 +464,7 @@ class Backtester(object):
 			self.indicators = plan.indicators
 
 			for chart in plan.charts:
-				chart = self.getChartFromChart(chart)
+				self.charts.append(self.getChartFromChart(chart))
 
 			self.module.setup(self)
 
@@ -811,6 +822,15 @@ class Backtester(object):
 	Utilities
 	'''
 
+	def convertPosition(self, pos):
+		new_pos = Position(
+			self, pos.orderid, 
+			pos.product, pos.direction
+		)
+
+		new_pos.setDict(dict(pos))
+		return new_pos
+
 	def convertTimezone(self, dt, tz):
 		return dt.astimezone(pytz.timezone(tz))
 
@@ -995,7 +1015,7 @@ class Backtester(object):
 		return Chart(
 			chart.product, chart.period,
 			chart.bids_ts, chart.bids_ohlc,
-			chart.asks_ts, chart.asks_ts
+			chart.asks_ts, chart.asks_ohlc
 		)
 
 	def createChart(self, product, period):

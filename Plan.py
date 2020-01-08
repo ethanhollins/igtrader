@@ -64,13 +64,11 @@ class Plan(object):
 		self.module, _ = bt.backtest(start=start_ts, plan=self)
 		
 		self.c_ts = bt.c_ts
-		self.module.setup(self)
 		while self.c_ts < self.getLatestChartTimestamp():
 			bt = Backtester(self.account.root, self.name, self.variables)
 			self.module, _ = bt.backtest(start=self.c_ts, start_off=1, plan=self)
 			self.c_ts = bt.c_ts
-
-			self.module.setup(self)
+		self.module.setup(self)
 
 		self.updatePositions()
 		self.getSavedPositions()
@@ -250,6 +248,15 @@ class Plan(object):
 	'''
 	Plan Utilities
 	'''
+
+	def convertPosition(self, pos):
+		new_pos = Position(
+			self, pos.orderid, 
+			pos.product, pos.direction
+		)
+
+		new_pos.setDict(dict(pos))
+		return new_pos
 
 	def buy(self, 
 		product, lotsize, orderType='MARKET', 
