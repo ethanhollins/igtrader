@@ -784,7 +784,7 @@ def confirmation(trigger, entry_type, reverse=False):
 		pending_entry = None
 		return False
 		
-	utils.log("confirmation", '{0} {1}'.format(trigger.direction, entry_type))
+	utils.log("confirmation", '{0} {1} {2}'.format(trigger.direction, entry_type, time_state))
 	pending_entry.entry_type = entry_type
 	return True
 
