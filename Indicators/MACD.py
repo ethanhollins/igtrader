@@ -13,23 +13,44 @@ class MACD(object):
 	@jit
 	def calculate(ohlc, fastperiod, slowperiod, signalperiod):
 		
-		fast_ema = np.zeros((ohlc.shape[0]-fastperiod), dtype=np.float32)
+		MAX_SIZE = 1000
+		if ohlc.shape[0]-MAX_SIZE > slowperiod:
+			start_off_fast = ohlc.shape[0]-MAX_SIZE
+		else:
+			start_off_fast = fastperiod
+
+		if ohlc.shape[0]-MAX_SIZE > slowperiod:
+			start_shape = MAX_SIZE
+		else:
+			start_shape = ohlc.shape[0]-fastperiod
+
+		fast_ema = np.zeros((start_shape), dtype=np.float32)
 		multi = 2.0 / (fastperiod + 1.0)
-		for x in range(fastperiod, ohlc.shape[0]):
-			if x == fastperiod:
-				fast_ema[x-fastperiod] = np.sum(ohlc[x-fastperiod:x,3]) / fastperiod
+		for x in range(start_off_fast, ohlc.shape[0]):
+			if x == start_off_fast:
+				fast_ema[x-start_off_fast] = np.sum(ohlc[x-start_off_fast:x,3]) / fastperiod
 			else:
-				fast_ema[x-fastperiod] = (ohlc[x,3] - fast_ema[x-fastperiod-1]) * multi + fast_ema[x-fastperiod-1]
+				fast_ema[x-start_off_fast] = (ohlc[x,3] - fast_ema[x-start_off_fast-1]) * multi + fast_ema[x-start_off_fast-1]
 
-		slow_ema = np.zeros((ohlc.shape[0]-slowperiod), dtype=np.float32)
+		if ohlc.shape[0]-MAX_SIZE > slowperiod:
+			start_off_slow = ohlc.shape[0]-MAX_SIZE
+		else:
+			start_off_slow = slowperiod
+
+		if ohlc.shape[0]-MAX_SIZE > slowperiod:
+			start_shape = MAX_SIZE
+		else:
+			start_shape = ohlc.shape[0]-slowperiod
+
+		slow_ema = np.zeros((start_shape), dtype=np.float32)
 		multi = 2.0 / (slowperiod + 1.0)
-		for x in range(slowperiod, ohlc.shape[0]):
-			if x == slowperiod:
-				slow_ema[x-slowperiod] = np.sum(ohlc[x-slowperiod:x,3]) / slowperiod
+		for x in range(start_off_slow, ohlc.shape[0]):
+			if x == start_off_slow:
+				slow_ema[x-start_off_slow] = np.sum(ohlc[x-start_off_slow:x,3]) / slowperiod
 			else:
-				slow_ema[x-slowperiod] = (ohlc[x,3] - slow_ema[x-slowperiod-1]) * multi + slow_ema[x-slowperiod-1]
+				slow_ema[x-start_off_slow] = (ohlc[x,3] - slow_ema[x-start_off_slow-1]) * multi + slow_ema[x-start_off_slow-1]
 
-		macd = fast_ema[slowperiod-fastperiod:] - slow_ema
+		macd = fast_ema[start_off_slow-start_off_fast:] - slow_ema
 
 		signal = np.zeros((macd.shape[0]-signalperiod), dtype=np.float32)
 		multi = 2.0 / (signalperiod + 1.0)

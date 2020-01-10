@@ -10,17 +10,29 @@ class RSI(object):
 
 	@jit
 	def calculate(ohlc, period):
-		result = np.zeros((ohlc.shape[0]-period), dtype=np.float32)
-		gain = np.zeros((ohlc.shape[0]-period), dtype=np.float32)
-		loss = np.zeros((ohlc.shape[0]-period), dtype=np.float32)
+
+		MAX_SIZE = 1000
+		if ohlc.shape[0]-MAX_SIZE > period:
+			start_off = ohlc.shape[0]-MAX_SIZE
+		else:
+			start_off = period
+
+		if ohlc.shape[0]-MAX_SIZE > period:
+			start_shape = MAX_SIZE
+		else:
+			start_shape = ohlc.shape[0]-period
+
+		result = np.zeros((start_shape), dtype=np.float32)
+		gain = np.zeros((start_shape), dtype=np.float32)
+		loss = np.zeros((start_shape), dtype=np.float32)
 		
-		for i in range(period, ohlc.shape[0]):
+		for i in range(start_off, ohlc.shape[0]):
 
 			gain_sum = 0.0
 			loss_sum = 0.0
-			if i > period:
-				p_gain = gain[i-period-1]
-				p_loss = loss[i-period-1]
+			if i > start_off:
+				p_gain = gain[i-start_off-1]
+				p_loss = loss[i-start_off-1]
 
 				chng = ohlc[i,3] - ohlc[i-1,3]
 				if chng >= 0:
@@ -44,13 +56,13 @@ class RSI(object):
 				gain_avg = gain_sum / period
 				loss_avg = loss_sum / period
 
-			gain[i-period] = gain_avg
-			loss[i-period] = loss_avg
+			gain[i-start_off] = gain_avg
+			loss[i-start_off] = loss_avg
 
 			if loss_avg == 0.0:
-				result[i-period] = 100
+				result[i-start_off] = 100
 			else:
-				result[i-period] = 100 - (100 / (1 + gain_avg/loss_avg))
+				result[i-start_off] = 100 - (100 / (1 + gain_avg/loss_avg))
 
 		return result[-1]
 
