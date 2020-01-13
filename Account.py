@@ -20,6 +20,9 @@ class Account(object):
 		self.audusd_bid = None
 		self.getLiveData()
 
+		self.funds = 0
+		self.equity = 0
+
 		self.plans = [Plan(
 			self, i,
 			plans[i]['variables'],
@@ -40,7 +43,7 @@ class Account(object):
 			['OPU'], 
 			self.onOpuItemUpdate
 		)
-		self.root.controller.subscriptions.append((
+		self.root.controller.subscriptions[self.root.username].append((
 			'DISTINCT',
 			['TRADE:{0}'.format(self.accountid)], 
 			['OPU'], 
@@ -54,11 +57,39 @@ class Account(object):
 			['BID'],
 			self.onAUDItemUpdate
 		)
-		self.root.controller.subscriptions.append((
+		self.root.controller.subscriptions[self.root.username].append((
 			'DISTINCT',
 			['CHART:CS.D.AUDUSD.CFD.IP:TICK'], 
 			['BID'], 
 			self.onAUDItemUpdate
+		))
+
+		self.root.subscribe(
+			self.root.controller.ls_clients[self.root.username], 
+			'DISTINCT', 
+			['CHART:CS.D.AUDUSD.CFD.IP:TICK'], 
+			['BID'],
+			self.onAUDItemUpdate
+		)
+		self.root.controller.subscriptions[self.root.username].append((
+			'DISTINCT',
+			['CHART:CS.D.AUDUSD.CFD.IP:TICK'], 
+			['BID'], 
+			self.onAUDItemUpdate
+		))
+
+		self.root.subscribe(
+			self.root.controller.ls_clients[self.root.username], 
+			'MERGE', 
+			['ACCOUNT:{}'.format(self.accountid)], 
+			['FUNDS', 'EQUITY'],
+			self.onAccountUpdate
+		)
+		self.root.controller.subscriptions[self.root.username].append((
+			'MERGE',
+			['ACCOUNT:{}'.format(self.accountid)], 
+			['FUNDS', 'EQUITY'],
+			self.onAccountUpdate
 		))
 
 	def onOpuItemUpdate(self, item):
@@ -157,6 +188,11 @@ class Account(object):
 	def onAUDItemUpdate(self, item):
 		if item['values'] and item['values']['BID']:
 			self.audusd_bid = float(item['values']['BID'])
+
+	def onAccountUpdate(self, item):
+		if 'values' in item:
+			self.funds = float(item['values']['FUNDS'])
+			self.equity = float(item['values']['EQUITY'])
 
 	def refreshTokens(self):
 		self.manager.refreshTokens()

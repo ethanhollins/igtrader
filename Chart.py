@@ -35,8 +35,9 @@ class Chart(object):
 
 		self.getPricePeriod()
 		self.updateValues()
-		self.subscription = self.getLiveData()
+		self.getLiveData()
 		self.last_update = None
+		self.is_open = False
 
 	def getPricePeriod(self):
 		if self.period == Constants.FOUR_HOURS:
@@ -98,14 +99,10 @@ class Chart(object):
 
 		latest_ts = sorted(result['bids'].items(), key=lambda kv: kv[0])[-1][0]
 
-		if self.root.isWeekend():
-			self.c_bid = []
-			self.c_ask = []
-		else:
-			self.c_bid = result['bids'][latest_ts]
-			self.c_ask = result['asks'][latest_ts]
-			del result['bids'][latest_ts]
-			del result['asks'][latest_ts]
+		self.c_bid = result['bids'][latest_ts]
+		self.c_ask = result['asks'][latest_ts]
+		del result['bids'][latest_ts]
+		del result['asks'][latest_ts]
 
 		bids = {int(self.bids_ts[i]):[
 			round(float(self.bids_ohlc[i,0]), 5),
@@ -172,7 +169,6 @@ class Chart(object):
 		return product == self.product and period == self.period
 
 	def getLiveData(self):
-		print('get live data')
 		period = ''
 		if self.period == Constants.FOUR_HOURS or self.period == Constants.DAILY:
 			period = Constants.PRICE_ONE_HOUR
@@ -188,12 +184,34 @@ class Chart(object):
 		]
 
 		self.last_update = datetime.datetime.now()
-		self.root.controller.subscriptions.append(('MERGE', items, fields, self.onItemUpdate)) 
-		return self.root.subscribe(
+		self.root.controller.subscriptions[self.root.username].append(('MERGE', items, fields, self.onItemUpdate))
+		self.root.subscribe(
 			self.root.controller.ls_clients[self.root.username], 
 			'MERGE', items, fields, 
 			self.onItemUpdate
 		)
+
+		items = ['MARKET:{0}'.format(self.product)]
+
+		fields = ['MARKET_STATE']
+
+		self.root.controller.subscriptions[self.root.username].append(('MERGE', items, fields, self.onStatusUpdate))
+		self.root.subscribe(
+			self.root.controller.ls_clients[self.root.username], 
+			'MERGE', items, fields, 
+			self.onStatusUpdate
+		)
+
+	def onStatusUpdate(self, item):
+		if 'values' in item:
+			if item['values']['MARKET_STATE'] == 'TRADEABLE':
+				self.is_open = True
+				print('[{}] Opened.'.format(self.product))
+			elif item['values']['MARKET_STATE'] == 'CLOSED' or item['values']['MARKET_STATE'] == 'OFFLINE':
+				self.is_open = False
+				self.c_bid = []
+				self.c_ask = []
+				print('[{}] Closed.'.format(self.product))
 
 	def onItemUpdate(self, item):
 		self.last_update = datetime.datetime.now()

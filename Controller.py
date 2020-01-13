@@ -1,5 +1,6 @@
 import json
 import time
+import win32api
 
 class Controller(object):
 
@@ -10,7 +11,8 @@ class Controller(object):
 	__slots__ = (
 		'running', 'queue', 'complete',
 		'ls_clients', 'subscriptions',
-		'is_queue', 'run_next', 'charts'
+		'is_queue', 'run_next', 'charts',
+		'restarting'
 	)
 	def __init__(self):
 		self.running = []
@@ -22,7 +24,9 @@ class Controller(object):
 
 		self.ls_clients = {}
 		self.charts = []
-		self.subscriptions = []
+		self.subscriptions = {}
+
+		self.restarting = False
 
 	def runQueue(self):
 		self.is_queue = True
@@ -74,3 +78,9 @@ class Controller(object):
 		with open(path, 'r') as f:
 			data = json.load(f)
 		return data
+
+	def performScheduledRestart(self):
+		if not self.restarting:
+			self.restarting = True
+			win32api.InitiateSystemShutdown()
+			

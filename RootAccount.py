@@ -55,7 +55,8 @@ class RootAccount(object):
 				
 				if not self.username in self.controller.ls_clients:
 					self.controller.ls_clients[self.username] = self.connectLS()
-				
+					self.controller.subscriptions[self.username] = []
+
 				self.accounts = []
 
 				for name in info['accounts']:
@@ -72,30 +73,26 @@ class RootAccount(object):
 			print('Account name {0} does not exist'.format(root_name))
 
 	def runloop(self):
-		self.is_weekend = False
+		self.is_weekend = True
 		while True:
 			time.sleep(0.1)
 
-			if self.is_weekend:
-				self.is_weekend = self.isWeekend()
-				continue
-
 			for chart in self.controller.charts:
-				if not chart.last_update or (datetime.datetime.now() - chart.last_update).total_seconds() > TWO_MINUTES:
-					if self.isWeekend():
-						print('isWeekendReset')
-						chart.c_bid = []
-						chart.c_ask = []
-						self.is_weekend = True
-						continue
-					elif self.idx == 0:
+				if chart.is_open:
+					self.is_weekend = False
+					if not chart.last_update or (datetime.datetime.now() - chart.last_update).total_seconds() > TWO_MINUTES:
 						print('isClientReconnect {0}'.format(datetime.datetime.now()))
 
 						chart.last_update = datetime.datetime.now()
 						self.controller.ls_clients[self.username] = self.reconnectLS(
 							self.controller.ls_clients[self.username],
-							self.controller.subscriptions
+							self.controller.subscriptions[self.username]
 						)
+				else:
+					if not self.is_weekend and all([i.is_open == False for i in self.controller.charts]):
+						self.is_weekend = True
+						self.controller.performScheduledRestart()
+					continue
 			
 			threads = []
 			for acc in self.accounts:
@@ -118,29 +115,6 @@ class RootAccount(object):
 						plan.plan_state = PlanState.STOPPED
 						print('PlanError ({0}):\n{1}'.format(acc.accountid, traceback.format_exc()))
 		account.refreshTokens()
-
-	def isWeekend(self):
-		now = datetime.datetime.now()
-		now = self.manager.utils.convertToLondonTimezone(now)
-		today = now.weekday() + 1
-		fri = 5
-		sun = 7
-
-		if sun > today > fri:
-			return True
-		else:
-			fri_dt = now + datetime.timedelta(hours=24 * ((7 - (today - fri)) % 7))
-			fri_dt = fri_dt.replace(second=0, microsecond=0, minute=0, hour=22)
-			sun_dt = now + datetime.timedelta(hours=24 * ((7 - (today - sun)) % 7))
-			sun_dt = sun_dt.replace(second=0, microsecond=0, minute=0, hour=22)
-
-			if (
-				(now > fri_dt and today == fri) or 
-				(sun_dt > now and today == sun)
-			):
-				return True
-
-		return False
 
 	def run_backtester(self, root_name):
 		f_path = 'Accounts/{0}.json'.format(root_name)
