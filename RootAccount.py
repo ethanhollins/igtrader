@@ -91,7 +91,7 @@ class RootAccount(object):
 				else:
 					if not self.is_weekend and all([i.is_open == False for i in self.controller.charts]):
 						self.is_weekend = True
-						self.controller.performScheduledRestart()
+						# self.controller.performScheduledRestart()
 					continue
 			
 			threads = []
