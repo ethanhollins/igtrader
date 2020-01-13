@@ -244,7 +244,9 @@ class Chart(object):
 					a_close
 				]
 
-			if int(item['values']['CONS_END']) == 1:
+			cons_end = int(item['values']['CONS_END']) if item['values']['CONS_END'] else None
+
+			if cons_end != 0:
 				now = datetime.datetime.now()
 				now = self.root.utils.setTimezone(now, 'Australia/Melbourne')
 				lon = self.root.utils.convertTimezone(now, 'Europe/London')
