@@ -1,6 +1,6 @@
 import json
 import time
-import win32api
+import os
 
 class Controller(object):
 
@@ -82,5 +82,4 @@ class Controller(object):
 	def performScheduledRestart(self):
 		if not self.restarting:
 			self.restarting = True
-			win32api.InitiateSystemShutdown()
-			
+			os.system("shutdown -t 0 -r -f")
