@@ -588,26 +588,21 @@ class Backtester(object):
 			else:
 				data[Constants.DAILY_PERC_DD] = {self.last_time: self.max_ret - perc_ret}
 
+			if not Constants.DAILY_WINS in data:
+				data[Constants.DAILY_WINS] = 0
+			if not Constants.DAILY_LOSSES in data:
+				data[Constants.DAILY_LOSSES] = 0
+
 			if self.last_ret:
 				if pip_ret - self.last_ret >= 0:
-					if not Constants.DAILY_WINS in data:
-						data[Constants.DAILY_WINS] = 0
-
 					data[Constants.DAILY_WINS] += 1
 				else:
-					if not Constants.DAILY_LOSSES in data:
-						data[Constants.DAILY_LOSSES] = 0
 
 					data[Constants.DAILY_LOSSES] += 1
 			else:
 				if pip_ret >= 0:
-					if not Constants.DAILY_WINS in data:
-						data[Constants.DAILY_WINS] = 0
-
 					data[Constants.DAILY_WINS] += 1
 				else:
-					if not Constants.DAILY_LOSSES in data:
-						data[Constants.DAILY_LOSSES] = 0
 
 					data[Constants.DAILY_LOSSES] += 1
 

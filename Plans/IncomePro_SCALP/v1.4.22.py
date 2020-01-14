@@ -1,5 +1,6 @@
 import Constants
 from enum import Enum
+import datetime
 
 VARIABLES = {
 	'TIMEZONE': 'America/New_York',
@@ -13,6 +14,8 @@ VARIABLES = {
 	'max_loss': -34,
 	'MISC': None,
 	'trade_limit': 3,
+	'start_minute': 0,
+	'start_hour': 7,
 	'RSI': None,
 	'rsi_long': 52,
 	'rsi_short': 48,
@@ -130,7 +133,6 @@ def setup(utilities):
 		chart = utils.getChart(VARIABLES['PRODUCT'], Constants.ONE_MINUTE)
 
 	bank = utils.getTradableBank()
-	print(bank)
 
 	global positions
 	for pos in positions:
@@ -299,15 +301,26 @@ def checkTime():
 	time = utils.convertTimestampToDatetime(utils.getLatestTimestamp())
 	london_time = utils.convertTimezone(time, 'Europe/London')
 
+	start_time = datetime.datetime.now().replace(
+		hour=VARIABLES['start_hour'],
+		minute=VARIABLES['start_minute'],
+		second=0
+	)
+
+	open_time = start_time - datetime.timedelta(minutes=1)
+
 	if time_state == TimeState.STOP:
-		if london_time.hour == 6 and london_time.minute == 59:
+		if london_time.hour == open_time.hour and london_time.minute == open_time.minute:
 			global bank
 			bank = utils.getTradableBank()
 			
 			trigger.pivot_line = 0
 			getPivotLines()
 
-		elif 7 <= london_time.hour < 20:
+		elif (
+			london_time.hour >= start_time.hour and london_time.minute >= start_time.minute
+			and london_time.hour < 20
+		):
 			time_state = TimeState.TRADING
 
 			global positions, trades
@@ -441,7 +454,10 @@ def getPivotLines():
 			if curr_ex_long == 0 or close > curr_ex_long:
 				curr_ex_long = close
 
-			if stridx >= VARIABLES['overbought']:
+			if not is_long_start:
+				if stridx <= 50:
+					is_long_start = True
+			elif stridx >= VARIABLES['overbought']:
 				obos_hist.append(Direction.LONG)
 				curr_obos = Direction.LONG
 
@@ -449,7 +465,10 @@ def getPivotLines():
 			if curr_ex_short == 0 or close < curr_ex_short:
 				curr_ex_short = close
 
-			if stridx <= VARIABLES['oversold']:
+			if not is_short_start:
+				if stridx >= 50:
+					is_short_start = True
+			elif stridx <= VARIABLES['oversold']:
 				obos_hist.append(Direction.SHORT)
 				curr_obos = Direction.SHORT
 
