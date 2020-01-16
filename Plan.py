@@ -482,14 +482,14 @@ class Plan(object):
 		return 0	
 
 	def getBank(self):
-		bank = self.account.equity
-		if not bank:
-			return (
-				self.account.manager.accountInfo(self.account.accountid)['balance']['balance']
-				+ self.account.manager.accountInfo(self.account.accountid)['balance']['profitLoss']
-			)
-		else:
-			return bank
+		# bank = self.account.equity
+		# if not bank:
+		return (
+			self.account.manager.accountInfo(self.account.accountid)['balance']['balance']
+			+ self.account.manager.accountInfo(self.account.accountid)['balance']['profitLoss']
+		)
+		# else:
+		# 	return bank
 
 	def getTotalBank(self):
 		return self.getBank() + self.external_bank
