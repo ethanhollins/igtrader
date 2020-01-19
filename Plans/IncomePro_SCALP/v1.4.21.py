@@ -9,7 +9,7 @@ VARIABLES = {
 	'stoprange': 17.0,
 	'exit_target': 45,
 	'tp_target': 51,
-	'set_be': 34,
+	'set_be': 40,
 	'max_loss': -34,
 	'MISC': None,
 	'trade_limit': 3,
