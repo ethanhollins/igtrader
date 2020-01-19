@@ -204,10 +204,15 @@ class Chart(object):
 
 	def onStatusUpdate(self, item):
 		if 'values' in item:
-			if item['values']['MARKET_STATE'] == 'TRADEABLE':
+			if not self.is_open and item['values']['MARKET_STATE'] == 'TRADEABLE':
 				self.is_open = True
 				print('[{}] Opened.'.format(self.product))
-			elif item['values']['MARKET_STATE'] == 'CLOSED' or item['values']['MARKET_STATE'] == 'OFFLINE':
+			elif (
+				self.is_open and
+				(item['values']['MARKET_STATE'] == 'CLOSED' 
+					or item['values']['MARKET_STATE'] == 'OFFLINE'
+					or item['values']['MARKET_STATE'] == 'EDIT')
+			):
 				self.is_open = False
 				self.c_bid = []
 				self.c_ask = []
@@ -264,7 +269,7 @@ class Chart(object):
 
 			cons_end = int(item['values']['CONS_END']) if item['values']['CONS_END'] else None
 
-			if cons_end != 0:
+			if cons_end == 1:
 				now = datetime.datetime.now()
 				now = self.root.utils.setTimezone(now, 'Australia/Melbourne')
 				lon = self.root.utils.convertTimezone(now, 'Europe/London')

@@ -77,22 +77,23 @@ class RootAccount(object):
 		while True:
 			time.sleep(0.1)
 
-			for chart in self.controller.charts:
-				if chart.is_open:
-					self.is_weekend = False
-					if not chart.last_update or (datetime.datetime.now() - chart.last_update).total_seconds() > TWO_MINUTES:
-						print('isClientReconnect {0}'.format(datetime.datetime.now()))
+			if all([i.is_open == False for i in self.controller.charts]):
+				# if not self.is_weekend:
+					# self.controller.performScheduledRestart()
+				self.is_weekend = True
+			else:
+				self.is_weekend = False
+				if not chart.last_update or (datetime.datetime.now() - chart.last_update).total_seconds() > TWO_MINUTES:
+					print('isClientReconnect {0}'.format(datetime.datetime.now()))
 
-						chart.last_update = datetime.datetime.now()
-						self.controller.ls_clients[self.username] = self.reconnectLS(
-							self.controller.ls_clients[self.username],
-							self.controller.subscriptions[self.username]
-						)
-				else:
-					if not self.is_weekend and all([i.is_open == False for i in self.controller.charts]):
-						self.is_weekend = True
-						# self.controller.performScheduledRestart()
-					continue
+					chart.last_update = datetime.datetime.now()
+					self.controller.ls_clients[self.username] = self.reconnectLS(
+						self.controller.ls_clients[self.username],
+						self.controller.subscriptions[self.username]
+					)
+			
+			if self.is_weekend:
+				continue
 			
 			threads = []
 			for acc in self.accounts:
@@ -202,6 +203,8 @@ class RootAccount(object):
 
 		colors = ['b', 'g', 'r', 'c', 'm', 'y']
 
+		pos_aggregate = {}
+
 		count = 0
 		for plan in results:
 			color = colors[count]
@@ -222,6 +225,14 @@ class RootAccount(object):
 			ax1.plot(dates, perc_ret, color=color, alpha=0.8)
 			ax1.xaxis_date()
 
+			for i in range(len(dates)):
+				if i != 0:
+					pos_aggregate[dates[i]] = (
+						pos_aggregate[dates[i]] + (perc_ret[i] - perc_ret[i-1])/len(results)
+						if dates[i] in pos_aggregate else
+						(perc_ret[i] - perc_ret[i-1])/len(results)
+					)
+
 			# Position Equity Drawdown
 			data = sorted(results[plan][Constants.POS_EQUITY_DD].items(), key=lambda kv: kv[0])
 			dates = [i[0] for i in data]
@@ -237,21 +248,23 @@ class RootAccount(object):
 			ax2.plot(dates, pos_equity_ret, color=color, alpha=0.8)
 			ax2.xaxis_date()
 
+			info_pos = len(results)*11-count*11
+
 			ax3.text(
-				0,len(results)*11-count*11-10, 
+				0,info_pos-10, 
 				'{0}:'.format(plan), 
 				fontsize=11, horizontalalignment='left',
 				fontweight='bold'
 			)
 			ax3.text(
-				0, len(results)*11-count*11-9, 
+				0, info_pos-9, 
 				'Trading DAYS: {}'.format(
 					results[plan][Constants.DAILY_WINS] + results[plan][Constants.DAILY_LOSSES]
 				), 
 				fontsize=10, horizontalalignment='left'
 			)
 			ax3.text(
-				0, len(results)*11-count*11-8, 
+				0, info_pos-8, 
 				'% Ret: {0} | % DD: {1}'.format(
 					results[plan][Constants.POS_PERC_RET],
 					results[plan][Constants.POS_PERC_DD]
@@ -259,7 +272,7 @@ class RootAccount(object):
 				fontsize=10, horizontalalignment='left'
 			)
 			ax3.text(
-				0, len(results)*11-count*11-7, 
+				0, info_pos-7, 
 				'CMP % Ret: {0} | CMP % DD: {1}'.format(
 					results[plan][Constants.POS_COMPOUND_RET],
 					results[plan][Constants.POS_COMPOUND_DD]
@@ -267,7 +280,7 @@ class RootAccount(object):
 				fontsize=10, horizontalalignment='left'
 			)
 			ax3.text(
-				0, len(results)*11-count*11-6, 
+				0, info_pos-6, 
 				'Daily CMP % Ret: {0} | Daily CMP % DD: {1}'.format(
 					results[plan][Constants.DAY_COMPOUND_RET],
 					results[plan][Constants.DAY_COMPOUND_DD]
@@ -275,14 +288,14 @@ class RootAccount(object):
 				fontsize=10, horizontalalignment='left'
 			)
 			ax3.text(
-				0, len(results)*11-count*11-5, 
+				0, info_pos-5, 
 				'PIP Ret: {0}'.format(
 					results[plan][Constants.POS_PIP_RET]
 				), 
 				fontsize=10, horizontalalignment='left'
 			)
 			ax3.text(
-				0, len(results)*11-count*11-4, 
+				0, info_pos-4, 
 				'Wins: {0} | Losses: {1}'.format(
 					results[plan][Constants.WINS],
 					results[plan][Constants.LOSSES]
@@ -290,7 +303,7 @@ class RootAccount(object):
 				fontsize=10, horizontalalignment='left'
 			)
 			ax3.text(
-				0, len(results)*11-count*11-3, 
+				0, info_pos-3, 
 				'Daily Wins: {0} | Daily Losses: {1}'.format(
 					results[plan][Constants.DAILY_WINS],
 					results[plan][Constants.DAILY_LOSSES]
@@ -298,7 +311,7 @@ class RootAccount(object):
 				fontsize=10, horizontalalignment='left'
 			)
 			ax3.text(
-				0, len(results)*11-count*11-2, 
+				0, info_pos-2, 
 				'Win %: {0} | Loss %: {1}'.format(
 					results[plan][Constants.WIN_PERC],
 					results[plan][Constants.LOSS_PERC]
@@ -306,7 +319,7 @@ class RootAccount(object):
 				fontsize=10, horizontalalignment='left'
 			)
 			ax3.text(
-				0, len(results)*11-count*11-1, 
+				0, info_pos-1, 
 				'Gain: {0} | Loss: {1}'.format(
 					results[plan][Constants.GAIN],
 					results[plan][Constants.LOSS]
@@ -314,19 +327,52 @@ class RootAccount(object):
 				fontsize=10, horizontalalignment='left'
 			)
 			ax3.text(
-				0, len(results)*11-count*11, 
+				0, info_pos, 
 				'GPR: {0}'.format(results[plan][Constants.GPR]), 
 				fontsize=10, horizontalalignment='left'
 			)
 
 			count += 1
 
+		# Daily Equity Return Aggregate
+		data = sorted(pos_aggregate.items(), key=lambda kv: kv[0])
+		dates = [i[0] for i in data]
+		pos_equity_ret = [i[1] for i in data]
+
+		agg_ret = round(sum(pos_equity_ret), 2)
+		agg_dd = round(self.getDD(pos_equity_ret), 2)
+
+		c_ret = pos_equity_ret[0]
+		ret_plot = [c_ret]
+		for i in range(1, len(pos_equity_ret)):
+			ret_plot.append(pos_equity_ret[i] + ret_plot[-1])
+
+		color = colors[count+1]
+		ax1.plot(dates, ret_plot, color=color, alpha=0.5)
+		ax1.xaxis_date()
+
+		info_pos = len(results)*11
+		ax3.text(
+			0, info_pos+1, 
+			'Aggregate Result:', 
+			fontsize=11, horizontalalignment='left',
+			fontweight='bold'
+		)
+		ax3.text(
+			0, info_pos+2, 
+			'% Ret: {0} | % DD: {1}'.format(
+				agg_ret,
+				agg_dd
+			), 
+			fontsize=10, horizontalalignment='left'
+		)
+
 		date_format = mpl_dates.DateFormatter('%b %d \'%y')
 
 		ax1.set_title('Daily Equity')
 		ax1.set_xlabel('Date')
 		ax1.set_ylabel('Percentage')
-		ax1.legend(results.keys())
+		ax1.legend(list(results.keys())+['Aggregate'])
 		ax1.xaxis.set_major_formatter(date_format)
 
 		ax2.set_title('Position Return')
@@ -340,6 +386,22 @@ class RootAccount(object):
 		plt.gcf().autofmt_xdate()
 		plt.tight_layout()
 		plt.show()
+
+	def getDD(self, pos_ret):
+		perc_ret = 0
+		max_ret = 0
+		perc_dd = 0
+
+		for perc in pos_ret:
+			perc_ret += perc
+
+			if perc_ret > max_ret:
+				max_ret = perc_ret
+			else:
+				dd = max_ret - perc_ret
+				perc_dd = dd if dd > perc_dd else perc_dd
+
+		return perc_dd
 
 	def showCharts(self, results, formatting):
 
