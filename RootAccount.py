@@ -83,14 +83,16 @@ class RootAccount(object):
 				self.is_weekend = True
 			else:
 				self.is_weekend = False
-				if not chart.last_update or (datetime.datetime.now() - chart.last_update).total_seconds() > TWO_MINUTES:
-					print('isClientReconnect {0}'.format(datetime.datetime.now()))
+				for chart in self.controller.charts:
+					if not chart.last_update or (datetime.datetime.now() - chart.last_update).total_seconds() > TWO_MINUTES:
+						print('isClientReconnect {0}'.format(datetime.datetime.now()))
 
-					chart.last_update = datetime.datetime.now()
-					self.controller.ls_clients[self.username] = self.reconnectLS(
-						self.controller.ls_clients[self.username],
-						self.controller.subscriptions[self.username]
-					)
+						chart.last_update = datetime.datetime.now()
+						self.controller.ls_clients[self.username] = self.reconnectLS(
+							self.controller.ls_clients[self.username],
+							self.controller.subscriptions[self.username]
+						)
+						break
 			
 			if self.is_weekend:
 				continue
