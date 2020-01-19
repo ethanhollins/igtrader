@@ -36,61 +36,65 @@ class Account(object):
 		return root_dict
 
 	def getLiveData(self):
-		self.root.subscribe(
-			self.root.controller.ls_clients[self.root.username], 
-			'DISTINCT', 
-			['TRADE:{0}'.format(self.accountid)], 
-			['OPU'], 
-			self.onOpuItemUpdate
-		)
-		self.root.controller.subscriptions[self.root.username].append((
-			'DISTINCT',
-			['TRADE:{0}'.format(self.accountid)], 
-			['OPU'], 
-			self.onOpuItemUpdate
-		))
+		if self.root.broker == 'ig':
+			self.manager.subscribe(
+				self.root.controller.ls_clients[self.root.username], 
+				'DISTINCT', 
+				['TRADE:{0}'.format(self.accountid)], 
+				['OPU'], 
+				self.onOpuItemUpdate
+			)
+			self.root.controller.subscriptions[self.root.username].append((
+				'DISTINCT',
+				['TRADE:{0}'.format(self.accountid)], 
+				['OPU'], 
+				self.onOpuItemUpdate
+			))
 
-		self.root.subscribe(
-			self.root.controller.ls_clients[self.root.username], 
-			'DISTINCT', 
-			['CHART:CS.D.AUDUSD.CFD.IP:TICK'], 
-			['BID'],
-			self.onAUDItemUpdate
-		)
-		self.root.controller.subscriptions[self.root.username].append((
-			'DISTINCT',
-			['CHART:CS.D.AUDUSD.CFD.IP:TICK'], 
-			['BID'], 
-			self.onAUDItemUpdate
-		))
+			self.manager.subscribe(
+				self.root.controller.ls_clients[self.root.username], 
+				'DISTINCT', 
+				['CHART:CS.D.AUDUSD.CFD.IP:TICK'], 
+				['BID'],
+				self.onAUDItemUpdate
+			)
+			self.root.controller.subscriptions[self.root.username].append((
+				'DISTINCT',
+				['CHART:CS.D.AUDUSD.CFD.IP:TICK'], 
+				['BID'], 
+				self.onAUDItemUpdate
+			))
 
-		self.root.subscribe(
-			self.root.controller.ls_clients[self.root.username], 
-			'DISTINCT', 
-			['CHART:CS.D.AUDUSD.CFD.IP:TICK'], 
-			['BID'],
-			self.onAUDItemUpdate
-		)
-		self.root.controller.subscriptions[self.root.username].append((
-			'DISTINCT',
-			['CHART:CS.D.AUDUSD.CFD.IP:TICK'], 
-			['BID'], 
-			self.onAUDItemUpdate
-		))
+			self.manager.subscribe(
+				self.root.controller.ls_clients[self.root.username], 
+				'DISTINCT', 
+				['CHART:CS.D.AUDUSD.CFD.IP:TICK'], 
+				['BID'],
+				self.onAUDItemUpdate
+			)
+			self.root.controller.subscriptions[self.root.username].append((
+				'DISTINCT',
+				['CHART:CS.D.AUDUSD.CFD.IP:TICK'], 
+				['BID'], 
+				self.onAUDItemUpdate
+			))
 
-		self.root.subscribe(
-			self.root.controller.ls_clients[self.root.username], 
-			'MERGE', 
-			['ACCOUNT:{}'.format(self.accountid)], 
-			['FUNDS', 'EQUITY'],
-			self.onAccountUpdate
-		)
-		self.root.controller.subscriptions[self.root.username].append((
-			'MERGE',
-			['ACCOUNT:{}'.format(self.accountid)], 
-			['FUNDS', 'EQUITY'],
-			self.onAccountUpdate
-		))
+			self.manager.subscribe(
+				self.root.controller.ls_clients[self.root.username], 
+				'MERGE', 
+				['ACCOUNT:{}'.format(self.accountid)], 
+				['FUNDS', 'EQUITY'],
+				self.onAccountUpdate
+			)
+			self.root.controller.subscriptions[self.root.username].append((
+				'MERGE',
+				['ACCOUNT:{}'.format(self.accountid)], 
+				['FUNDS', 'EQUITY'],
+				self.onAccountUpdate
+			))
+
+		elif self.root.broker == 'fxcm':
+			# TODO
 
 	def onOpuItemUpdate(self, item):
 		if 'OPU' in item['values'] and item['values']['OPU']:

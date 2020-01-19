@@ -1,4 +1,5 @@
 from IGManager import IGManager
+from FXCMManager import FXCMManager
 from Account import Account
 from Plan import PlanState
 from Utilities import Utilities
@@ -37,7 +38,7 @@ class RootAccount(object):
 				self.set_credentials(root_name, running_accounts)
 			except:
 				print(traceback.format_exc())
-				if self.controller.ls_clients[self.username]:
+				if self.username in self.controller.ls_clients:
 					self.controller.ls_clients[self.username].disconnect()
 				sys.exit()
 
@@ -46,51 +47,44 @@ class RootAccount(object):
 		if os.path.exists(f_path):
 			with open(f_path, 'r') as f:
 				info = json.load(f)
-				self.username = info['username']
-				self.password = info['password']
-				self.key = info['key']
-				self.is_demo = info['isDemo']	
-				self.utils = Utilities()			
-				self.manager = IGManager(self)
 				
-				if not self.username in self.controller.ls_clients:
-					self.controller.ls_clients[self.username] = self.connectLS()
-					self.controller.subscriptions[self.username] = []
+				self.key = info['key']
+				self.is_demo = info['isDemo']
+				self.utils = Utilities()
 
-				self.accounts = []
-
-				for name in info['accounts']:
-					if name in running_accounts:
-						new_acc = Account(
-							self,
-							name,
-							info['accounts'][name]['plans']
-						)
-
-						self.accounts.append(new_acc)
-
+				self.setBrokerAccounts(info)
 		else:
 			print('Account name {0} does not exist'.format(root_name))
+
+	def setBrokerAccounts(self, info):
+		if info['broker'] == 'ig':
+			self.username = info['username']
+			self.password = info['password']
+			self.broker = info['broker']
+			self.manager = IGManager(self)
+
+			self.accounts = []
+
+			for name in info['accounts']:
+				if name in running_accounts:
+					new_acc = Account(
+						self,
+						name,
+						info['accounts'][name]['plans']
+					)
+
+					self.accounts.append(new_acc)
+
+		elif info['broker'] == 'fxcm':
+			self.manager = FXCMManager(self)
+			self.broker = info['broker']
 
 	def runloop(self):
 		self.is_weekend = True
 		while True:
 			time.sleep(0.1)
 
-			if all([i.is_open == False for i in self.controller.charts]):
-				# if not self.is_weekend:
-					# self.controller.performScheduledRestart()
-				self.is_weekend = True
-			else:
-				self.is_weekend = False
-				if not chart.last_update or (datetime.datetime.now() - chart.last_update).total_seconds() > TWO_MINUTES:
-					print('isClientReconnect {0}'.format(datetime.datetime.now()))
-
-					chart.last_update = datetime.datetime.now()
-					self.controller.ls_clients[self.username] = self.reconnectLS(
-						self.controller.ls_clients[self.username],
-						self.controller.subscriptions[self.username]
-					)
+			self.mananger.streamCheck()
 			
 			if self.is_weekend:
 				continue
@@ -527,71 +521,3 @@ class RootAccount(object):
 		
 	def addToQueue(self, item):
 		self.cmd_queue.append(item)
-
-		'''
-	Lightstreamer helper functions
-	'''
-
-	def connectLS(self):
-		count = 1
-		while True:
-			ls_client = LSClient(
-				self.root_name,
-				"CST-{0}|XST-{1}".format(
-					self.manager.headers['CST'], 
-					self.manager.headers['X-SECURITY-TOKEN']
-				),
-				self.manager.ls_endpoint
-			)
-
-			print("Attempting to connect ({0})...".format(count))
-			try:
-				ls_client.connect()
-				return ls_client
-			except Exception as e:
-				count += 1
-				time.sleep(1)
-				pass
-
-	def reconnectLS(self, ls_client, subscriptions):
-
-		count = 1
-		while True:
-			new_ls_client = LSClient(
-				self.root_name,
-				"CST-{0}|XST-{1}".format(
-					self.manager.headers['CST'], 
-					self.manager.headers['X-SECURITY-TOKEN']
-				),
-				self.manager.ls_endpoint
-			)
-
-			print("Attempting to reconnect ({0})...".format(count))
-			try:
-				new_ls_client.connect()
-				break
-			except Exception as e:
-				count += 1
-				time.sleep(1)
-				pass
-				
-		for i in subscriptions:
-			self.subscribe(
-				new_ls_client, 
-				i[0],i[1],i[2],i[3]
-			)
-			
-		ls_client.disconnect()
-
-		return new_ls_client
-
-	def subscribe(self, ls_client, mode, items, fields, listener):
-		subscription = Subscription(
-			mode=mode, 
-			items= items,
-			fields= fields
-		)
-
-		subscription.addlistener(listener)
-		ls_client.subscribe(subscription)
-		return subscription

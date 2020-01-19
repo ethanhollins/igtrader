@@ -92,7 +92,11 @@ class Chart(object):
 		# end_dt = datetime.datetime(year=2019, month=11, day=2)
 		end_dt = datetime.datetime.now()
 		print('{} {}'.format(start_dt, end_dt))
-		result = self.manager.getPricesByDate(self.product, self.price_period, start_dt, end_dt, 1, {})
+
+		if self.root.broker == 'ig':
+			result = self.manager.getPricesByDate(self.product, self.price_period, start_dt, end_dt, 1, {})
+		elif self.root.broker == 'fxcm':
+			# TODO
 
 		if not result or len(result['bids']) == 0:
 			raise Exception("({}) Couldn't retrieve data.".format(self.root.idx))
@@ -169,38 +173,41 @@ class Chart(object):
 		return product == self.product and period == self.period
 
 	def getLiveData(self):
-		period = ''
-		if self.period == Constants.FOUR_HOURS or self.period == Constants.DAILY:
-			period = Constants.PRICE_ONE_HOUR
-		elif self.period == Constants.ONE_MINUTE:
-			period = Constants.PRICE_LIVE_ONE_MINUTE
+		if self.root.broker == 'ig':
+			period = ''
+			if self.period == Constants.FOUR_HOURS or self.period == Constants.DAILY:
+				period = Constants.PRICE_ONE_HOUR
+			elif self.period == Constants.ONE_MINUTE:
+				period = Constants.PRICE_LIVE_ONE_MINUTE
 
-		items = ['Chart:{0}:{1}'.format(self.product, period)]
+			items = ['Chart:{0}:{1}'.format(self.product, period)]
 
-		fields = [
-			'CONS_END', 'UTM',
-			'BID_OPEN', 'BID_HIGH', 'BID_LOW', 'BID_CLOSE',
-			'OFR_OPEN', 'OFR_HIGH', 'OFR_LOW', 'OFR_CLOSE'
-		]
+			fields = [
+				'CONS_END', 'UTM',
+				'BID_OPEN', 'BID_HIGH', 'BID_LOW', 'BID_CLOSE',
+				'OFR_OPEN', 'OFR_HIGH', 'OFR_LOW', 'OFR_CLOSE'
+			]
 
-		self.last_update = datetime.datetime.now()
-		self.root.controller.subscriptions[self.root.username].append(('MERGE', items, fields, self.onItemUpdate))
-		self.root.subscribe(
-			self.root.controller.ls_clients[self.root.username], 
-			'MERGE', items, fields, 
-			self.onItemUpdate
-		)
+			self.last_update = datetime.datetime.now()
+			self.root.controller.subscriptions[self.root.username].append(('MERGE', items, fields, self.onItemUpdate))
+			self.manager.subscribe(
+				self.root.controller.ls_clients[self.root.username], 
+				'MERGE', items, fields, 
+				self.onItemUpdate
+			)
 
-		items = ['MARKET:{0}'.format(self.product)]
+			items = ['MARKET:{0}'.format(self.product)]
 
-		fields = ['MARKET_STATE']
+			fields = ['MARKET_STATE']
 
-		self.root.controller.subscriptions[self.root.username].append(('MERGE', items, fields, self.onStatusUpdate))
-		self.root.subscribe(
-			self.root.controller.ls_clients[self.root.username], 
-			'MERGE', items, fields, 
-			self.onStatusUpdate
-		)
+			self.root.controller.subscriptions[self.root.username].append(('MERGE', items, fields, self.onStatusUpdate))
+			self.manager.subscribe(
+				self.root.controller.ls_clients[self.root.username], 
+				'MERGE', items, fields, 
+				self.onStatusUpdate
+			)
+		elif self.root.broker == 'fxcm':
+			# TODO
 
 	def onStatusUpdate(self, item):
 		if 'values' in item:
