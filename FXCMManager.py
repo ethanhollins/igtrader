@@ -105,10 +105,10 @@ class FXCMManager(object):
 			result['asks'][ts] = asks
 
 		if period == 'H4':
-			result['bids'] = self.stitchH4(result['bids'])
-			result['asks'] = self.stitchH4(result['asks'])
+			result['bids'] = self.stitchH(result['bids'], Constants.FOUR_HOURS_BARS)
+			result['asks'] = self.stitchH(result['asks'], Constants.FOUR_HOURS_BARS)
 
-		print(result)
+		return result
 	
 	def getReqPeriod(self, period):
 		if period.startswith('m'):
@@ -120,13 +120,13 @@ class FXCMManager(object):
 		elif period.startswith('W'):
 			return 'W1'
 
-	def stitchH4(self, vals):
+	def stitchH(self, vals, bars):
 		c_ohlc = []
 		c_dt = None
 		result = {}
 		for dt, ohlc in vals.items():
 			l_dt = self.utils.convertToLondonTimezone(dt)
-			if l_dt.hour in Constants.FOUR_HOURS_BARS:
+			if l_dt.hour in bars:
 				if len(c_ohlc) > 0:
 					ts = self.utils.convertUTCTimeToTimestamp(c_dt)
 					result[ts] = c_ohlc
@@ -137,6 +137,9 @@ class FXCMManager(object):
 				c_ohlc[1] = ohlc[1] if ohlc[1] > c_ohlc[1] else c_ohlc[1]
 				c_ohlc[2] = ohlc[2] if ohlc[2] < c_ohlc[2] else c_ohlc[2]
 				c_ohlc[3] = ohlc[3]
+
+		ts = self.utils.convertUTCTimeToTimestamp(c_dt)
+		result[ts] = c_ohlc
 		return result
 
 	'''
