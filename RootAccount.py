@@ -38,7 +38,7 @@ class RootAccount(object):
 				self.set_credentials(root_name, running_accounts)
 			except:
 				print(traceback.format_exc())
-				if self.username in self.controller.ls_clients:
+				if self.broker == 'ig' and self.username in self.controller.ls_clients:
 					self.controller.ls_clients[self.username].disconnect()
 				sys.exit()
 
@@ -76,15 +76,15 @@ class RootAccount(object):
 					self.accounts.append(new_acc)
 
 		elif info['broker'] == 'fxcm':
-			self.manager = FXCMManager(self)
 			self.broker = info['broker']
+			self.manager = FXCMManager(self)
 
 	def runloop(self):
 		self.is_weekend = True
 		while True:
 			time.sleep(0.1)
 
-			self.mananger.streamCheck()
+			self.manager.streamCheck()
 			
 			if self.is_weekend:
 				continue

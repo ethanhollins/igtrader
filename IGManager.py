@@ -115,26 +115,34 @@ class IGManager(object):
 		self.root.controller.charts.append(chart)
 		return chart
 
-	def getPricesByDate(self, product, period, start_dt, end_dt, page_number, result):
+	def getPrices(self, product, period, start_dt=None, end_dt=None, count=0, page_number=1, result={}):
 		if not self.getTokens():
 			return None
 
-		endpoint = 'prices/{0}?resolution={1}&from={2}&to={3}&pageSize=500&pageNumber={4}'.format(
-			product, period,
-			start_dt.strftime("%Y-%m-%dT%H:%M:%S"),
-			end_dt.strftime("%Y-%m-%dT%H:%M:%S"),
-			page_number
-		)
+		if start_dt and end_dt:
+			endpoint = 'prices/{0}?resolution={1}&from={2}&to={3}&pageSize=500&pageNumber={4}'.format(
+				product, period,
+				start_dt.strftime("%Y-%m-%dT%H:%M:%S"),
+				end_dt.strftime("%Y-%m-%dT%H:%M:%S"),
+				page_number
+			)
+			self.headers['Version'] = '3'
+			
+		elif count:
+			endpoint = 'prices/{0}/{1}/{2}'.format(
+				product, period,
+				count
+			)
+			self.headers['Version'] = '2'
+
 		print(endpoint)
 
-		self.headers['Version'] = '3'
 		res = requests.get(
 			self.url + endpoint, 
 			headers=self.headers
 		)
 
 		if res.status_code == 200:
-			print('(200)')
 			data = res.json()
 			if not 'bids' in result:
 				result['bids'] = {}
@@ -168,13 +176,15 @@ class IGManager(object):
 					float(ask_close) if ask_close != None else float(bid_close)
 				]
 
-			page_number = data['metadata']['pageData']['pageNumber']
-			total_pages = data['metadata']['pageData']['totalPages']
+			if 'metadata' in data:
+				page_number = data['metadata']['pageData']['pageNumber']
+				total_pages = data['metadata']['pageData']['totalPages']
 
-			if page_number < total_pages:
-				return self.getPricesByDate(product, period, start_dt, end_dt, page_number+1, result)
+				if page_number < total_pages:
+					return self.getPricesByDate(product, period, start_dt=start_dt, end_dt=end_dt, page_number=page_number+1, result=result)
+				else:
+					return result
 			else:
-				print('done')
 				return result
 
 		else:

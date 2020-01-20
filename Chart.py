@@ -80,23 +80,20 @@ class Chart(object):
 				break
 
 	def updateValues(self):
+		end_dt = datetime.datetime.now()
 		if self.bids_ts.size > 0:
 			start_dt = self.root.utils.convertTimestampToDatetime(self.getLatestTimestamp())
+
+			if self.root.broker == 'ig':
+				result = self.manager.getPrices(self.product, self.price_period, start_dt=start_dt, end_dt=end_dt)
+			# elif self.root.broker == 'fxcm':
+				#TODO
+
 		else:
-			start_dt = Constants.DT_START_DATE
-
-		# if pytz.timezone('Australia/Melbourne').dst(start_dt).seconds:
-		# 	start_dt -= datetime.timedelta(seconds=3600)
-
-		# start_dt = datetime.datetime(year=2019, month=10, day=27)
-		# end_dt = datetime.datetime(year=2019, month=11, day=2)
-		end_dt = datetime.datetime.now()
-		print('{} {}'.format(start_dt, end_dt))
-
-		if self.root.broker == 'ig':
-			result = self.manager.getPricesByDate(self.product, self.price_period, start_dt, end_dt, 1, {})
-		elif self.root.broker == 'fxcm':
-			# TODO
+			if self.root.broker == 'ig':
+				result = self.manager.getPrices(self.product, self.price_period, count=1000)
+			# elif self.root.broker == 'fxcm':
+				#TODO
 
 		if not result or len(result['bids']) == 0:
 			raise Exception("({}) Couldn't retrieve data.".format(self.root.idx))
@@ -169,8 +166,8 @@ class Chart(object):
 		path = 'Data/{0}_{1}_ask.json'.format(self.product, self.period)
 		self.root.saveToFile(path, json.dumps(asks, indent=4), priority=1)
 
-	def isChart(self, product, period):
-		return product == self.product and period == self.period
+	def isChart(self, product, period, broker):
+		return product == self.product and period == self.period and self.root.broker == broker
 
 	def getLiveData(self):
 		if self.root.broker == 'ig':
@@ -206,8 +203,8 @@ class Chart(object):
 				'MERGE', items, fields, 
 				self.onStatusUpdate
 			)
-		elif self.root.broker == 'fxcm':
-			# TODO
+		# elif self.root.broker == 'fxcm':
+		# 	# TODO
 
 	def onStatusUpdate(self, item):
 		if 'values' in item:

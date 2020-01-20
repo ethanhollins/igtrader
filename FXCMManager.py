@@ -1,5 +1,6 @@
 from Chart import Chart
 
+import Constants
 import json
 import fxcmpy
 import datetime
@@ -20,23 +21,17 @@ class FXCMManager(object):
 			server='demo'
 		)
 		print('Connected.')
-		# print(self.con.get_instruments())
-		# data = self.con.get_candles('EUR/USD', period='m1', number=250)
-		# print(data.head())
 
-		# start = datetime.datetime(2017, 7, 12)
-		# stop = datetime.datetime(2017, 7, 12, 1)
-		# data = self.con.get_candles(
-		# 	'GBP/USD', period='m1',
-		# 	start=start, number=10
-		# )
-		# print(data)
+		self.getPrices('GBP/USD', 'H4', count=100)
 
 	def getRootDict(self):
 		root_path = 'Accounts/{0}.json'.format(self.root.root_name)
 		with open(root_path, 'r') as f:
 			root_dict = json.load(f)
 		return root_dict
+
+	def streamCheck(self):
+		return
 
 	'''
 	Chart helper functions
@@ -80,24 +75,73 @@ class FXCMManager(object):
 		self.root.controller.charts.append(chart)
 		return chart
 
-	# def getPricesByDate(self, product, period, start_dt, end_dt, page_number, result):
-		
+	def getPrices(self, product, period, start_dt=None, end_dt=None, count=None):
+		req_period = self.getReqPeriod(period)
+
+		if start_dt and end_dt:
+			data = self.con.get_candles(
+				product, period=req_period,
+				start=start, to=end_dt
+			)
+		elif count:
+			data = self.con.get_candles(
+				product, period=req_period,
+				number=count
+			)
+
+		result = {'bids': {}, 'asks': {}}
+		keys = ['bidopen', 'bidhigh', 'bidlow', 'bidclose', 
+				'askopen', 'askhigh', 'asklow', 'askclose']
+
+		timestamps = data['bidopen'].keys()
+		vals = data[keys].values
+
+		for i in range(vals.shape[0]):
+			ts = timestamps[i].to_pydatetime()
+			bids = vals[i][:4]
+			result['bids'][ts] = bids
+
+			asks = vals[i][4:]
+			result['asks'][ts] = asks
+
+		if period == 'H4':
+			result['bids'] = self.stitchH4(result['bids'])
+			result['asks'] = self.stitchH4(result['asks'])
+
+		print(result)
+	
+	def getReqPeriod(self, period):
+		if period.startswith('m'):
+			return 'm1'
+		elif period.startswith('H'):
+			return 'H1'
+		elif period.startswith('D'):
+			return 'D1'
+		elif period.startswith('W'):
+			return 'W1'
+
+	def stitchH4(self, vals):
+		c_ohlc = []
+		c_dt = None
+		result = {}
+		for dt, ohlc in vals.items():
+			l_dt = self.utils.convertToLondonTimezone(dt)
+			if l_dt.hour in Constants.FOUR_HOURS_BARS:
+				if len(c_ohlc) > 0:
+					ts = self.utils.convertUTCTimeToTimestamp(c_dt)
+					result[ts] = c_ohlc
+
+				c_ohlc = ohlc
+				c_dt = dt
+			elif len(c_ohlc) > 0:
+				c_ohlc[1] = ohlc[1] if ohlc[1] > c_ohlc[1] else c_ohlc[1]
+				c_ohlc[2] = ohlc[2] if ohlc[2] < c_ohlc[2] else c_ohlc[2]
+				c_ohlc[3] = ohlc[3]
+		return result
 
 	'''
 	REST API helper functions
 	'''
-
-	# def checkTokens(self):
-		
-
-	# def refreshTokens(self):
-		
-
-	# def getTokens(self, accountid=None, attempts=0):
-		
-
-	# def switchAccount(self, accountid, attempts=0):
-		
 
 	# def accountInfo(self, accountid):
 		

@@ -93,8 +93,8 @@ class Account(object):
 				self.onAccountUpdate
 			))
 
-		elif self.root.broker == 'fxcm':
-			# TODO
+		# elif self.root.broker == 'fxcm':
+		# 	# TODO
 
 	def onOpuItemUpdate(self, item):
 		if 'OPU' in item['values'] and item['values']['OPU']:
