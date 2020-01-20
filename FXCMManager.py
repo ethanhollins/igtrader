@@ -13,16 +13,16 @@ class FXCMManager(object):
 		self.root = root
 		self.utils = self.root.utils
 		
-		print('Connecting...')
+		print('Connecting to FXCM...')
 		self.con = fxcmpy.fxcmpy(
 			access_token=self.root.key, 
 			log_level='error',
 			log_file='./Logs/FXCM',
 			server='demo'
 		)
-		print('Connected.')
+		print('Connected to FXCM.')
 
-		self.getPrices('GBP/USD', 'H4', count=100)
+		# print(self.getPositions('5633193'))
 
 	def getRootDict(self):
 		root_path = 'Accounts/{0}.json'.format(self.root.root_name)
@@ -38,7 +38,7 @@ class FXCMManager(object):
 	'''
 	def subscribeChart(self, plan, product, period):
 		for chart in self.root.controller.charts:
-			if chart.isChart(product, period):
+			if chart.isChart(product, period, self.root.broker):
 				if not account in chart.subscribed_accounts:
 					chart.subscribed_plans.append(plan)
 					return chart
@@ -46,7 +46,7 @@ class FXCMManager(object):
 
 	def unsubscribeChart(self, plan, product, period):
 		for chart in self.root.controller.charts:
-			if chart.isChart(product, period):
+			if chart.isChart(product, period, self.root.broker):
 				if account in chart.subscribed_accounts:
 					del chart.subscribed_accounts[
 						chart.subscribed_plans.index(plan)
@@ -56,7 +56,7 @@ class FXCMManager(object):
 
 	def getChart(self, plan, product, period):
 		for chart in self.root.controller.charts:
-			if chart.isChart(product, period):
+			if chart.isChart(product, period, self.root.broker):
 				chart.subscribed_plans.append(plan)
 				return chart
 
@@ -146,32 +146,85 @@ class FXCMManager(object):
 	REST API helper functions
 	'''
 
-	# def accountInfo(self, accountid):
-		
+	def getEquity(self, accountid):
+		result = self.con.get_accounts(kind='list')
+		for i in result:
+			if i['accountId'] == accountid:
+				return i['equity']
+		return None
+	
+	def getBalance(self, accountid):
+		result = self.con.get_accounts(kind='list')
+		for i in result:
+			if i['accountId'] == accountid:
+				return i['balance']
+		return None	
 
-	# def getPositions(self, accountid):
+	def getPositions(self, accountid):
+		result = self.con.get_open_positions(kind='list')
+		return [i for i in result if i['accountId'] == accountid]
 		
+	def getPosition(self, orderid):
+		result = self.con.get_open_position(orderid)
+		return result
 
-	# def getPosition(self, accountid, orderid):
+	def createPosition(self,
+		accountid,
+		product, direction, lotsize, 
+		orderType = 'MARKET', 
+		slPrice = None, slRange = None,
+		tpPrice = None, tpRange = None,
+		is_gslo = False
+	):
+		sl = None
+		tp = None
+		is_in_pips = False
+
+		if slPrice or tpPrice:
+			sl = slPrice
+			tp = tpPrice
+		elif slRange or tpRange:
+			sl = slRange
+			tp = tpRange
+			is_in_pips = True
+
+		order = self.con.open_trade(
+			symbol=product,
+			is_buy= direction == Constants.BUY,
+			amount=str(lotsize),
+			time_in_force='GTC',
+			order_type='AtMarket',
+			is_in_pips=is_in_pips,
+			limit=tpRange if is_in_pips else tpPrice,
+			stop=slRange if is_in_pips else slPrice,
+			accountid=accountid
+		)
+
+		return order
+
+	def modifyPosition(self, orderid, slPrice=None, tpPrice=None):
 		
+		if slPrice:
+			self.con.change_trade_stop_limit(
+				orderid, is_in_pips=False,
+				is_stop=True,
+				rate=slPrice
+			)
+		if tpPrice:
+			self.con.change_trade_stop_limit(
+				orderid, is_in_pips=False,
+				is_stop=False,
+				rate=tpPrice
+			)
 
-	# def getReferenceDetails(self, accountid, ref):
-		
+		return
 
-	# def createPosition(self,
-	# 	accountid,
-	# 	product, direction, lotsize, 
-	# 	orderType = 'MARKET', 
-	# 	slPrice = None, slRange = None,
-	# 	tpPrice = None, tpRange = None,
-	# 	is_gslo = False
-	# ):
-		
+	def closePosition(self, orderid):
+		self.con.close_trade(
+			trade_id=orderid, amount=0,
+		)
+		return
 
-	# def modifyPosition(self, accountid, orderid, slPrice=None, tpPrice=None):
-		
-
-	# def closePosition(self, accountid, pos):
-		
-
+	def closeAllPositions(self):
+		self.con.close_all()
 	

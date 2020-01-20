@@ -78,7 +78,7 @@ class IGManager(object):
 	'''
 	def subscribeChart(self, plan, product, period):
 		for chart in self.root.controller.charts:
-			if chart.isChart(product, period):
+			if chart.isChart(product, period, self.root.broker):
 				if not account in chart.subscribed_accounts:
 					chart.subscribed_plans.append(plan)
 					return chart
@@ -86,7 +86,7 @@ class IGManager(object):
 
 	def unsubscribeChart(self, plan, product, period):
 		for chart in self.root.controller.charts:
-			if chart.isChart(product, period):
+			if chart.isChart(product, period, self.root.broker):
 				if account in chart.subscribed_accounts:
 					del chart.subscribed_accounts[
 						chart.subscribed_plans.index(plan)
@@ -96,7 +96,7 @@ class IGManager(object):
 
 	def getChart(self, plan, product, period):
 		for chart in self.root.controller.charts:
-			if chart.isChart(product, period):
+			if chart.isChart(product, period, self.root.broker):
 				chart.subscribed_plans.append(plan)
 				return chart
 
