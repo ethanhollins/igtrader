@@ -7,13 +7,14 @@ import datetime
 import pytz
 import Constants
 import traceback
+import pandas as pd
 from threading import Thread
 
 class Chart(object):
 	
-	def __init__(self, root, product=None, period=None, chart=None):
+	def __init__(self, root, manager, product=None, period=None, chart=None):
 		self.root = root
-		self.manager = root.manager
+		self.manager = manager
 		self.subscribed_plans = []
 		self.reset = False
 		self.c_bid = []
@@ -34,8 +35,13 @@ class Chart(object):
 			raise Exception('Chart object requires a product and period or chart.')
 
 		self.getPricePeriod()
-		self.updateValues()
-		self.getLiveData()
+		# self.updateValues()
+
+		if self.root.broker == 'ig':
+			self.getLiveIGData()
+		elif self.root.broker == 'fxcm':
+			self.getLiveFXCMData()
+
 		self.last_update = None
 		self.is_open = False
 
@@ -171,40 +177,46 @@ class Chart(object):
 
 	def getLiveData(self):
 		if self.root.broker == 'ig':
-			period = ''
-			if self.period == Constants.FOUR_HOURS or self.period == Constants.DAILY:
-				period = Constants.PRICE_ONE_HOUR
-			elif self.period == Constants.ONE_MINUTE:
-				period = Constants.PRICE_LIVE_ONE_MINUTE
+			self.getLiveIGData()
+		elif self.root.broker == 'fxcm':
+			self.getLiveFXCMData()
 
-			items = ['Chart:{0}:{1}'.format(self.product, period)]
+	def getLiveIGData(self):
+		period = ''
+		if self.period == Constants.FOUR_HOURS or self.period == Constants.DAILY:
+			period = Constants.PRICE_ONE_HOUR
+		elif self.period == Constants.ONE_MINUTE:
+			period = Constants.PRICE_LIVE_ONE_MINUTE
 
-			fields = [
-				'CONS_END', 'UTM',
-				'BID_OPEN', 'BID_HIGH', 'BID_LOW', 'BID_CLOSE',
-				'OFR_OPEN', 'OFR_HIGH', 'OFR_LOW', 'OFR_CLOSE'
-			]
+		items = ['Chart:{0}:{1}'.format(self.product, period)]
 
-			self.last_update = datetime.datetime.now()
-			self.root.controller.subscriptions[self.root.username].append(('MERGE', items, fields, self.onItemUpdate))
-			self.manager.subscribe(
-				self.root.controller.ls_clients[self.root.username], 
-				'MERGE', items, fields, 
-				self.onItemUpdate
-			)
+		fields = [
+			'CONS_END', 'UTM',
+			'BID_OPEN', 'BID_HIGH', 'BID_LOW', 'BID_CLOSE',
+			'OFR_OPEN', 'OFR_HIGH', 'OFR_LOW', 'OFR_CLOSE'
+		]
 
-			items = ['MARKET:{0}'.format(self.product)]
+		self.last_update = datetime.datetime.now()
+		self.root.controller.subscriptions[self.root.username].append(('MERGE', items, fields, self.onItemUpdateIG))
+		self.manager.subscribe(
+			self.root.controller.ls_clients[self.root.username], 
+			'MERGE', items, fields, 
+			self.onItemUpdateIG
+		)
 
-			fields = ['MARKET_STATE']
+		items = ['MARKET:{0}'.format(self.product)]
 
-			self.root.controller.subscriptions[self.root.username].append(('MERGE', items, fields, self.onStatusUpdate))
-			self.manager.subscribe(
-				self.root.controller.ls_clients[self.root.username], 
-				'MERGE', items, fields, 
-				self.onStatusUpdate
-			)
-		# elif self.root.broker == 'fxcm':
-		# 	# TODO
+		fields = ['MARKET_STATE']
+
+		self.root.controller.subscriptions[self.root.username].append(('MERGE', items, fields, self.onStatusUpdate))
+		self.manager.subscribe(
+			self.root.controller.ls_clients[self.root.username], 
+			'MERGE', items, fields, 
+			self.onStatusUpdate
+		)
+
+	def getLiveFXCMData(self):
+		self.manager.con.subscribe_market_data(self.product, (self.onItemUpdateFXCM,))
 
 	def onStatusUpdate(self, item):
 		if 'values' in item:
@@ -222,7 +234,7 @@ class Chart(object):
 				self.c_ask = []
 				print('[{}] Closed.'.format(self.product))
 
-	def onItemUpdate(self, item):
+	def onItemUpdateIG(self, item):
 		self.last_update = datetime.datetime.now()
 
 		if 'values' in item:
@@ -307,6 +319,14 @@ class Chart(object):
 					new_ts = self.root.utils.convertDatetimeToTimestamp(now)
 
 					self.addNewBar(new_ts)
+
+	def onItemUpdateFXCM(self, data, dataframe):
+		# print(data)
+		# print(dataframe)
+		print(pd.to_datetime(int(data['Updated']), unit='ms'))
+		print(type(pd.to_datetime(int(data['Updated']), unit='ms')))
+		print('bid: {0:.5f}, ask: {1:.5f}'.format(data['Rates'][0], data['Rates'][1]))
+		print('--------')
 
 	def addNewBar(self, new_ts):
 		print('Bid: {0}\nAsk: {1}'.format(self.c_bid, self.c_ask))

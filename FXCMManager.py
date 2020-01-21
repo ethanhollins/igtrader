@@ -23,6 +23,7 @@ class FXCMManager(object):
 		print('Connected to FXCM.')
 
 		# print(self.getPositions('5633193'))
+		self.createChart('GBP/USD', 'm1')
 
 	def getRootDict(self):
 		root_path = 'Accounts/{0}.json'.format(self.root.root_name)
@@ -71,7 +72,7 @@ class FXCMManager(object):
 		return chart
 
 	def createChart(self, product, period):
-		chart = Chart(self.root, product=product, period=period)
+		chart = Chart(self.root, self, product=product, period=period)
 		self.root.controller.charts.append(chart)
 		return chart
 
