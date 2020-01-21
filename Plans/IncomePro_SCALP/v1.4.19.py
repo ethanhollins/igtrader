@@ -139,16 +139,15 @@ def setup(utilities):
 		positions.append(pos)
 
 def setGlobalVars():
-	global trigger
-	global pending_entry, pending_breakevens, pending_exits
+	global trigger, is_onb
+	global pending_entry
 	global positions, trades
 	global time_state, bank
 
 	trigger = Trigger()
+	is_onb = False
 
 	pending_entry = None
-	pending_breakevens = []
-	pending_exits = []
 
 	positions = []
 	trades = 0
@@ -157,6 +156,8 @@ def setGlobalVars():
 	bank = utils.getTradableBank()
 
 def onNewBar(chart):
+	global is_onb
+	is_onb = True
 	''' Function called on every new bar '''
 	if utils.plan_state.value in (4,):
 		time = utils.convertTimestampToDatetime(utils.getLatestTimestamp())
@@ -173,6 +174,8 @@ def onNewBar(chart):
 	if utils.plan_state.value in (4,):
 		report()
 
+	is_onb = False
+
 def onDownTime():
 	''' Function called outside of trading time '''
 
@@ -181,8 +184,8 @@ def onDownTime():
 
 def onLoop():
 	''' Function called on every program iteration '''
-
-	handleEntries()
+	if not is_onb:
+		handleEntries()
 
 def handleEntries():
 	''' Handle all pending entries '''
