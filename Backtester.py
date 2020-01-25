@@ -17,6 +17,7 @@ from Indicators.ATR import ATR
 from Indicators.BOLL import BOLL
 from Indicators.CCI import CCI
 from Indicators.KELT import KELT
+from Indicators.KELT_IG import KELT_IG
 from Indicators.MACD import MACD
 from Indicators.MAE import MAE
 from Indicators.RSI import RSI
@@ -1072,6 +1073,11 @@ class Backtester(object):
 		kelt = KELT(period, atr_period, multi)
 		self.indicators.append(kelt)
 		return kelt
+
+	def KELT_IG(self, period, atr_period, multi):
+		kelt_ig = KELT_IG(period, atr_period, multi)
+		self.indicators.append(kelt_ig)
+		return kelt_ig
 
 	def DONCH(self, period):
 		donch = DONCH(period)
