@@ -1,5 +1,6 @@
 from IGManager import IGManager
 from FXCMManager import FXCMManager
+from OandaManager import OandaManager
 from Account import Account
 from Plan import PlanState
 from Utilities import Utilities
@@ -78,6 +79,10 @@ class RootAccount(object):
 		elif info['broker'] == 'fxcm':
 			self.broker = info['broker']
 			self.manager = FXCMManager(self)
+
+		elif info['broker'] == 'oanda':
+			self.broker = info['broker']
+			self.manager = OandaManager(self)
 
 	def runloop(self):
 		self.is_weekend = True

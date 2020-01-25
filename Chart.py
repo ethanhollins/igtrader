@@ -34,9 +34,8 @@ class Chart(object):
 		else:
 			raise Exception('Chart object requires a product and period or chart.')
 
-		self.getPricePeriod()
 		# self.updateValues()
-
+		
 		if self.root.broker == 'ig':
 			self.getLiveIGData()
 		elif self.root.broker == 'fxcm':
@@ -45,18 +44,10 @@ class Chart(object):
 		self.last_update = None
 		self.is_open = False
 
-	def getPricePeriod(self):
-		if self.period == Constants.FOUR_HOURS:
-			self.price_period = Constants.PRICE_FOUR_HOURS
-		elif self.period == Constants.DAILY:
-			self.price_period = Constants.PRICE_DAILY
-		elif self.period == Constants.ONE_MINUTE:
-			self.price_period = Constants.PRICE_ONE_MINUTE
-
 	def loadData(self):
 
 		for i in ['bid', 'ask']:
-			path = 'Data/{0}_{1}_{2}.json'.format(self.product, self.period, i)
+			path = 'Data/{0}/{1}_{2}_{3}.json'.format(self.root.broker, self.product, self.period, i)
 			if os.path.exists(path):
 				values = self.root.getJsonFromFile(path)
 
@@ -91,15 +82,31 @@ class Chart(object):
 			start_dt = self.root.utils.convertTimestampToDatetime(self.getLatestTimestamp())
 
 			if self.root.broker == 'ig':
-				result = self.manager.getPrices(self.product, self.price_period, start_dt=start_dt, end_dt=end_dt)
+				result = self.manager.getPrices(
+					self.product, self.getIGPricePeriod(), 
+					start_dt=start_dt, end_dt=end_dt
+				)
 			# elif self.root.broker == 'fxcm':
 				#TODO
+			elif self.root.broker == 'oanda':
+				result = self.manager.getPrices(
+					self.product, self.period, 
+					start_dt=start_dt, end_dt=end_dt
+				)
 
 		else:
 			if self.root.broker == 'ig':
-				result = self.manager.getPrices(self.product, self.price_period, count=1000)
+				result = self.manager.getPrices(self.product, self.getIGPricePeriod(), count=1000)
 			# elif self.root.broker == 'fxcm':
 				#TODO
+			elif self.root.broker == 'oanda':
+				START_DT = datetime.datetime(
+					year=2010, month=1, day=1
+				)
+				result = self.manager.getPrices(
+					self.product, self.period, 
+					start_dt=start_dt, end_dt=end_dt
+				)
 
 		if not result or len(result['bids']) == 0:
 			raise Exception("({}) Couldn't retrieve data.".format(self.root.idx))
@@ -146,10 +153,10 @@ class Chart(object):
 		print('curr bid:', str(self.c_bid))
 		print('curr ask:', str(self.c_ask))
 
-		path = 'Data/{0}_{1}_bid.json'.format(self.product, self.period)
+		path = 'Data/{0}/{1}_{2}_bid.json'.format(self.root.broker, self.product, self.period)
 		self.root.saveToFile(path, json.dumps(bids, indent=4))
 
-		path = 'Data/{0}_{1}_ask.json'.format(self.product, self.period)
+		path = 'Data/{0}/{1}_{2}_bid.json'.format(self.root.broker, self.product, self.period)
 		self.root.saveToFile(path, json.dumps(asks, indent=4))
 
 	def saveValues(self):
@@ -166,10 +173,10 @@ class Chart(object):
 			round(float(self.asks_ohlc[i,3]), 5)
 		] for i in range(self.asks_ts.size)}
 
-		path = 'Data/{0}_{1}_bid.json'.format(self.product, self.period)
+		path = 'Data/{0}/{1}_{2}_bid.json'.format(self.root.broker, self.product, self.period)
 		self.root.saveToFile(path, json.dumps(bids, indent=4), priority=1)
 
-		path = 'Data/{0}_{1}_ask.json'.format(self.product, self.period)
+		path = 'Data/{0}/{1}_{2}_bid.json'.format(self.root.broker, self.product, self.period)
 		self.root.saveToFile(path, json.dumps(asks, indent=4), priority=1)
 
 	def isChart(self, product, period, broker):
@@ -184,9 +191,9 @@ class Chart(object):
 	def getLiveIGData(self):
 		period = ''
 		if self.period == Constants.FOUR_HOURS or self.period == Constants.DAILY:
-			period = Constants.PRICE_ONE_HOUR
+			period = Constants.IG_ONE_HOUR
 		elif self.period == Constants.ONE_MINUTE:
-			period = Constants.PRICE_LIVE_ONE_MINUTE
+			period = Constants.IG_LIVE_ONE_MINUTE
 
 		items = ['Chart:{0}:{1}'.format(self.product, period)]
 
@@ -365,6 +372,24 @@ class Chart(object):
 				if not 'has no attribute \'onNewBar\'' in str(e):
 					plan.plan_state = PlanState.STOPPED
 					print('PlanError ({0}):\n {1}'.format(plan.account.accountid, traceback.format_exc()))
+
+	'''
+	IG Specific Keywords
+	'''
+
+	def getIGPricePeriod(self):
+		if self.period == Constants.ONE_MINUTE:
+			return Constants.IG_ONE_MINUTE
+		elif self.period == Constants.ONE_HOUR:
+			return Constants.IG_ONE_HOUR
+		elif self.period == Constants.FOUR_HOURS:
+			return Constants.IG_FOUR_HOURS
+		elif self.period == Constants.DAILY:
+			return Constants.IG_DAILY
+
+	def getIGProduct(self):
+		if self.product == Constants.GBPUSD:
+			return Constants.IG_GBPUSD
 
 	def nearestMinute(self, dt):
 		return (
