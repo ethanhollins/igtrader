@@ -40,6 +40,7 @@ class IGManager(object):
 		}
 		
 		self.getTokens()
+		self.initLS()
 
 	def getRootDict(self):
 		root_path = 'Accounts/{0}.json'.format(self.root.root_name)
@@ -55,12 +56,29 @@ class IGManager(object):
 		with open(root_path, 'w') as f:
 			f.write(json.dumps(info, indent=4))
 
+	def streamCheck(self):
+		if all([i.is_open == False for i in self.root.controller.charts if i.root.broker == 'ig']):
+			# if not self.is_weekend:
+				# self.controller.performScheduledRestart()
+			self.root.is_weekend = True
+		else:
+			self.root.is_weekend = False
+			for chart in self.root.controller.charts:
+				if not chart.last_update or (datetime.datetime.now() - chart.last_update).total_seconds() > TWO_MINUTES:
+					print('isClientReconnect {0}'.format(datetime.datetime.now()))
+
+					chart.last_update = datetime.datetime.now()
+					self.root.controller.ls_clients[self.root.username] = self.reconnectLS(
+						self.root.controller.ls_clients[self.root.username],
+						self.root.controller.subscriptions[self.root.username]
+					)
+
 	'''
 	Chart helper functions
 	'''
 	def subscribeChart(self, plan, product, period):
 		for chart in self.root.controller.charts:
-			if chart.isChart(product, period):
+			if chart.isChart(product, period, self.root.broker):
 				if not account in chart.subscribed_accounts:
 					chart.subscribed_plans.append(plan)
 					return chart
@@ -68,7 +86,7 @@ class IGManager(object):
 
 	def unsubscribeChart(self, plan, product, period):
 		for chart in self.root.controller.charts:
-			if chart.isChart(product, period):
+			if chart.isChart(product, period, self.root.broker):
 				if account in chart.subscribed_accounts:
 					del chart.subscribed_accounts[
 						chart.subscribed_plans.index(plan)
@@ -78,7 +96,7 @@ class IGManager(object):
 
 	def getChart(self, plan, product, period):
 		for chart in self.root.controller.charts:
-			if chart.isChart(product, period):
+			if chart.isChart(product, period, self.root.broker):
 				chart.subscribed_plans.append(plan)
 				return chart
 
@@ -97,26 +115,34 @@ class IGManager(object):
 		self.root.controller.charts.append(chart)
 		return chart
 
-	def getPricesByDate(self, product, period, start_dt, end_dt, page_number, result):
+	def getPrices(self, product, period, start_dt=None, end_dt=None, count=0, page_number=1, result={}):
 		if not self.getTokens():
 			return None
 
-		endpoint = 'prices/{0}?resolution={1}&from={2}&to={3}&pageSize=500&pageNumber={4}'.format(
-			product, period,
-			start_dt.strftime("%Y-%m-%dT%H:%M:%S"),
-			end_dt.strftime("%Y-%m-%dT%H:%M:%S"),
-			page_number
-		)
+		if start_dt and end_dt:
+			endpoint = 'prices/{0}?resolution={1}&from={2}&to={3}&pageSize=500&pageNumber={4}'.format(
+				product, period,
+				start_dt.strftime("%Y-%m-%dT%H:%M:%S"),
+				end_dt.strftime("%Y-%m-%dT%H:%M:%S"),
+				page_number
+			)
+			self.headers['Version'] = '3'
+			
+		elif count:
+			endpoint = 'prices/{0}/{1}/{2}'.format(
+				product, period,
+				count
+			)
+			self.headers['Version'] = '2'
+
 		print(endpoint)
 
-		self.headers['Version'] = '3'
 		res = requests.get(
 			self.url + endpoint, 
 			headers=self.headers
 		)
 
 		if res.status_code == 200:
-			print('(200)')
 			data = res.json()
 			if not 'bids' in result:
 				result['bids'] = {}
@@ -150,13 +176,15 @@ class IGManager(object):
 					float(ask_close) if ask_close != None else float(bid_close)
 				]
 
-			page_number = data['metadata']['pageData']['pageNumber']
-			total_pages = data['metadata']['pageData']['totalPages']
+			if 'metadata' in data:
+				page_number = data['metadata']['pageData']['pageNumber']
+				total_pages = data['metadata']['pageData']['totalPages']
 
-			if page_number < total_pages:
-				return self.getPricesByDate(product, period, start_dt, end_dt, page_number+1, result)
+				if page_number < total_pages:
+					return self.getPricesByDate(product, period, start_dt=start_dt, end_dt=end_dt, page_number=page_number+1, result=result)
+				else:
+					return result
 			else:
-				print('done')
 				return result
 
 		else:
@@ -465,4 +493,75 @@ class IGManager(object):
 			print('Error closing position ({0}):\n{1}'.format(res.status_code, res.json()))
 			return None
 
-	
+	'''
+	Lightstreamer helper functions
+	'''
+
+	def initLS(self):
+		if not self.root.username in self.root.controller.ls_clients:
+			self.root.controller.ls_clients[self.root.username] = self.connectLS()
+			self.root.controller.subscriptions[self.root.username] = []
+
+	def connectLS(self):
+		count = 1
+		while True:
+			ls_client = LSClient(
+				self.root.root_name,
+				"CST-{0}|XST-{1}".format(
+					self.headers['CST'], 
+					self.headers['X-SECURITY-TOKEN']
+				),
+				self.ls_endpoint
+			)
+
+			print("Attempting to connect ({0})...".format(count))
+			try:
+				ls_client.connect()
+				return ls_client
+			except Exception as e:
+				count += 1
+				time.sleep(1)
+				pass
+
+	def reconnectLS(self, ls_client, subscriptions):
+
+		count = 1
+		while True:
+			new_ls_client = LSClient(
+				self.root.root_name,
+				"CST-{0}|XST-{1}".format(
+					self.headers['CST'], 
+					self.headers['X-SECURITY-TOKEN']
+				),
+				self.ls_endpoint
+			)
+
+			print("Attempting to reconnect ({0})...".format(count))
+			try:
+				new_ls_client.connect()
+				break
+			except Exception as e:
+				count += 1
+				time.sleep(1)
+				pass
+				
+		for i in subscriptions:
+			self.subscribe(
+				new_ls_client, 
+				i[0],i[1],i[2],i[3]
+			)
+			
+		ls_client.disconnect()
+
+		return new_ls_client
+
+	def subscribe(self, ls_client, mode, items, fields, listener):
+		subscription = Subscription(
+			mode=mode, 
+			items= items,
+			fields= fields
+		)
+
+		subscription.addlistener(listener)
+		ls_client.subscribe(subscription)
+		return subscription

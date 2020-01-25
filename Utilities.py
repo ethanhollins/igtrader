@@ -59,6 +59,10 @@ class Utilities(object):
 		s_dt = self.convertToMelbourneTimezone(s_dt)
 		return int((s_dt - Constants.DT_START_DATE).total_seconds())
 
+	def convertUTCTimeToTimestamp(self, time):
+		time = self.convertToMelbourneTimezone(time)
+		return int((time - Constants.DT_START_DATE).total_seconds())
+
 	def convertTimestampToDatetime(self, ts):
 		return Constants.DT_START_DATE + datetime.timedelta(seconds=int(ts))
 		
