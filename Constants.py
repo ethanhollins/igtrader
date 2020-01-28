@@ -2,6 +2,9 @@
 Products
 '''
 GBPUSD = 'GBP_USD'
+EURUSD = 'EUR_USD'
+EURJPY = 'EUR_JPY'
+AUDUSD = 'AUD_USD'
 
 '''
 Periods

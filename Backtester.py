@@ -517,6 +517,14 @@ class Backtester(object):
 			data = self.getCompletedChartData(data, all_ts, all_charts)
 
 		print('Backtest DONE ({0}) {1:.2f}'.format(self.name, timer() - start))
+
+		if self.method == 'analyse':
+			try:
+				self.module.onEnd()
+			except Exception as e:
+				print('Error: {}'.format(e))
+				pass
+
 		return self.module, data
 
 	def backtestTrainTest(self, 

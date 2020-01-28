@@ -144,18 +144,18 @@ class RootAccount(object):
 
 				plans_info = info['plans']
 				if info['start']:
-						start = utils.convertDatetimeToTimestamp(
-							datetime.datetime.strptime(info['start'], '%d/%m/%y %H:%M')
-						)
-					else:
-						start = None
+					start = utils.convertDatetimeToTimestamp(
+						datetime.datetime.strptime(info['start'], '%d/%m/%y %H:%M')
+					)
+				else:
+					start = None
 
-					if info['end']:
-						end = utils.convertDatetimeToTimestamp(
-							datetime.datetime.strptime(info['end'], '%d/%m/%y %H:%M')
-						)
-					else:
-						end = None
+				if info['end']:
+					end = utils.convertDatetimeToTimestamp(
+						datetime.datetime.strptime(info['end'], '%d/%m/%y %H:%M')
+					)
+				else:
+					end = None
 
 				if method == 'train' or method == 'test':
 

@@ -101,7 +101,7 @@ class Chart(object):
 				#TODO
 			elif self.root.broker == 'oanda':
 				start_dt = datetime.datetime(
-					year=2018, month=1, day=1
+					year=2010, month=1, day=1
 				)
 				result = self.manager.getPrices(
 					self.product, self.period, 

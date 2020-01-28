@@ -79,19 +79,19 @@ class OandaManager(object):
 			if start_dt:
 				start_str = start_dt.strftime('%Y-%m-%dT%H:%M:%S.000000000Z')
 				endpoint = 'instruments/{}/candles?price=BA' \
-							'&from={}&count={}&granularity={}&alignmentTimezone=Europe/London'.format(
+							'&from={}&count={}&granularity={}&alignmentTimezone=Europe/London&dailyAlignment=0'.format(
 								product, start_str, count, period
 							)
 			else:
 				endpoint = 'instruments/{}/candles?price=BA' \
-							'&count={}&granularity={}&alignmentTimezone=Europe/London'.format(
+							'&count={}&granularity={}&alignmentTimezone=Europe/London&dailyAlignment=0'.format(
 								product, count, period
 							)
 		else:
 			start_str = start_dt.strftime('%Y-%m-%dT%H:%M:%S.000000000Z')
 			end_str = end_dt.strftime('%Y-%m-%dT%H:%M:%S.000000000Z')
 			endpoint = 'instruments/{}/candles?price=BA' \
-						'&from={}&to={}&granularity={}&alignmentTimezone=Europe/London'.format(
+						'&from={}&to={}&granularity={}&alignmentTimezone=Europe/London&dailyAlignment=0'.format(
 							product, start_str, end_str, period
 						)
 		print(endpoint)
@@ -137,6 +137,10 @@ class OandaManager(object):
 			return start_dt + datetime.timedelta(hours=count) >= end_dt
 		elif period == Constants.FOUR_HOURS:
 			return start_dt + datetime.timedelta(hours=count*4) >= end_dt
+		elif period == Constants.DAILY:
+			return start_dt + datetime.timedelta(hours=count*24) >= end_dt
+		else:
+			raise Exception('OandaManager (isLastCandleFound): Period not present.')
 
 	'''
 	REST API helper functions
