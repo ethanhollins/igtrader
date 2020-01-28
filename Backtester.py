@@ -93,28 +93,31 @@ class Chart(object):
 	def getTsOffset(self, ts):
 		return Chart.getClosestIndex(self.bids_ts, ts)
 
+	def getLatestTimestamp(self):
+		return self.bids_ts[-1]
+
 	def getAllBidOHLC(self, backtester):
-		c_idx = Chart.getClosestIndex(self.bids_ts, backtester.c_ts)
+		c_idx = Chart.getClosestIndex(self.bids_ts, backtester.c_ts)-1
 		return self.bids_ohlc[:c_idx+1]
 
 	def getAllAskOHLC(self, backtester):
-		c_idx = Chart.getClosestIndex(self.asks_ts, backtester.c_ts)
+		c_idx = Chart.getClosestIndex(self.asks_ts, backtester.c_ts)-1
 		return self.asks_ohlc[:c_idx+1]
 
 	def getBidOHLC(self, backtester, shift, amount):
-		c_idx = Chart.getClosestIndex(self.bids_ts, backtester.c_ts)
+		c_idx = Chart.getClosestIndex(self.bids_ts, backtester.c_ts)-1
 		return self.bids_ohlc[c_idx+1-shift-amount:c_idx+1-shift]
 
 	def getAskOHLC(self, backtester, shift, amount):
-		c_idx = Chart.getClosestIndex(self.asks_ts, backtester.c_ts)
+		c_idx = Chart.getClosestIndex(self.asks_ts, backtester.c_ts)-1
 		return self.asks_ohlc[c_idx+1-shift-amount:c_idx+1-shift]
 
 	def getCurrentBidOHLC(self, backtester):
-		c_idx = Chart.getClosestIndex(self.bids_ts, backtester.c_ts)
+		c_idx = Chart.getClosestIndex(self.bids_ts, backtester.c_ts)-1
 		return self.bids_ohlc[c_idx]
 
 	def getCurrentAskOHLC(self, backtester):
-		c_idx = Chart.getClosestIndex(self.asks_ts, backtester.c_ts)
+		c_idx = Chart.getClosestIndex(self.asks_ts, backtester.c_ts)-1
 		return self.asks_ohlc[c_idx]
 
 	def isChart(self, product, period):

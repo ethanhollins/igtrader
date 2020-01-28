@@ -33,6 +33,11 @@ def setup(utilities):
 
 def onNewBar(chart):
 	global last_time
+	# if chart.period == Constants.DAILY:
+	# 	time = utils.convertTimestampToDatetime(utils.getLatestTimestamp())
+	# 	ohlc = d_chart.getCurrentBidOHLC(utils)
+	# 	print('d: {}'.format(ohlc))
+
 	if chart.period == Constants.FOUR_HOURS:
 		time = utils.convertTimestampToDatetime(utils.getLatestTimestamp())
 		london_time = utils.convertTimezone(time, 'Europe/London')
