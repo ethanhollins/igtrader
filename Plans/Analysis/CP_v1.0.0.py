@@ -161,10 +161,14 @@ def onEnd():
 				result[i][j]['pos'] = len([x for x in close_list if x >= 0])
 				result[i][j]['neg'] = len([x for x in close_list if x < 0])
 
-				result[i][j]['total'] = 0
-				for x in close_list:
-					if x*-1 > 50:
-						result[i][j]['total'] += 50
+				result[i][j]['estimate'] = 0
+				for x in range(len(close_list)):
+					close_result = close_list[x]
+					dd_result = dd_list[x]
+					if dd_result > result[i][j]['dd_median']*2:
+						result[i][j]['estimate'] -= result[i][j]['dd_median']*2
+					elif close_result*-1 > result[i][j]['max_median']:
+						result[i][j]['estimate'] += result[i][j]['max_median']
 	
 	for i in result:
 		print('{}:'.format(i))
@@ -173,13 +177,13 @@ def onEnd():
 				'\t{}:\n\tMean: {}\n\tMedian: {}' \
 				'\n\tMax Mean: {}\n\tMax Median: {}' \
 				'\n\tDD Mean: {}\n\tDD Median: {}' \
-				'\n\tPos: {}\n\tNeg: {}\n\tTotal: {}\n'
+				'\n\tPos: {}\n\tNeg: {}\n\tEstimate: {:.2f}\n'
 				.format(
 					j, result[i][j]['mean'], result[i][j]['median'],
 					result[i][j]['max_mean'], result[i][j]['max_median'],
 					result[i][j]['dd_mean'], result[i][j]['dd_median'],
 					result[i][j]['pos'], result[i][j]['neg'],
-					result[i][j]['total']
+					result[i][j]['estimate']
 				)
 			)
 
