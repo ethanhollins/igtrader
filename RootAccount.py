@@ -10,8 +10,6 @@ from matplotlib import dates as mpl_dates
 from matplotlib import gridspec as gridspec
 from mpl_finance import candlestick_ohlc
 from threading import Thread
-from lightstreamer_client import LightstreamerClient as LSClient
-from lightstreamer_client import LightstreamerSubscription as Subscription
 import Constants
 import os
 import sys
@@ -53,28 +51,18 @@ class RootAccount(object):
 				self.is_demo = info['isDemo']
 				self.utils = Utilities()
 
-				self.setBrokerAccounts(info)
+				self.setBrokerAccounts(info, running_accounts)
 		else:
 			print('Account name {0} does not exist'.format(root_name))
 
-	def setBrokerAccounts(self, info):
+	def setBrokerAccounts(self, info, running_accounts):
+		self.accounts = []
 		if info['broker'] == 'ig':
 			self.username = info['username']
 			self.password = info['password']
 			self.broker = info['broker']
 			self.manager = IGManager(self)
 
-			self.accounts = []
-
-			for name in info['accounts']:
-				if name in running_accounts:
-					new_acc = Account(
-						self,
-						name,
-						info['accounts'][name]['plans']
-					)
-
-					self.accounts.append(new_acc)
 
 		elif info['broker'] == 'fxcm':
 			self.broker = info['broker']
@@ -83,6 +71,16 @@ class RootAccount(object):
 		elif info['broker'] == 'oanda':
 			self.broker = info['broker']
 			self.manager = OandaManager(self)
+
+		for name in info['accounts']:
+			if name in running_accounts:
+				new_acc = Account(
+					self,
+					name,
+					info['accounts'][name]['plans']
+				)
+
+				self.accounts.append(new_acc)
 
 	def runloop(self):
 		self.is_weekend = True
@@ -144,51 +142,65 @@ class RootAccount(object):
 				method = info['method']
 				source = info['source']
 
+				plans_info = info['plans']
 				if info['start']:
-					if source == 'ig':
 						start = utils.convertDatetimeToTimestamp(
 							datetime.datetime.strptime(info['start'], '%d/%m/%y %H:%M')
 						)
-					elif source == 'mt':
-						start = utils.convertMTDatetimeToTimestamp(
-							datetime.datetime.strptime(info['start'], '%d/%m/%y %H:%M')
-						)
-				else:
-					start = None
+					else:
+						start = None
 
-				if info['end']:
-					if source == 'ig':
+					if info['end']:
 						end = utils.convertDatetimeToTimestamp(
 							datetime.datetime.strptime(info['end'], '%d/%m/%y %H:%M')
 						)
-					elif source == 'mt':
-						end = utils.convertMTDatetimeToTimestamp(
-							datetime.datetime.strptime(info['end'], '%d/%m/%y %H:%M')
-						)
+					else:
+						end = None
+
+				if method == 'train' or method == 'test':
+
+					for i in range(len(plans_info)):
+						plan = plans_info[i]
+
+						bt = Backtester(self, plan['name'], plan['variables'], info['source'])
+						if 'seed' in plan:
+							bt.setSeed(plan['seed'])
+						if 'batch' in plan:
+							bt.setBatch(plan['batch'])
+						if 'padding' in plan:
+							bt.setPadding(plan['padding'])
+						if 'req-start' in plan:
+							bt.setReqStart(plan['req-start'])
+						if 'req-end' in plan:
+							bt.setReqEnd(plan['req-end'])
+
+						plans.append(bt)
+
 				else:
-					end = None
+					for i in range(len(plans_info)):
+						plan = plans_info[i]
+						plans.append(Backtester(self, plan['name'], plan['variables'], info['source']))
 
-				plans_info = info['plans']
-
-				for i in range(len(plans_info)):
-					plan = plans_info[i]
-					plans.append(Backtester(self, plan['name'], plan['variables'], info['source']))
-
-					name = plan['name'] + ' ({0})'.format(i)
-					formatting[name] = {}
-					if 'colors' in plan:
-						formatting[name]['colors'] = plan['colors']
-					if 'styles' in plan:
-						formatting[name]['styles'] = plan['styles']
-					if 'studies' in plan:
-						formatting[name]['studies'] = plan['studies']
-					if 'pos_data' in plan:
-						formatting[name]['pos_data'] = plan['pos_data']
+						name = plan['name'] + ' ({0})'.format(i)
+						formatting[name] = {}
+						if 'colors' in plan:
+							formatting[name]['colors'] = plan['colors']
+						if 'styles' in plan:
+							formatting[name]['styles'] = plan['styles']
+						if 'studies' in plan:
+							formatting[name]['studies'] = plan['studies']
+						if 'pos_data' in plan:
+							formatting[name]['pos_data'] = plan['pos_data']
 
 		results = {}
 		for i in range(len(plans)):
 			plan = plans[i]
-			_, data = plan.backtest(start=start, end=end, method=method)
+
+			if method == 'validate' or method == 'test':
+				pass
+			else:
+				_, data = plan.backtestRun(start=start, end=end, method=method)
+
 			results[plan.name + ' ({0})'.format(i)] = data
 
 		if method == 'compare':

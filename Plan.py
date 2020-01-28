@@ -61,12 +61,12 @@ class Plan(object):
 		start_ts = chart.getTimestampAtOffset(max(chart.bids_ts.size-START_OFF, 0))
 
 		bt = Backtester(self.account.root, self.name, self.variables)
-		self.module, _ = bt.backtest(start=start_ts, plan=self)
+		self.module, _ = bt.backtestRun(start=start_ts, plan=self)
 		
 		self.c_ts = bt.c_ts
 		while self.c_ts < self.getLatestChartTimestamp():
 			bt = Backtester(self.account.root, self.name, self.variables)
-			self.module, _ = bt.backtest(start=self.c_ts, start_off=1, plan=self)
+			self.module, _ = bt.backtestRun(start=self.c_ts, start_off=1, plan=self)
 			self.c_ts = bt.c_ts
 		self.module.setup(self)
 
@@ -492,7 +492,8 @@ class Plan(object):
 		# 	return bank
 
 	def getTotalBank(self):
-		return self.getBank() + self.external_bank
+		return 10000
+		# return self.getBank() + self.external_bank
 
 	def getTradableBank(self):
 		bank = self.getTotalBank()

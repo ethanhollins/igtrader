@@ -69,9 +69,6 @@ class Utilities(object):
 	def convertDatetimeToTimestamp(self, dt):
 		return int((dt - Constants.DT_START_DATE).total_seconds())
 
-	def convertMTDatetimeToTimestamp(self, dt):
-		return int((dt - Constants.MT_DT_START_DATE).total_seconds())
-
 	def convertToPips(self, price):
 		return round(price * 10000, 1)
 

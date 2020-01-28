@@ -5,8 +5,6 @@ import json
 import requests
 import datetime
 
-ONE_HOUR = 60*60
-
 class OandaManager(object):
 
 	def __init__(self, root):
@@ -72,7 +70,7 @@ class OandaManager(object):
 		return chart
 
 	def createChart(self, product, period):
-		chart = Chart(self.root, self, product=product, period=period)
+		chart = Chart(self.root, product=product, period=period)
 		self.root.controller.charts.append(chart)
 		return chart
 
@@ -103,8 +101,8 @@ class OandaManager(object):
 		)
 
 		if res.status_code == 200:
-			if 'bid' not in result: result['bid'] = {}
-			if 'ask' not in result: result['ask'] = {}
+			if 'bids' not in result: result['bids'] = {}
+			if 'asks' not in result: result['asks'] = {}
 
 			data = res.json()
 			candles = data['candles']
@@ -113,8 +111,8 @@ class OandaManager(object):
 				time = datetime.datetime.strptime(i['time'], '%Y-%m-%dT%H:%M:%S.000000000Z')
 				ts = self.utils.convertUTCTimeToTimestamp(time)
 
-				result['bid'][ts] = list(i['bid'].values())
-				result['ask'][ts] = list(i['ask'].values())
+				result['bids'][ts] = [float(j) for j in i['bid'].values()]
+				result['asks'][ts] = [float(j) for j in i['ask'].values()]
 
 			if count:
 				if not self.isLastCandleFound(period, start_dt, end_dt, count):
@@ -124,7 +122,7 @@ class OandaManager(object):
 			return result
 		if res.status_code == 400:
 			print('({}) Bad Request: {}'.format(res.status_code, res.json()['errorMessage']))
-			if res.json()['errorMessage'].startswith('Maximum'):
+			if 'Maximum' in res.json()['errorMessage'] or 'future' in res.json()['errorMessage']:
 				return self.getPrices(product, period, start_dt=start_dt, end_dt=end_dt, count=5000, result={})
 			else:
 				return result

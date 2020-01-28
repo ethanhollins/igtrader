@@ -12,9 +12,9 @@ from threading import Thread
 
 class Chart(object):
 	
-	def __init__(self, root, manager, product=None, period=None, chart=None):
+	def __init__(self, root, product=None, period=None, chart=None):
 		self.root = root
-		self.manager = manager
+		self.manager = root.manager
 		self.subscribed_plans = []
 		self.reset = False
 		self.c_bid = []
@@ -34,7 +34,7 @@ class Chart(object):
 		else:
 			raise Exception('Chart object requires a product and period or chart.')
 
-		# self.updateValues()
+		self.updateValues()
 		
 		if self.root.broker == 'ig':
 			self.getLiveIGData()
@@ -83,7 +83,7 @@ class Chart(object):
 
 			if self.root.broker == 'ig':
 				result = self.manager.getPrices(
-					self.product, self.getIGPricePeriod(), 
+					self.getIGProduct(), self.getIGPricePeriod(), 
 					start_dt=start_dt, end_dt=end_dt
 				)
 			# elif self.root.broker == 'fxcm':
@@ -96,12 +96,12 @@ class Chart(object):
 
 		else:
 			if self.root.broker == 'ig':
-				result = self.manager.getPrices(self.product, self.getIGPricePeriod(), count=1000)
+				result = self.manager.getPrices(self.getIGProduct(), self.getIGPricePeriod(), count=1000)
 			# elif self.root.broker == 'fxcm':
 				#TODO
 			elif self.root.broker == 'oanda':
-				START_DT = datetime.datetime(
-					year=2010, month=1, day=1
+				start_dt = datetime.datetime(
+					year=2018, month=1, day=1
 				)
 				result = self.manager.getPrices(
 					self.product, self.period, 
@@ -156,7 +156,7 @@ class Chart(object):
 		path = 'Data/{0}/{1}_{2}_bid.json'.format(self.root.broker, self.product, self.period)
 		self.root.saveToFile(path, json.dumps(bids, indent=4))
 
-		path = 'Data/{0}/{1}_{2}_bid.json'.format(self.root.broker, self.product, self.period)
+		path = 'Data/{0}/{1}_{2}_ask.json'.format(self.root.broker, self.product, self.period)
 		self.root.saveToFile(path, json.dumps(asks, indent=4))
 
 	def saveValues(self):
@@ -176,7 +176,7 @@ class Chart(object):
 		path = 'Data/{0}/{1}_{2}_bid.json'.format(self.root.broker, self.product, self.period)
 		self.root.saveToFile(path, json.dumps(bids, indent=4), priority=1)
 
-		path = 'Data/{0}/{1}_{2}_bid.json'.format(self.root.broker, self.product, self.period)
+		path = 'Data/{0}/{1}_{2}_ask.json'.format(self.root.broker, self.product, self.period)
 		self.root.saveToFile(path, json.dumps(asks, indent=4), priority=1)
 
 	def isChart(self, product, period, broker):
@@ -389,7 +389,7 @@ class Chart(object):
 
 	def getIGProduct(self):
 		if self.product == Constants.GBPUSD:
-			return Constants.IG_GBPUSD
+			return Constants.IG_GBPUSD_MINI
 
 	def nearestMinute(self, dt):
 		return (

@@ -9,6 +9,7 @@ import os
 import json
 import numpy as np
 import traceback
+import random
 from timeit import default_timer as timer
 from enum import Enum
 from matplotlib import dates as mpl_dates
@@ -404,28 +405,7 @@ class Backtester(object):
 		self.last_ret = None
 
 	def loadData(self, product, period):
-		if self.source == 'ig':
-			for i in ['bid', 'ask']:
-				path = 'Data/{0}_{1}_{2}.json'.format(product, period, i)
-				if os.path.exists(path):
-					values = self.getJsonFromFile(path)
-
-					if i == 'bid':
-						bids_ts = np.array([int(i[0]) for i in sorted(values.items(), key=lambda kv: kv[0])], dtype=np.int32)
-						bids_ohlc = np.array([i[1] for i in sorted(values.items(), key=lambda kv: kv[0])], dtype=np.float32)
-					else:
-						asks_ts = np.array([int(i[0]) for i in sorted(values.items(), key=lambda kv: kv[0])], dtype=np.int32)
-						asks_ohlc = np.array([i[1] for i in sorted(values.items(), key=lambda kv: kv[0])], dtype=np.float32)
-				else:
-					print('Error: Could not find data for chart product: {0}, period: {1}.'.format(product, period))
-					return None
-			chart = Chart(
-				product, period, 
-				bids_ts, bids_ohlc,
-				asks_ts, asks_ohlc
-			)
-			return chart
-		elif self.source == 'mt':
+		if self.source == 'mt':
 			path = 'Data/MT_{0}_{1}.json'.format(product, period)
 			if os.path.exists(path):
 				values = self.getJsonFromFile(path)
@@ -446,6 +426,27 @@ class Backtester(object):
 				bids_ts, bids_ohlc
 			)
 			return chart
+		else:
+			for i in ['bid', 'ask']:
+				path = 'Data/{0}/{1}_{2}_{3}.json'.format(self.source, product, period, i)
+				if os.path.exists(path):
+					values = self.getJsonFromFile(path)
+					if i == 'bid':
+						bids_ts = np.array([int(i[0]) for i in sorted(values.items(), key=lambda kv: kv[0])], dtype=np.int32)
+						bids_ohlc = np.array([i[1] for i in sorted(values.items(), key=lambda kv: kv[0])], dtype=np.float32)
+					else:
+						asks_ts = np.array([int(i[0]) for i in sorted(values.items(), key=lambda kv: kv[0])], dtype=np.int32)
+						asks_ohlc = np.array([i[1] for i in sorted(values.items(), key=lambda kv: kv[0])], dtype=np.float32)
+				else:
+					print('Error: Could not find data for chart product: {0}, period: {1}.'.format(product, period))
+					return None
+			chart = Chart(
+				product, period, 
+				bids_ts, bids_ohlc,
+				asks_ts, asks_ohlc
+			)
+			return chart
+
 
 	def saveToFile(self, path, data):
 		return self.root.saveToFile(path, data)
@@ -453,7 +454,7 @@ class Backtester(object):
 	def getJsonFromFile(self, path):
 		return self.root.getJsonFromFile(path)
 
-	def backtest(self, start=None, start_off=0, end=None, end_off=0, method='run', plan=None):
+	def backtestRun(self, start=None, start_off=0, end=None, end_off=0, method='run', plan=None):
 		print('Running backtest ({0})...'.format(self.name))
 		self.method = method
 		if not plan:
@@ -516,8 +517,131 @@ class Backtester(object):
 			data = self.getCompletedChartData(data, all_ts, all_charts)
 
 		print('Backtest DONE ({0}) {1:.2f}'.format(self.name, timer() - start))
-
 		return self.module, data
+
+	def backtestTrainTest(self, 
+		method, split=0.7, seed=None, 
+		batch_split=None, padding=0,
+		dropout=0,
+		start=None, end=None
+	):
+		'''
+		PRE-PROCESSING
+		'''
+
+		# Get chart timestamps
+		all_ts = np.sort(np.unique(np.concatenate([
+			chart.bids_ts
+			for chart in self.charts
+		])))
+
+		assert 0.0 <= split <= 1.0
+
+		if padding:
+			assert type(padding) == int and padding >= 0
+
+		if start:
+			start_idx = max(Chart.getClosestIndex(all_ts, start), self.getMinPeriod())
+		else:
+			start_idx = max(self.getMinPeriod(), padding)
+
+		if end:
+			end_idx = Chart.getClosestIndex(all_ts, end)+1
+		else:
+			end_idx = all_ts.size
+
+		all_ts = all_ts[start_idx:end_idx]
+
+		# Get correlating charts to all_ts
+		all_charts = []
+		for i in range(all_ts.size):
+			charts = []
+			for chart in self.charts:
+				if chart.doesTsExist(all_ts[i]):
+					charts.append(chart)
+			all_charts.append(charts)
+
+		padded_ts = all_ts[padding:]
+		padded_size = padded_ts.size
+
+		test_batches = []
+		train_batches = []
+		if batch_split:
+			batches = []
+
+			assert type(batch_split) == int
+			batch_size = padded_size * batch_split
+			batch_points = [i for i in range(padded_size-1, -1, -batch_size) if i >= batch_size]
+
+			for i in range(len(batch_points)-1):
+				pt = batch_points[i]
+				nxt_pt = batch_points[i+1]
+				batches.append((all_ts[pt-padding:nxt_pt], all_charts[pt-padding:nxt_pt]))
+
+			# Get Test Batch
+			if seed:
+				assert type(seed) == int
+				random.seed(seed)
+
+			batches = random.shuffle(batches)
+			test_split = int(len(batches) * (1-split))
+			for i in range(test_split):
+				batch = random.choice(batches)
+				test_batches.append(batch)
+				del batches[batches.index(batch)]
+
+			# Get Train Batch
+			random.seed(None)
+			batches = random.shuffle(batches)
+			if dropout:
+				assert 0 <= dropout <= 1.0
+				dropout_amt = int(len(batches) * dropout)
+				for i in range(dropout_amt):
+					del batches[random.randint(0, len(batches)-1)]
+
+			train_batches = batches
+		else:
+			test_start_idx = padded_size * split
+
+			train_ts = all_ts[:test_start_idx]
+			train_batches.append(train_ts)
+
+			test_ts = padded_ts[test_start_idx:]
+			test_batches.append(test_ts)
+		
+		dataset = None
+		if method == 'train':
+			dataset = train_batches
+		else:
+			dataset = test_batches
+		
+		'''
+		TESTING
+		'''
+
+		start_time = timer()
+		for i in range(len(dataset)):
+			batch = dataset[i]
+			print('Batch {}/{}\t{:.2f}s'.format(i+1, len(dataset), timer() - start_time))
+
+			self.module = self.execPlan()
+			self.setPlanVariables()
+			self.module.init(self)
+
+			all_ts = batch[0]
+			all_charts = batch[1]
+
+			for i in range(all_ts.size):
+				self.c_ts = all_ts[i]
+				self.runloop(all_charts[i])
+
+				# TODO: GET RESULTS AND SAVE FOR BATCH
+
+		print('Finished.\t{:.2f}s'.format(timer() - start_time))
+
+
+
+
 
 	def execPlan(self):
 		path = 'Plans/{0}.py'.format(self.name)
@@ -858,10 +982,7 @@ class Backtester(object):
 		return pytz.timezone(tz).localize(dt)
 
 	def convertTimestampToDatetime(self, ts):
-		if self.source == 'ig':
-			return Constants.DT_START_DATE + datetime.timedelta(seconds=int(ts))
-		elif self.source == 'mt':
-			return Constants.MT_DT_START_DATE + datetime.timedelta(seconds=int(ts))
+		return Constants.DT_START_DATE + datetime.timedelta(seconds=int(ts))
 		
 	def convertDatetimeToTimestamp(self, dt):
 		# dt = self.convertTimezone(dt, 'Australia/Melbourne')

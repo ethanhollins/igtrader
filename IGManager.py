@@ -1,4 +1,6 @@
 from Chart import Chart
+from lightstreamer_client import LightstreamerClient as LSClient
+from lightstreamer_client import LightstreamerSubscription as Subscription
 
 import requests
 import json
@@ -150,7 +152,11 @@ class IGManager(object):
 				result['asks'] = {}
 
 			for price in data['prices']:
-				ts = self.utils.convertUTCSnapshotToTimestamp(price['snapshotTimeUTC'])
+				if 'snapshotTimeUTC' in price:
+					ts = self.utils.convertUTCSnapshotToTimestamp(price['snapshotTimeUTC'])
+				else:
+					ts = self.utils.convertSnapshotToTimestamp(price['snapshotTime'])
+					
 
 				bid_open = price['openPrice']['bid']
 				bid_high = price['highPrice']['bid']
