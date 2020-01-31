@@ -8,17 +8,20 @@ VARIABLES = {
 
 def init(utilities):
 	''' Initialize utilities and indicators '''
-	global utils, h4_chart, d_chart
+	global utils, h4_chart, d_chart, prev_piv, prev_pivs, rsi
 	utils = utilities
 
 	d_chart = utils.getChart(VARIABLES['PRODUCT'], Constants.DAILY)
 	h4_chart = utils.getChart(VARIABLES['PRODUCT'], Constants.FOUR_HOURS)
+	rsi = utils.RSI(10)
+	prev_pivs = []
+	prev_piv = 0
 
 	global info
 	info = {}
 	for i in range(0,24,4): 
 		info[i] = {}
-		info[i]['isLong'] = False
+		info[i]['isLong'] = None
 		info[i]['close'] = 0
 		info[i]['open'] = 0
 		# for j in range(0,24,4):
@@ -33,7 +36,7 @@ def setup(utilities):
 	return
 
 def onNewBar(chart):
-	global last_time
+	global last_time, prev_piv, prev_pivs
 
 	# if chart.period == Constants.DAILY:
 	# 	time = utils.convertTimestampToDatetime(utils.getLatestTimestamp())
@@ -45,7 +48,8 @@ def onNewBar(chart):
 		time = utils.convertTimestampToDatetime(utils.getLatestTimestamp())
 		london_time = utils.convertTimezone(time, 'Europe/London')
 		_open, high, low, close = h4_chart.getCurrentBidOHLC(utils)
-
+		prev_open, _, _, prev_close = h4_chart.getBidOHLC(utils, 1, 1)[0]
+		# stridx = rsi.getCurrent(utils, h4_chart)
 		# ohlc_h4 = h4_chart.getCurrentBidOHLC(utils)
 		# ohlc_d = d_chart.getCurrentBidOHLC(utils)
 		# print('d: {} - h4 ({}): {} - {}'.format(ohlc_d, london_time.hour, ohlc_h4, london_time.strftime('%Y-%m-%d %H:%M:%S')))
@@ -58,7 +62,13 @@ def onNewBar(chart):
 
 		time_str = london_time.strftime('%Y-%m-%d %H:%M:%S')
 
-		info[hour]['isLong'] = close > pl[0]
+		# print('{}, {}'.format(prev_pivs, pl[0]))
+		if prev_close >= pl[0]:
+			isLong = (prev_close - prev_open) >= 0
+		else:
+			isLong = not (prev_close - prev_open) < 0
+
+		info[hour]['isLong'] = isLong
 		info[hour]['open'] = _open
 		info[hour]['close'] = close
 		info[hour]['time'] = time_str
@@ -69,7 +79,7 @@ def onNewBar(chart):
 
 		for i in range(0,24,4):
 			if i != hour:
-				if info[i]['close'] != 0:
+				if info[i]['close'] != 0 and info[i]['isLong']:
 					# if (london_time.replace(tzinfo=None) - datetime.datetime.strptime(info[i]['time'], '%Y-%m-%d %H:%M:%S')) <= datetime.timedelta(hours=24):
 
 					pip_result = utils.convertToPips(close - info[i]['close'])
@@ -102,16 +112,38 @@ def onNewBar(chart):
 
 						max_dd = max(max_dd, utils.convertToPips(info[i]['close'] - low))
 
-					if not info[i]['isLong']:
-						pip_result *= -1
+					long_max = -999
+					for x in info[i][info[i]['time']]:
+						dist = info[i][info[i]['time']][x][3]
+						long_max = max(long_max, dist)
+
+					long_max = max(long_max, utils.convertToPips(high - info[i]['close']))
+
+					short_max = -999
+					for x in info[i][info[i]['time']]:
+						dist = info[i][info[i]['time']][x][4]
+						short_max = max(short_max, dist)
+
+					short_max = max(short_max, utils.convertToPips(info[i]['close'] - low))
+
+
+					if info[i]['isLong']:
+						pos_result = pip_result
+					else:
+						pos_result = pip_result * -1
 
 					info[i][info[i]['time']][hour] = (
-						pip_result, max_dist, max_dd, 
+						pos_result, max_dist, max_dd, 
 						utils.convertToPips(high - info[i]['close']),
-						utils.convertToPips(info[i]['close'] - low)
+						utils.convertToPips(info[i]['close'] - low),
+						long_max, short_max, info[i]['isLong']
 					)
 
 		last_time = london_time
+		if pl[0] != prev_piv:
+			prev_pivs.append(prev_piv)
+			prev_pivs = prev_pivs[-2:]
+		prev_piv = pl[0]
 
 def onLoop():
 	''' Function called on every program iteration '''
@@ -142,8 +174,12 @@ def onEnd():
 				close_list = [x[0] for x in processed[i][j]]
 				max_list = [x[1] for x in processed[i][j]]
 				dd_list = [x[2] for x in processed[i][j]]
-				high_list = [x[3] for x in processed[i][j]]
-				low_list = [x[4] for x in processed[i][j]]
+				long_list = [x[5] for x in processed[i][j]]
+				short_list = [x[6] for x in processed[i][j]]
+				dir_list = [x[7] for x in processed[i][j]]
+
+				if not len(close_list) > 0:
+					continue
 
 				result[i][j]['mean'] = round(sum(close_list) / len(close_list), 2)
 				mp = int(len(close_list)/2)
@@ -178,28 +214,42 @@ def onEnd():
 				result[i][j]['estimate'] = 0
 				for x in range(len(close_list)):
 					close_result = close_list[x]
+					long_result = long_list[x]
+					short_result = short_list[x]
+					dir_result = dir_list[x]
 
-					if close_result*-1 < -result[i][j]['max_median'] / 3:
-						result[i][j]['estimate'] -= result[i][j]['max_median'] / 3
-					if close_result*-1 > result[i][j]['max_median']:
-						result[i][j]['estimate'] += result[i][j]['max_median']
+					if not dir_result:
+						if short_result > result[i][j]['dd_median']:
+							result[i][j]['estimate'] -= result[i][j]['dd_median']
+						elif long_result > result[i][j]['max_median']:
+							result[i][j]['estimate'] += result[i][j]['max_median']		
+						else:
+							result[i][j]['estimate'] += close_result
+					else:
+						if long_result > result[i][j]['dd_median']:
+							result[i][j]['estimate'] -= result[i][j]['dd_median']
+						elif short_result > result[i][j]['max_median']:
+							result[i][j]['estimate'] += result[i][j]['max_median']	
+						else:
+							result[i][j]['estimate'] += close_result
 
 	for i in result:
 		print('{}:'.format(i))
 		for j in result[i]:
-			print(
-				'\t{}:\n\tMean: {}\n\tMedian: {}' \
-				'\n\tMax Mean: {}\n\tMax Median: {}' \
-				'\n\tDD Mean: {}\n\tDD Median: {}' \
-				'\n\tPos: {}\n\tNeg: {}\n\tEstimate: {:.2f}\n'
-				.format(
-					j, result[i][j]['mean'], result[i][j]['median'],
-					result[i][j]['max_mean'], result[i][j]['max_median'],
-					result[i][j]['dd_mean'], result[i][j]['dd_median'],
-					result[i][j]['pos'], result[i][j]['neg'],
-					result[i][j]['estimate']
+			if 'mean' in result[i][j]:
+				print(
+					'\t{}:\n\tMean: {}\n\tMedian: {}' \
+					'\n\tMax Mean: {}\n\tMax Median: {}' \
+					'\n\tDD Mean: {}\n\tDD Median: {}' \
+					'\n\tPos: {}\n\tNeg: {}\n\tEstimate: {:.2f}\n'
+					.format(
+						j, result[i][j]['mean'], result[i][j]['median'],
+						result[i][j]['max_mean'], result[i][j]['max_median'],
+						result[i][j]['dd_mean'], result[i][j]['dd_median'],
+						result[i][j]['pos'], result[i][j]['neg'],
+						result[i][j]['estimate']
+					)
 				)
-			)
 
 
 

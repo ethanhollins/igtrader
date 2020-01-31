@@ -5,6 +5,7 @@ from Account import Account
 from Plan import PlanState
 from Utilities import Utilities
 from Backtester import Backtester
+from Graphing import Graphing
 from matplotlib import pyplot as plt
 from matplotlib import dates as mpl_dates
 from matplotlib import gridspec as gridspec
@@ -163,16 +164,16 @@ class RootAccount(object):
 						plan = plans_info[i]
 
 						bt = Backtester(self, plan['name'], plan['variables'], info['source'])
+						if 'split' in plan:
+							bt.setSplit(plan['split'])
 						if 'seed' in plan:
 							bt.setSeed(plan['seed'])
 						if 'batch' in plan:
 							bt.setBatch(plan['batch'])
 						if 'padding' in plan:
 							bt.setPadding(plan['padding'])
-						if 'req-start' in plan:
-							bt.setReqStart(plan['req-start'])
-						if 'req-end' in plan:
-							bt.setReqEnd(plan['req-end'])
+						if 'dropout' in plan:
+							bt.setDropout(plan['dropout'])
 
 						plans.append(bt)
 
@@ -196,17 +197,21 @@ class RootAccount(object):
 		for i in range(len(plans)):
 			plan = plans[i]
 
-			if method == 'validate' or method == 'test':
-				pass
+			if method == 'train' or method == 'test':
+				data = plan.backtestTrainTest(method, start=start, end=end)
+				results[plan.name + ' ({0})'.format(i)] = data
 			else:
 				_, data = plan.backtestRun(start=start, end=end, method=method)
 
-			results[plan.name + ' ({0})'.format(i)] = data
+				results[plan.name + ' ({0})'.format(i)] = data
 
 		if method == 'compare':
 			self.showGraphs(results)
 		elif method == 'show':
 			self.showCharts(results, formatting)
+		elif method == 'train' or method == 'test':
+			graphing = Graphing()
+			graphing.plotBatchResults(results)
 
 	def saveToFile(self, path, data, priority=0, **kwargs):
 		if self.controller.saveToFile(self.root_name, path, data, priority=priority, **kwargs):
@@ -362,49 +367,49 @@ class RootAccount(object):
 			count += 1
 
 		# Daily Equity Return Aggregate
-		data = sorted(pos_aggregate.items(), key=lambda kv: kv[0])
-		dates = [i[0] for i in data]
-		pos_equity_ret = [i[1] for i in data]
+		# data = sorted(pos_aggregate.items(), key=lambda kv: kv[0])
+		# dates = [i[0] for i in data]
+		# pos_equity_ret = [i[1] for i in data]
 
-		agg_ret = round(sum(pos_equity_ret), 2)
-		agg_dd = round(self.getDD(pos_equity_ret), 2)
+		# agg_ret = round(sum(pos_equity_ret), 2)
+		# agg_dd = round(self.getDD(pos_equity_ret), 2)
 
-		c_ret = pos_equity_ret[0]
-		ret_plot = [c_ret]
-		for i in range(1, len(pos_equity_ret)):
-			ret_plot.append(pos_equity_ret[i] + ret_plot[-1])
+		# c_ret = pos_equity_ret[0]
+		# ret_plot = [c_ret]
+		# for i in range(1, len(pos_equity_ret)):
+		# 	ret_plot.append(pos_equity_ret[i] + ret_plot[-1])
 
-		color = colors[count+1]
-		ax1.plot(dates, ret_plot, color=color, alpha=0.5)
-		ax1.xaxis_date()
+		# color = colors[count+1]
+		# ax1.plot(dates, ret_plot, color=color, alpha=0.5)
+		# ax1.xaxis_date()
 
-		info_pos = len(results)*11
-		ax3.text(
-			0, info_pos+1, 
-			'Aggregate Result:', 
-			fontsize=11, horizontalalignment='left',
-			fontweight='bold'
-		)
-		ax3.text(
-			0, info_pos+2, 
-			'% Ret: {0} | % DD: {1}'.format(
-				agg_ret,
-				agg_dd
-			), 
-			fontsize=10, horizontalalignment='left'
-		)
+		# info_pos = len(results)*11
+		# ax3.text(
+		# 	0, info_pos+1, 
+		# 	'Aggregate Result:', 
+		# 	fontsize=11, horizontalalignment='left',
+		# 	fontweight='bold'
+		# )
+		# ax3.text(
+		# 	0, info_pos+2, 
+		# 	'% Ret: {0} | % DD: {1}'.format(
+		# 		agg_ret,
+		# 		agg_dd
+		# 	), 
+		# 	fontsize=10, horizontalalignment='left'
+		# )
 
 		date_format = mpl_dates.DateFormatter('%b %d \'%y')
 
 		ax1.set_title('Daily Equity')
 		ax1.set_xlabel('Date')
-		ax1.set_ylabel('Percentage')
-		ax1.legend(list(results.keys())+['Aggregate'])
+		ax1.set_ylabel('Percentage %')
+		ax1.legend(list(results.keys()))
 		ax1.xaxis.set_major_formatter(date_format)
 
 		ax2.set_title('Position Return')
 		ax2.set_xlabel('Date')
-		ax2.set_ylabel('Percentage')
+		ax2.set_yticks([])
 		ax2.legend(results.keys())
 		ax2.xaxis.set_major_formatter(date_format)
 

@@ -31,7 +31,8 @@ class Chart(object):
 	__slots__ = (
 		'product', 'period',
 		'bids_ts', 'bids_ohlc',
-		'asks_ts', 'asks_ohlc'
+		'asks_ts', 'asks_ohlc',
+		'c_ts'
 	)
 	def __init__(self,
 		product, period,
@@ -45,6 +46,7 @@ class Chart(object):
 		self.bids_ohlc = bids_ohlc
 		self.asks_ts = asks_ts
 		self.asks_ohlc = asks_ohlc
+		self.c_ts = 0
 
 	@jit
 	def tsExists(l, search):
@@ -97,27 +99,28 @@ class Chart(object):
 		return self.bids_ts[-1]
 
 	def getAllBidOHLC(self, backtester):
-		c_idx = Chart.getClosestIndex(self.bids_ts, backtester.c_ts)-1
+		c_idx = Chart.getClosestIndex(self.bids_ts, self.c_ts)-1
 		return self.bids_ohlc[:c_idx+1]
 
 	def getAllAskOHLC(self, backtester):
-		c_idx = Chart.getClosestIndex(self.asks_ts, backtester.c_ts)-1
+		c_idx = Chart.getClosestIndex(self.asks_ts, self.c_ts)-1
 		return self.asks_ohlc[:c_idx+1]
 
 	def getBidOHLC(self, backtester, shift, amount):
-		c_idx = Chart.getClosestIndex(self.bids_ts, backtester.c_ts)-1
+		c_idx = Chart.getClosestIndex(self.bids_ts, self.c_ts)-1
 		return self.bids_ohlc[c_idx+1-shift-amount:c_idx+1-shift]
 
 	def getAskOHLC(self, backtester, shift, amount):
-		c_idx = Chart.getClosestIndex(self.asks_ts, backtester.c_ts)-1
+		c_idx = Chart.getClosestIndex(self.asks_ts, self.c_ts)-1
 		return self.asks_ohlc[c_idx+1-shift-amount:c_idx+1-shift]
 
 	def getCurrentBidOHLC(self, backtester):
-		c_idx = Chart.getClosestIndex(self.bids_ts, backtester.c_ts)-1
+		c_idx = Chart.getClosestIndex(self.bids_ts, self.c_ts)-1
 		return self.bids_ohlc[c_idx]
 
 	def getCurrentAskOHLC(self, backtester):
-		c_idx = Chart.getClosestIndex(self.asks_ts, backtester.c_ts)-1
+
+		c_idx = Chart.getClosestIndex(self.asks_ts, self.c_ts)-1
 		return self.asks_ohlc[c_idx]
 
 	def isChart(self, product, period):
@@ -381,7 +384,8 @@ class Backtester(object):
 		'c_ts', 'storage', 'method',
 		'external_bank', 'maximum_bank', 'minimum_bank',
 		'last_time', 'max_ret', 'source', 'plan_state',
-		'last_ret'
+		'last_ret', 'split', 'seed', 'batch', 'padding',
+		'dropout'
 	)
 	def __init__(self, root, name, variables, source='ig'):
 		self.root = root
@@ -406,6 +410,12 @@ class Backtester(object):
 		self.last_time = None
 		self.max_ret = None
 		self.last_ret = None
+
+		self.split = 0.7
+		self.seed = None
+		self.batch = 0
+		self.padding = 0
+		self.dropout = 0
 
 	def loadData(self, product, period):
 		if self.source == 'mt':
@@ -531,14 +541,17 @@ class Backtester(object):
 		return self.module, data
 
 	def backtestTrainTest(self, 
-		method, split=0.7, seed=None, 
-		batch_split=None, padding=0,
-		dropout=0,
-		start=None, end=None
+		method,	start=None, end=None
 	):
 		'''
 		PRE-PROCESSING
 		'''
+
+		print('Running backtest ({0})...'.format(self.name))
+
+		self.module = self.execPlan()
+		self.setPlanVariables()
+		self.module.init(self)
 
 		# Get chart timestamps
 		all_ts = np.sort(np.unique(np.concatenate([
@@ -546,15 +559,15 @@ class Backtester(object):
 			for chart in self.charts
 		])))
 
-		assert 0.0 <= split <= 1.0
+		assert 0.0 <= self.split <= 1.0
 
-		if padding:
-			assert type(padding) == int and padding >= 0
+		if self.padding:
+			assert type(self.padding) == int and self.padding >= 0
 
 		if start:
 			start_idx = max(Chart.getClosestIndex(all_ts, start), self.getMinPeriod())
 		else:
-			start_idx = max(self.getMinPeriod(), padding)
+			start_idx = max(self.getMinPeriod(), self.padding)
 
 		if end:
 			end_idx = Chart.getClosestIndex(all_ts, end)+1
@@ -572,52 +585,52 @@ class Backtester(object):
 					charts.append(chart)
 			all_charts.append(charts)
 
-		padded_ts = all_ts[padding:]
+		padded_ts = all_ts[self.padding:]
 		padded_size = padded_ts.size
 
 		test_batches = []
 		train_batches = []
-		if batch_split:
+		if self.batch:
 			batches = []
 
-			assert type(batch_split) == int
-			batch_size = padded_size * batch_split
+			assert type(self.batch) == int
+			batch_size = self.batch
 			batch_points = [i for i in range(padded_size-1, -1, -batch_size) if i >= batch_size]
 
-			for i in range(len(batch_points)-1):
+			for i in range(len(batch_points)-1, -1, -1):
 				pt = batch_points[i]
-				nxt_pt = batch_points[i+1]
-				batches.append((all_ts[pt-padding:nxt_pt], all_charts[pt-padding:nxt_pt]))
+				nxt_pt = batch_points[i-1]
+				batches.append((all_ts[pt-self.padding:nxt_pt], all_charts[pt-self.padding:nxt_pt]))
 
 			# Get Test Batch
-			if seed:
-				assert type(seed) == int
-				random.seed(seed)
+			if self.seed:
+				assert type(self.seed) == int
+				random.seed(self.seed)
 
-			batches = random.shuffle(batches)
-			test_split = int(len(batches) * (1-split))
+			random.shuffle(batches)
+			test_split = int(len(batches) * (1-self.split))
 			for i in range(test_split):
-				batch = random.choice(batches)
-				test_batches.append(batch)
-				del batches[batches.index(batch)]
+				idx = random.randint(0, len(batches)-1)
+				test_batches.append(batches[idx])
+				del batches[idx]
 
 			# Get Train Batch
 			random.seed(None)
-			batches = random.shuffle(batches)
-			if dropout:
-				assert 0 <= dropout <= 1.0
-				dropout_amt = int(len(batches) * dropout)
+			random.shuffle(batches)
+			if self.dropout:
+				assert 0 <= self.dropout <= 1.0
+				dropout_amt = int(len(batches) * self.dropout)
 				for i in range(dropout_amt):
 					del batches[random.randint(0, len(batches)-1)]
 
 			train_batches = batches
 		else:
-			test_start_idx = padded_size * split
+			test_start_idx = int(padded_size * self.split)
 
-			train_ts = all_ts[:test_start_idx]
+			train_ts = (all_ts[:test_start_idx], all_charts[:test_start_idx])
 			train_batches.append(train_ts)
 
-			test_ts = padded_ts[test_start_idx:]
+			test_ts = (all_ts[test_start_idx:], all_charts[test_start_idx:])
 			test_batches.append(test_ts)
 		
 		dataset = None
@@ -631,9 +644,12 @@ class Backtester(object):
 		'''
 
 		start_time = timer()
+		batch_data = []
 		for i in range(len(dataset)):
 			batch = dataset[i]
-			print('Batch {}/{}\t{:.2f}s'.format(i+1, len(dataset), timer() - start_time))
+
+			self.reset()
+			data = {}
 
 			self.module = self.execPlan()
 			self.setPlanVariables()
@@ -641,18 +657,29 @@ class Backtester(object):
 
 			all_ts = batch[0]
 			all_charts = batch[1]
+			for j in range(all_ts.size):
+				self.c_ts = all_ts[j]
+				self.runloop(all_charts[j])
 
-			for i in range(all_ts.size):
-				self.c_ts = all_ts[i]
-				self.runloop(all_charts[i])
-
+				data = self.getInterimData(data)
 				# TODO: GET RESULTS AND SAVE FOR BATCH
+			data = self.getCompletedData(data)
+			batch_data.append(data)
+			print('Batch {}/{}\t{:.2f}s'.format(i+1, len(dataset), timer() - start_time))
+		print('\nFinished.\t{:.2f}s'.format(timer() - start_time))
 
-		print('Finished.\t{:.2f}s'.format(timer() - start_time))
+		return batch_data
 
+	def reset(self):
+		self.c_ts = 0
+		self.storage = {}
 
+		self.positions = []
+		self.closed_positions = []
 
-
+		self.last_time = None
+		self.max_ret = None
+		self.last_ret = None
 
 	def execPlan(self):
 		path = 'Plans/{0}.py'.format(self.name)
@@ -672,6 +699,7 @@ class Backtester(object):
 		self.checkSl()
 		self.checkTp()
 		for chart in charts:
+			chart.c_ts = self.c_ts
 			try:
 				self.module.onNewBar(chart)
 			except Exception as e:
@@ -811,18 +839,19 @@ class Backtester(object):
 		d_max_cmp_dd = 0
 		last_ret = None
 
-		for k, perc in data[Constants.DAILY_PERC_RET].items():
-			if last_ret:
-				d_ret = perc - last_ret
-				d_bank += (d_bank * (d_ret/100))
+		if Constants.DAILY_PERC_RET in data:
+			for k, perc in data[Constants.DAILY_PERC_RET].items():
+				if last_ret:
+					d_ret = perc - last_ret
+					d_bank += (d_bank * (d_ret/100))
 
-				if d_bank > d_max_bank:
-					d_max_bank = d_bank
-				else:
-					dd = (d_max_bank - d_bank) / d_max_bank
-					d_max_cmp_dd = dd if dd > d_max_cmp_dd else d_max_cmp_dd
+					if d_bank > d_max_bank:
+						d_max_bank = d_bank
+					else:
+						dd = (d_max_bank - d_bank) / d_max_bank
+						d_max_cmp_dd = dd if dd > d_max_cmp_dd else d_max_cmp_dd
 
-			last_ret = perc
+				last_ret = perc
 
 		data[Constants.POS_PERC_RET] = round(perc_ret, 2)
 		data[Constants.POS_PIP_RET] = round(pip_ret, 1)
@@ -839,6 +868,7 @@ class Backtester(object):
 
 		data[Constants.WINS] = wins
 		data[Constants.LOSSES] = losses
+
 		data[Constants.WIN_PERC] = round(wins/(wins+losses), 2)
 		data[Constants.LOSS_PERC] = round(losses/(wins+losses), 2)
 		data[Constants.GAIN] = round(gain, 2)
@@ -1023,6 +1053,21 @@ class Backtester(object):
 
 	def savePositions(self):
 		return
+
+	def setSplit(self, split):
+		self.split = split
+
+	def setSeed(self, seed):
+		self.seed = seed
+
+	def setBatch(self, batch):
+		self.batch = batch
+
+	def setPadding(self, padding):
+		self.padding = padding
+
+	def setDropout(self, dropout):
+		self.dropout = dropout
 
 	'''
 	Plan Utilities

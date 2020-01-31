@@ -8,11 +8,16 @@ VARIABLES = {
 
 def init(utilities):
 	''' Initialize utilities and indicators '''
-	global utils, h4_chart, d_chart
+	global utils, h4_chart, d_chart, sma_20, sma_50, isLong, rsi
 	utils = utilities
 
 	d_chart = utils.getChart(VARIABLES['PRODUCT'], Constants.DAILY)
 	h4_chart = utils.getChart(VARIABLES['PRODUCT'], Constants.FOUR_HOURS)
+	rsi = utils.RSI(10)
+	sma_20 = utils.SMA(20)
+	sma_50 = utils.SMA(50)
+	isLong = None
+
 
 	global info
 	info = {}
@@ -33,7 +38,7 @@ def setup(utilities):
 	return
 
 def onNewBar(chart):
-	global last_time
+	global last_time, isLong
 
 	# if chart.period == Constants.DAILY:
 	# 	time = utils.convertTimestampToDatetime(utils.getLatestTimestamp())
@@ -45,6 +50,9 @@ def onNewBar(chart):
 		time = utils.convertTimestampToDatetime(utils.getLatestTimestamp())
 		london_time = utils.convertTimezone(time, 'Europe/London')
 		_open, high, low, close = h4_chart.getCurrentBidOHLC(utils)
+		sma_20_val = sma_20.getCurrent(utils, d_chart)
+		sma_50_val = sma_50.getCurrent(utils, d_chart)
+		rsi_val = rsi.getCurrent(utils, d_chart)
 
 		# ohlc_h4 = h4_chart.getCurrentBidOHLC(utils)
 		# ohlc_d = d_chart.getCurrentBidOHLC(utils)
@@ -58,7 +66,12 @@ def onNewBar(chart):
 
 		time_str = london_time.strftime('%Y-%m-%d %H:%M:%S')
 
-		info[hour]['isLong'] = close > pl[0]
+		if rsi_val >= 70:
+			isLong = True
+		if rsi_val <= 30:
+			isLong = False
+
+		info[hour]['isLong'] = isLong
 		info[hour]['open'] = _open
 		info[hour]['close'] = close
 		info[hour]['time'] = time_str
@@ -69,7 +82,7 @@ def onNewBar(chart):
 
 		for i in range(0,24,4):
 			if i != hour:
-				if info[i]['close'] != 0:
+				if info[i]['close'] != 0 and isLong:
 					# if (london_time.replace(tzinfo=None) - datetime.datetime.strptime(info[i]['time'], '%Y-%m-%d %H:%M:%S')) <= datetime.timedelta(hours=24):
 
 					pip_result = utils.convertToPips(close - info[i]['close'])
@@ -102,13 +115,31 @@ def onNewBar(chart):
 
 						max_dd = max(max_dd, utils.convertToPips(info[i]['close'] - low))
 
-					if not info[i]['isLong']:
-						pip_result *= -1
+					long_max = -999
+					for x in info[i][info[i]['time']]:
+						dist = info[i][info[i]['time']][x][3]
+						long_max = max(long_max, dist)
+
+					long_max = max(long_max, utils.convertToPips(high - info[i]['close']))
+
+					short_max = -999
+					for x in info[i][info[i]['time']]:
+						dist = info[i][info[i]['time']][x][4]
+						short_max = max(short_max, dist)
+
+					short_max = max(short_max, utils.convertToPips(info[i]['close'] - low))
+
+
+					if info[i]['isLong']:
+						pos_result = pip_result
+					else:
+						pos_result = pip_result * -1
 
 					info[i][info[i]['time']][hour] = (
-						pip_result, max_dist, max_dd, 
+						pos_result, max_dist, max_dd, 
 						utils.convertToPips(high - info[i]['close']),
-						utils.convertToPips(info[i]['close'] - low)
+						utils.convertToPips(info[i]['close'] - low),
+						long_max, short_max, info[i]['isLong']
 					)
 
 		last_time = london_time
@@ -142,8 +173,9 @@ def onEnd():
 				close_list = [x[0] for x in processed[i][j]]
 				max_list = [x[1] for x in processed[i][j]]
 				dd_list = [x[2] for x in processed[i][j]]
-				high_list = [x[3] for x in processed[i][j]]
-				low_list = [x[4] for x in processed[i][j]]
+				long_list = [x[5] for x in processed[i][j]]
+				short_list = [x[6] for x in processed[i][j]]
+				dir_list = [x[7] for x in processed[i][j]]
 
 				result[i][j]['mean'] = round(sum(close_list) / len(close_list), 2)
 				mp = int(len(close_list)/2)
@@ -178,11 +210,24 @@ def onEnd():
 				result[i][j]['estimate'] = 0
 				for x in range(len(close_list)):
 					close_result = close_list[x]
+					long_result = long_list[x]
+					short_result = short_list[x]
+					dir_result = dir_list[x]
 
-					if close_result*-1 < -result[i][j]['max_median'] / 3:
-						result[i][j]['estimate'] -= result[i][j]['max_median'] / 3
-					if close_result*-1 > result[i][j]['max_median']:
-						result[i][j]['estimate'] += result[i][j]['max_median']
+					if dir_result:
+						if long_result > result[i][j]['dd_median']:
+							result[i][j]['estimate'] -= result[i][j]['dd_median']
+						elif short_result > result[i][j]['max_median']:
+							result[i][j]['estimate'] += result[i][j]['max_median']		
+						else:
+							result[i][j]['estimate'] += close_result*-1
+					else:
+						if short_result > result[i][j]['dd_median']:
+							result[i][j]['estimate'] -= result[i][j]['dd_median']
+						elif long_result > result[i][j]['max_median']:
+							result[i][j]['estimate'] += result[i][j]['max_median']	
+						else:
+							result[i][j]['estimate'] += close_result*-1
 
 	for i in result:
 		print('{}:'.format(i))
