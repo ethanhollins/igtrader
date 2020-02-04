@@ -74,25 +74,26 @@ class OandaManager(object):
 		self.root.controller.charts.append(chart)
 		return chart
 
-	def getPrices(self, product, period, start_dt=None, end_dt=None, count=None, result={}):
+	def getPrices(self, product, period, tz='Europe/London', start_dt=None, end_dt=None, count=None, result={}):
+		# tz = 'Australia/Melbourne'
 		if count:
 			if start_dt:
 				start_str = start_dt.strftime('%Y-%m-%dT%H:%M:%S.000000000Z')
 				endpoint = 'instruments/{}/candles?price=BA' \
-							'&from={}&count={}&granularity={}&alignmentTimezone=Europe/London&dailyAlignment=0'.format(
-								product, start_str, count, period
+							'&from={}&count={}&granularity={}&alignmentTimezone={}&dailyAlignment=0'.format(
+								product, start_str, count, period, tz
 							)
 			else:
 				endpoint = 'instruments/{}/candles?price=BA' \
-							'&count={}&granularity={}&alignmentTimezone=Europe/London&dailyAlignment=0'.format(
-								product, count, period
+							'&count={}&granularity={}&alignmentTimezone={}&dailyAlignment=0'.format(
+								product, count, period, tz
 							)
 		else:
 			start_str = start_dt.strftime('%Y-%m-%dT%H:%M:%S.000000000Z')
 			end_str = end_dt.strftime('%Y-%m-%dT%H:%M:%S.000000000Z')
 			endpoint = 'instruments/{}/candles?price=BA' \
-						'&from={}&to={}&granularity={}&alignmentTimezone=Europe/London&dailyAlignment=0'.format(
-							product, start_str, end_str, period
+						'&from={}&to={}&granularity={}&alignmentTimezone={}&dailyAlignment=0'.format(
+							product, start_str, end_str, period, tz
 						)
 		print(endpoint)
 		res = requests.get(
@@ -109,7 +110,7 @@ class OandaManager(object):
 
 			for i in candles:
 				time = datetime.datetime.strptime(i['time'], '%Y-%m-%dT%H:%M:%S.000000000Z')
-				ts = self.utils.convertUTCTimeToTimestamp(time)
+				ts = self.utils.convertLondonTimeToTimestamp(time)
 
 				result['bids'][ts] = [float(j) for j in i['bid'].values()]
 				result['asks'][ts] = [float(j) for j in i['ask'].values()]

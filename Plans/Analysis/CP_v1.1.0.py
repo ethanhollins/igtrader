@@ -11,8 +11,9 @@ def init(utilities):
 	global utils, h4_chart, d_chart, sma_20, sma_50, isLong, rsi
 	utils = utilities
 
-	d_chart = utils.getChart(VARIABLES['PRODUCT'], Constants.DAILY)
-	h4_chart = utils.getChart(VARIABLES['PRODUCT'], Constants.FOUR_HOURS)
+	# d_chart = utils.getChart(VARIABLES['PRODUCT'], Constants.DAILY)
+	d_chart = utils.getChart(VARIABLES['PRODUCT'], Constants.ONE_MINUTE)
+	# h4_chart = utils.getChart(VARIABLES['PRODUCT'], Constants.FOUR_HOURS)
 	rsi = utils.RSI(10)
 	sma_20 = utils.SMA(20)
 	sma_50 = utils.SMA(50)

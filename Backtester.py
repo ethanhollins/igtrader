@@ -119,7 +119,6 @@ class Chart(object):
 		return self.bids_ohlc[c_idx]
 
 	def getCurrentAskOHLC(self, backtester):
-
 		c_idx = Chart.getClosestIndex(self.asks_ts, self.c_ts)-1
 		return self.asks_ohlc[c_idx]
 
@@ -469,6 +468,8 @@ class Backtester(object):
 
 	def backtestRun(self, start=None, start_off=0, end=None, end_off=0, method='run', plan=None):
 		print('Running backtest ({0})...'.format(self.name))
+		start_time = timer()
+
 		self.method = method
 		if not plan:
 			self.module = self.execPlan()
@@ -500,6 +501,15 @@ class Backtester(object):
 
 		all_ts = all_ts[start_idx:end_idx]
 
+		for chart in self.charts:
+			start_idx = max(Chart.getClosestIndex(chart.bids_ts, all_ts[0])-1000, 0)
+			end_idx = Chart.getClosestIndex(chart.bids_ts, all_ts[-1])+1
+
+			chart.bids_ts = chart.bids_ts[start_idx:end_idx]
+			chart.bids_ohlc = chart.bids_ohlc[start_idx:end_idx]
+			chart.asks_ts = chart.asks_ts[start_idx:end_idx]
+			chart.asks_ohlc = chart.asks_ohlc[start_idx:end_idx]
+
 		all_charts = []
 		for i in range(all_ts.size):
 			charts = []
@@ -514,7 +524,9 @@ class Backtester(object):
 		else:
 			self.plan_state = PlanState.RUN
 
-		start = timer()
+		print('Pre-processing complete ({0})... {1:.2f}s'.format(self.name, timer() - start_time))
+
+		start_time = timer()
 		for i in range(all_ts.size):
 			self.c_ts = all_ts[i]
 			self.runloop(all_charts[i])
@@ -529,7 +541,7 @@ class Backtester(object):
 		elif self.method == 'show':
 			data = self.getCompletedChartData(data, all_ts, all_charts)
 
-		print('Backtest DONE ({0}) {1:.2f}'.format(self.name, timer() - start))
+		print('Backtest DONE ({0}) {1:.2f}s'.format(self.name, timer() - start_time))
 
 		if self.method == 'analyse':
 			try:
@@ -1199,11 +1211,43 @@ class Backtester(object):
 	def getLowestPeriodChart(self):
 		low_chart = None
 		for chart in self.charts:
+			low_period = None
 			if low_chart:
-				low_chart = chart if chart.period < low_chart.period else low_chart
+				low_period = self.getPeriodNumber(low_chart.period)
+			period = self.getPeriodNumber(chart.period)
+			if low_period:
+				low_chart = chart if period < low_period else low_chart
 			else:
 				low_chart = chart
 		return low_chart
+
+	def getPeriodNumber(self, period):
+		if period == Constants.ONE_MINUTE:
+			return 1
+		elif period == Constants.TWO_MINUTES:
+			return 2
+		elif period == Constants.THREE_MINUTES:
+			return 3
+		elif period == Constants.FIFTEEN_MINUTES:
+			return 5
+		elif period == Constants.THIRTY_MINUTES:
+			return 30
+		elif period == Constants.ONE_HOUR:
+			return 60
+		elif period == Constants.TWO_HOURS:
+			return 60*2
+		elif period == Constants.THREE_HOURS:
+			return 60*3
+		elif period == Constants.FOUR_HOURS:
+			return 60*4
+		elif period == Constants.DAILY:
+			return 60*24
+		elif period == Constants.WEEKLY:
+			return 60*24*7
+		elif period == Constants.MONTHLY:
+			return 60*24*7*4
+		else:
+			None
 
 	def getBid(self, product):
 		for chart in self.charts:
