@@ -60,6 +60,7 @@ class Utilities(object):
 		return int((s_dt - Constants.DT_START_DATE).total_seconds())
 
 	def convertUTCTimeToTimestamp(self, time):
+		time = self.setTimezone(time, 'UTC')
 		time = self.convertTimezone(time, 'Australia/Melbourne').replace(tzinfo=None)
 		# time = self.convertToMelbourneTimezone(time)
 		return int((time - Constants.DT_START_DATE).total_seconds())
