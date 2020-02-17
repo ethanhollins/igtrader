@@ -75,7 +75,7 @@ class OandaManager(object):
 		return chart
 
 	def getPrices(self, product, period, tz='Europe/London', start_dt=None, end_dt=None, count=None, result={}):
-		tz = 'Australia/Melbourne'
+		# tz = 'Australia/Melbourne'
 		if count:
 			if start_dt:
 				start_str = start_dt.strftime('%Y-%m-%dT%H:%M:%S.000000000Z')

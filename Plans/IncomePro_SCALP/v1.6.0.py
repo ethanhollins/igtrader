@@ -2,35 +2,21 @@ import Constants
 from enum import Enum
 
 VARIABLES = {
-	'TIMEZONE': 'America/New_York',
 	'PRODUCT': Constants.GBPUSD,
 	'BANK': None,
 	'risk': 1.0,
 	'stoprange': 17.0,
-	'safety_target': 45,
-	'fri_safety_target': 35,
-	'tp_target': 51,
-	'init_tp_target': 204,
-	'init_mid_target': 150,
-	'init_mid_tp': 102,
-	'max_loss': -34,
-	'MISC': None,
-	'trade_limit': 3,
+	'm_targets': [100, 130, 150, 180, 204],
+	'm_stops': [51, 85, 102, 153],
+	'add_target': 51,
+	'close_target': 17,
 	'RSI': None,
 	'rsi_long': 52,
 	'rsi_short': 48,
-	'overbought': 70,
-	'oversold': 30,
-	'overbought_2': 75,
-	'oversold_2': 25,
 	'MACD': None,
 	'macdz_conf': 2.0,
 	'CCI': None,
-	'cci_conf': 120.0, 
-	'DONCH': None,
-	'donch': 4,
-	'BOLL': None,
-	'boll': 2.2
+	'cci_conf': 100.0, 
 }
 
 class Direction(Enum):
@@ -50,29 +36,16 @@ class EntryState(Enum):
 	COMPLETE = 4
 
 class EntryType(Enum):
-	REGULAR = 1
-	RE_ENTRY = 2
-	CLOSE = 3
+	M_TRADE = 1
+	ADDITIONAL = 2
+	RE_ENTRY = 3
+	CLOSE = 4
 
 class TimeState(Enum):
 	TRADING = 1
 	STOP = 2
 	EXIT_ONLY = 3
 	EXIT = 4
-
-class PivotState(Enum):
-	NONE = 1
-	REVERSE = 2
-	CPP = 3
-
-class TradeState(Enum):
-	INITIAL = 1
-	NORMAL = 2
-
-class StopState(Enum):
-	NONE = 1
-	BREAKEVEN = 2
-	MID = 3
 
 class SortedList(list):
 	def __getitem__(self, row):
@@ -89,25 +62,17 @@ class Trigger(dict):
 	def __init__(self, direction=None):
 		self.direction = direction
 		
-		self.macd_ds_long = DirectionState.ONE
-		self.macd_ds_short = DirectionState.ONE
-
-		# self.cci_ds_long = DirectionState.ONE
-		# self.cci_ds_short = DirectionState.ONE
+		self.ds_long = DirectionState.ONE
+		self.ds_short = DirectionState.ONE
 
 		self.est_direction = None
 
 		self.entry_state = EntryState.ONE
-		self.entry_type = None
-		
+		self.entry_type = EntryType.ADDITIONAL
 		self.re_entry = None
 
-		self.zero_close = 0
-		self.pivot_direction = None
 		self.pivot_line = 0
-		self.pivot_state = PivotState.NONE
-
-		self.trade_state = TradeState.NORMAL
+		self.is_stopped = False
 
 	def setDirection(self, direction, reverse=False):
 		if reverse:
@@ -138,9 +103,7 @@ def init(utilities):
 
 	rsi = utils.RSI(10)
 	macd_z = utils.MACD(4, 40, 3)
-	# boll_one = utils.BOLL(10, VARIABLES['boll'])
-	# donch = utils.DONCH(VARIABLES['donch'])
-	# cci = utils.CCI(5)
+	cci = utils.CCI(5)
 	d_pivots = None
 
 def setup(utilities):
@@ -233,14 +196,7 @@ def handleEntries():
 
 	if pending_entry:
 		
-		if (
-			getCurrentProfit() <= VARIABLES['max_loss']
-		):
-			closeAllPositions()
-			pending_entry = None
-			time_state = TimeState.EXIT
-			return
-		elif pending_entry.entry_type == EntryType.CLOSE or time_state != TimeState.TRADING:
+		if pending_entry.entry_type == EntryType.CLOSE or time_state != TimeState.TRADING:
 			closeAllPositions()
 			pending_entry = None
 			return
@@ -270,13 +226,12 @@ def handleStopAndReverse(entry):
 	'''
 	global trades
 	if bank:
-		if trigger.trade_state == TradeState.INITIAL:
-			tp = getTargetProfit(VARIABLES['init_tp_target'], getCurrentProfit())
+		if trigger.entry_state == EntryType.M_TRADE:
+			tp = getTargetProfit(VARIABLES['m_targets'][-1], getCurrentProfit())
 		else:
-			tp = getTargetProfit(VARIABLES['tp_target'], getCurrentProfit())
+			tp = getTargetProfit(VARIABLES['add_target'], getCurrentProfit())
 
-		mid_target = getTargetProfit(VARIABLES['init_mid_target'], getCurrentProfit())
-		mid_tp = getTargetProfit(VARIABLES['init_mid_tp'], getCurrentProfit())
+		c_profit = getCurrentProfit()
 
 		pos = utils.stopAndReverse(
 			VARIABLES['PRODUCT'], 
@@ -288,10 +243,9 @@ def handleStopAndReverse(entry):
 		if entry.entry_type != EntryType.RE_ENTRY:
 			trades += 1
 
-		pos.data['initial'] = trigger.trade_state == TradeState.INITIAL
-		pos.data['mid_target'] = mid_target
-		pos.data['mid_tp'] = mid_tp
-		pos.data['stop_state'] = StopState.NONE.value
+		pos.data['is_m_trade'] = trigger.entry_state == EntryType.M_TRADE
+		pos.data['c_profit'] = c_profit
+		pos.data['stop_state'] = 0
 
 		utils.savePositions()
 
@@ -305,16 +259,14 @@ def handleRegularEntry(entry):
 
 	global trades
 	if bank:
-		if trigger.trade_state == TradeState.INITIAL:
-			tp = getTargetProfit(VARIABLES['init_tp_target'], getCurrentProfit())
+		if trigger.entry_state == EntryType.M_TRADE:
+			tp = getTargetProfit(VARIABLES['m_targets'][-1], getCurrentProfit())
 		else:
-			tp = getTargetProfit(VARIABLES['tp_target'], getCurrentProfit())
+			tp = getTargetProfit(VARIABLES['add_target'], getCurrentProfit())
 		
-		mid_target = getTargetProfit(VARIABLES['init_mid_target'], getCurrentProfit())
-		mid_tp = getTargetProfit(VARIABLES['init_mid_tp'], getCurrentProfit())
+		c_profit = getCurrentProfit()
 
 		if entry.direction == Direction.LONG:
-
 			pos = utils.buy(
 				VARIABLES['PRODUCT'], 
 				utils.getLotsize(bank, VARIABLES['risk'], VARIABLES['stoprange']), 
@@ -332,10 +284,9 @@ def handleRegularEntry(entry):
 		if entry.entry_type != EntryType.RE_ENTRY:
 			trades += 1
 		
-		pos.data['initial'] = trigger.trade_state == TradeState.INITIAL
-		pos.data['mid_target'] = mid_target
-		pos.data['mid_tp'] = mid_tp
-		pos.data['stop_state'] = StopState.NONE.value
+		pos.data['is_m_trade'] = trigger.entry_state == EntryType.M_TRADE
+		pos.data['c_profit'] = c_profit
+		pos.data['stop_state'] = 0
 
 		utils.savePositions()
 
@@ -353,51 +304,73 @@ def setSL17():
 		sl_price = pos.calculateSLPrice(-target)
 		pos.modifySL(sl_price)
 
-def setInitialBE(force=False, is_fri=False):
+def setMTradeStop(is_close=False):
 	_, high, low, close = m_chart.getCurrentBidOHLC(utils)
 
 	for pos in utils.positions:
-		if 'stop_state' in pos.data and 'initial' in pos.data and pos.data['initial']:
-			if pos.data['stop_state'] == StopState.NONE.value:
-				if is_fri:
-					if not pos.getPipProfit() >= VARIABLES['fri_safety_target']:
-						pos.close()
-						utils.log('setInitialBE', "Fri Close")
+		if 'stop_state' in pos.data and 'is_m_trade' in pos.data and pos.data['is_m_trade']:
+			if pos.data['stop_state'] == 0:
+				if is_close:
+					pivot_sl = getPossiblePivotSL(trigger.pivot_line, pos.direction)
+					if pivot_sl:
+						pos.modifySL(pivot_sl)
+						pos.data['stop_state'] = 1
+						utils.savePositions()
+						utils.log('setMTradeStop', "isClose")
 
-				if isTargetProfit(VARIABLES['safety_target']):
-					pos.modifySL(pos.entryprice)
-					pos.data['stop_state'] = StopState.BREAKEVEN.value
-					utils.savePositions()
-					utils.log('setInitialBE', "Breakeven")
+			else:
+				if 'stop_state' in pos.data and 'c_profit' in pos.data:
+					for i in range(len(VARIABLES['m_stops'])):
+						if pos.data['stop_state'] >= i+2:
+							continue
 
-			elif pos.data['stop_state'] == StopState.BREAKEVEN.value:
-				if 'mid_tp' in pos.data and 'mid_target' in pos.data:
-					if isPositionProfit(pos, pos.data['mid_target']):
-						if pos.direction == Constants.BUY:
-							sl_price = pos.calculateSLPrice(-pos.data['mid_tp'])
-							pos.modifySL(sl_price)
-							pos.data['stop_state'] = StopState.MID.value
-							utils.savePositions()
-							utils.log('setInitialBE', "Mid TP")
-						else:
-							sl_price = pos.calculateSLPrice(-pos.data['mid_tp'])
-							pos.modifySL(sl_price)
-							pos.data['stop_state'] = StopState.MID.value
-							utils.savePositions()
-							utils.log('setInitialBE', "Mid TP")
+						target = getTargetProfit(VARIABLES['m_targets'][i], VARIABLES['c_profit'])
+						if isPositionProfit(pos, target):
+							stop = getTargetProfit(VARIABLES['m_stops'][i], VARIABLES['c_profit'])
+							if pos.direction == Constants.BUY:
+								sl_price = pos.calculateSLPrice(-stop)
+								pos.modifySL(sl_price)
+								pos.data['stop_state'] = i+2
+								utils.savePositions()
+								utils.log('setMTradeStop', "TP Level {}".format(i))
+							else:
+								sl_price = pos.calculateSLPrice(-stop)
+								pos.modifySL(sl_price)
+								pos.data['stop_state'] = i+2
+								utils.savePositions()
+								utils.log('setMTradeStop', "TP Level {}".format(i))
+
+def getPossiblePivotSL(x, pos):
+	close = m_chart.getCurrentBidOHLC(utils)[3]
+
+	if pos.direction == Constants.BUY:
+		sl = min(
+			x - utils.convertToPrice(1.0),
+			close - utils.convertToPrice(5.0)
+		)
+		if sl > pos.sl:
+			return sl
+	else:
+		sl = max(
+			x + utils.convertToPrice(2.7),
+			close + utils.convertToPrice(5.0)
+		)
+		if sl < pos.sl:
+			return sl
+
+	return None
 
 def onTakeProfit(pos):
 	utils.log("onTakeProfit ", '')
 	global time_state
-	if 'initial' in pos.data and not pos.data['initial']:
+	if 'is_m_trade' in pos.data and not pos.data['is_m_trade']:
 		time_state = TimeState.EXIT
 
 def onStopLoss(pos):
 	utils.log("onStopLoss", '')
-	# if pos.direction == Constants.BUY:
-	# 	trigger.re_entry = Direction.LONG
-	# else:
-	# 	trigger.re_entry = Direction.SHORT
+	if ('is_m_trade' in pos.data and pos.data['is_m_trade']
+		and 'stop_state' in pos.data and pos.data['stop_state'] <= 1):
+		trigger.is_stopped = True
 
 def checkTime():
 	''' 
@@ -415,7 +388,7 @@ def checkTime():
 			london_time.hour == 20)
 	):
 		time_state = TimeState.STOP
-		setInitialBE(force=True, is_fri=london_time.weekday() == 4)
+		setMTradeStop(is_close=True)
 	elif (
 		time_state == TimeState.TRADING
 		and (london_time.hour == 19 and london_time.minute >= 30)
@@ -426,94 +399,70 @@ def runSequence():
 
 	if utils.plan_state.value in (4,):
 		utils.log('M1 OHLC', m_chart.getCurrentBidOHLC(utils))
-		
 		stridx = rsi.getCurrent(utils, m_chart)
-		hist = round(float(macd_z.getCurrent(utils, m_chart)[2]), 5)
+		hist = macd_z.getCurrent(utils, m_chart)[2]
+		ch_idx = cci.getCurrent(utils, m_chart)
 
-		utils.log('IND', 'RSI: {} HIST: {} \n| D PIVOTS: {}'.format(
-			stridx, hist, d_pivots
+		utils.log('IND', 'RSI: {:.2f} |HIST: {:.5f} |CCI: {:.5f}\n| D PIVOTS: {}'.format(
+			stridx, hist, ch_idx, d_pivots
 		))
 
 	time = utils.convertTimestampToDatetime(utils.getLatestTimestamp())
 	london_time = utils.convertTimezone(time, 'Europe/London')
 
-	setInitialBE()
-	global time_state
-	if time_state == TimeState.TRADING:
-		if isTargetProfit(VARIABLES['safety_target']):
-			if trigger.trade_state == TradeState.NORMAL:
-				time_state = TimeState.EXIT
+	setMTradeStop()
 
-	if isNewPivot(): trigger.pivot_state = PivotState.CPP
 	if not trigger.pivot_line: return
 
 	if time_state == TimeState.TRADING or time_state == TimeState.EXIT_ONLY:
-		macdDirectionSetup(Direction.LONG)
-		macdDirectionSetup(Direction.SHORT)
+		directionSetup(Direction.LONG)
+		directionSetup(Direction.SHORT)
 		if entrySetup(): return
 		if reEntrySetup(): return
 
 	elif time_state == TimeState.STOP or time_state == TimeState.EXIT:
-		macdDirectionSetup(Direction.LONG)
-		macdDirectionSetup(Direction.SHORT)
+		directionSetup(Direction.LONG)
+		directionSetup(Direction.SHORT)
 		entrySetup()
 
-		if trigger.trade_state == TradeState.INITIAL:
-			pass
-			# setInitialBE(force=True, is_fri=london_time.weekday() == 4)
-		else:
+		if not trigger.entry_state == EntryType.ADDITIONAL:
 			exitSetup()
 
 def setPivot():
+	global time_state
 	time = utils.convertTimestampToDatetime(h4_chart.c_ts)
 	m_time = utils.convertTimestampToDatetime(utils.getLatestTimestamp())
 	london_time = utils.convertTimezone(time, 'Europe/London')
 	london_m_time = utils.convertTimezone(m_time, 'Europe/London')
+	close = h4_chart.getCurrentBidOHLC(utils)[3]
+
+	if (trigger.is_stopped 
+		and time_state == TimeState.TRADING 
+		and trigger.entry_type == EntryType.ADDITIONAL):
+		trigger.pivot_line = close
+		trigger.entry_state = EntryType.M_TRADE
+		trigger.is_stopped = False
 
 	if london_time.hour == 4:
 		global d_pivots
-		if london_m_time.weekday() == 0:
-			d_pivots = getDailyPivots(d_chart.getBidOHLC(utils, 1, 1)[0])
-		else:
-			d_pivots = getDailyPivots(d_chart.getCurrentBidOHLC(utils))
+		d_pivots = getDailyPivots(d_chart.getCurrentBidOHLC(utils))
 
-		global time_state, positions, trades, bank
+		global positions, trades, bank
 		time_state = TimeState.TRADING
 		positions = []
 		trades = 0
 		bank = utils.getTradableBank()
 
-		# if not getPivotDirection() or getPivotDirection() == trigger.pivot_direction and isInitialTrade():
-		# 	trigger.pivot_direction = getPivotDirection()
-		# 	trigger.trade_state = TradeState.NORMAL
-		# else:
-		trigger.pivot_direction = getPivotDirection()
-		trigger.trade_state = TradeState.NORMAL
+		m_trade = getMTrade()
+		if not m_trade or isIndecisivePivots() or isOppPivots(m_trade.direction):
+			trigger.entry_type = EntryType.M_TRADE
+		else:
+			trigger.entry_type = EntryType.ADDITIONAL
 
-		trigger.zero_close = h4_chart.getCurrentBidOHLC(utils)[3]
-		trigger.pivot_line = 0
-		trigger.pivot_state = PivotState.NONE
+		trigger.pivot_line = close
 		trigger.est_direction = None
 		trigger.re_entry = None
-
-	if not d_pivots:
-		return
-
-	if london_time.hour in [4, 8, 12] and trigger.pivot_state.value < PivotState.REVERSE.value:
-		if isReverseBar(trigger.pivot_direction):
-			close = h4_chart.getCurrentBidOHLC(utils)[3]
-			if trigger.pivot_direction == Direction.LONG:
-				trigger.pivot_line = close if close < trigger.zero_close else trigger.zero_close
-			else:
-				trigger.pivot_line = close if close > trigger.zero_close else trigger.zero_close
-			
-			trigger.pivot_state = PivotState.REVERSE
-
-	if trigger.pivot_state.value < PivotState.CPP.value:
-		if isABCpp(trigger.pivot_direction, reverse=True):
-			close = h4_chart.getCurrentBidOHLC(utils)[3]
-			trigger.pivot_line = close
-			trigger.pivot_state = PivotState.CPP
+		trigger.is_stopped = False
 
 def getCurrentProfit(get_open=True):
 	profit = 0
@@ -568,59 +517,22 @@ def getDailyPivots(ohlc):
 
 	return cp, r1, r2, r3, s1, s2, s3
 
-def getPivotDirection():
-	close = h4_chart.getCurrentBidOHLC(utils)[3]
+def directionSetup(direction):
 
-	if close > d_pivots[0]:
-		return Direction.LONG
-	elif close < d_pivots[0]:
-		return Direction.SHORT
-	else:
-		return None
-
-def isNewPivot():
-	if d_pivots:
-		_, high, low, _ = m_chart.getCurrentBidOHLC(utils)
-
-		if trigger.pivot_direction == Direction.LONG:
-			if trigger.pivot_line > d_pivots[6] and low <= d_pivots[6]:
-				trigger.pivot_line = d_pivots[6]
-				return True
-			elif trigger.pivot_line > d_pivots[5] and low <= d_pivots[5]:
-				trigger.pivot_line = d_pivots[5]
-				return True
-			elif trigger.pivot_line > d_pivots[4] and low <= d_pivots[4]:
-				trigger.pivot_line = d_pivots[4]
-				return True
-		else:
-			if trigger.pivot_line < d_pivots[3] and high >= d_pivots[3]:
-				trigger.pivot_line = d_pivots[3]
-				return True
-			elif trigger.pivot_line < d_pivots[2] and high >= d_pivots[2]:
-				trigger.pivot_line = d_pivots[2]
-				return True
-			elif trigger.pivot_line < d_pivots[1] and high >= d_pivots[1]:
-				trigger.pivot_line = d_pivots[1]
-				return True
-
-	return False
-
-def macdDirectionSetup(direction):
-
-	if getMacdDirectionState(direction) == DirectionState.ONE:
+	if getDirectionState(direction) == DirectionState.ONE:
 		if isRsiConf(direction) and isMacdzPosConf(direction):
-			setMacdDirectionState(direction, DirectionState.TWO)
+			setDirectionState(direction, DirectionState.TWO)
 			return
 
-	elif getMacdDirectionState(direction) == DirectionState.TWO:
+	elif getDirectionState(direction) == DirectionState.TWO:
 		if isMacdzPosConf(direction, reverse=True):
-			setMacdDirectionState(direction, DirectionState.THREE)
+			setDirectionState(direction, DirectionState.THREE)
 			return
 
-	elif getMacdDirectionState(direction) == DirectionState.THREE:
+	elif getDirectionState(direction) == DirectionState.THREE:
 		if isMacdzPosConf(direction):
 			if isRsiConf(direction):
-				setMacdDirectionState(direction, DirectionState.ONE)
+				setDirectionState(direction, DirectionState.ONE)
 				
 				if trigger.est_direction != direction:
 					trigger.entry_state = EntryState.ONE
@@ -628,93 +540,48 @@ def macdDirectionSetup(direction):
 						trigger.est_direction = direction
 				return
 			else:
-				setMacdDirectionState(direction, DirectionState.ONE)
+				setDirectionState(direction, DirectionState.ONE)
 				return
 
-def cciDirectionSetup(direction):
-
-	if getCciDirectionState(direction) == DirectionState.ONE:
-		if isRsiConf(direction) and isCciConf(direction):
-			setCciDirectionState(direction, DirectionState.TWO)
-			return
-
-	elif getCciDirectionState(direction) == DirectionState.TWO:
-		if isCciConf(direction, reverse=True):
-			setCciDirectionState(direction, DirectionState.THREE)
-			return
-
-	elif getCciDirectionState(direction) == DirectionState.THREE:
-		if isCciConf(direction):
-			if isRsiConf(direction):
-				setCciDirectionState(direction, DirectionState.ONE)
-
-				if trigger.est_direction != direction:
-					trigger.entry_state = EntryState.ONE
-					if time_state == TimeState.TRADING and trigger.pivot_line:
-						trigger.est_direction = direction
-				return
-			else:
-				setCciDirectionState(direction, DirectionState.ONE)
-				return
-
-def setMacdDirectionState(direction, state):
+def setDirectionState(direction, state):
 	if direction == Direction.LONG:
-		trigger.macd_ds_long = state
+		trigger.ds_long = state
 	else:
-		trigger.macd_ds_short = state
+		trigger.ds_short = state
 
-def getMacdDirectionState(direction):
+def getDirectionState(direction):
 	if direction == Direction.LONG:
-		return trigger.macd_ds_long
+		return trigger.ds_long
 	else:
-		return trigger.macd_ds_short
-
-def setCciDirectionState(direction, state):
-	if direction == Direction.LONG:
-		trigger.cci_ds_long = state
-	else:
-		trigger.cci_ds_short = state
-
-def getCciDirectionState(direction):
-	if direction == Direction.LONG:
-		return trigger.cci_ds_long
-	else:
-		return trigger.cci_ds_short
+		return trigger.ds_short
 
 def entrySetup():
 
 	if trigger.est_direction:
-		
 		if trigger.entry_state == EntryState.ONE:
 			if entryConfirmation(trigger.est_direction):
 				trigger.entry_state = EntryState.COMPLETE
 				trigger.re_entry = None
-				return confirmation(trigger, EntryType.REGULAR)
+				return confirmation(trigger)
 
 def entryConfirmation(direction):
 	if utils.plan_state.value in (4,):
-		utils.log('entryConfirmation', 'Entry ONE Conf: {0}'.format(
-			isABPivotLine(trigger.est_direction)
+		utils.log('entryConfirmation', 'Entry ONE Conf: {0} {1} {2}'.format(
+			isABPivotLine(trigger.est_direction),
+			isCciConf(trigger.est_direction),
+			isBB(trigger.est_direction)
 		))
 
 	return (
-		isABPivotLine(trigger.est_direction)
-	)
-
-def isBollConfirmation(direction):
-	if utils.plan_state.value in (4,):
-		utils.log('bollConfirmation', 'Boll Conf: {0}'.format(
-			not isCloseABBollOne(trigger.est_direction)
-		))
-
-	return (
-		not isCloseABBollOne(trigger.est_direction)
+		isABPivotLine(trigger.est_direction) and
+		isCciConf(trigger.est_direction) and
+		isBB(trigger.est_direction)
 	)
 
 def reEntrySetup():
 	if trigger.re_entry != None:
 		if isMacdzConf(trigger.re_entry):
-			return confirmation(trigger, EntryType.RE_ENTRY)
+			return confirmation(trigger)
 
 def exitSetup():
 	if len(utils.positions) > 0:
@@ -723,54 +590,53 @@ def exitSetup():
 		if isMacdzPosConf(direction, reverse=True):
 			closeAllPositions()
 
-def isInitialTrade():
+def getMTrade():
 	for pos in utils.positions:
-		if 'initial' in pos.data and pos.data['initial']:
-			return True
+		if 'is_m_trade' in pos.data and pos.data['is_m_trade']:
+			return pos
 
-	return False
+	return None
 
-def isReverseBar(direction, reverse=False):
-	_open, _, _, close = h4_chart.getCurrentBidOHLC(utils)
+def isIndecisivePivots():
+	# TODO: Make sure session pivots are used only
+	ohlc = h4_chart.getBidOHLC(utils, 0, 2)
+	c_piv = getDailyPivots(ohlc[1])
+	p_piv = getDailyPivots(ohlc[0])
+
+	return (
+		c_piv < close < p_piv
+		or p_piv < close < c_piv
+	)
+
+def isOppPivots(direction, reverse=False):
+	ohlc = h4_chart.getBidOHLC(utils, 0, 2)
+	c_piv = getDailyPivots(ohlc[1])
+	p_piv = getDailyPivots(ohlc[0])
 
 	if reverse:
-		if direction == Direction.LONG:
-			return close > _open
+		if direction == Constants.BUY:
+			return close > c_piv and close > p_piv
 		else:
-			return close < _open
+			return close < c_piv and close < p_piv
 	else:
-		if direction == Direction.LONG:
-			return close < _open
+		if direction == Constants.BUY:
+			return close < c_piv and close < p_piv
 		else:
-			return close > _open
-
-def isABCpp(direction, reverse=False):
-	_open, _, _, close = h4_chart.getCurrentBidOHLC(utils)
-
-	if reverse:
-		if direction == Direction.LONG:
-			return close < d_pivots[0]
-		else:
-			return close > d_pivots[0]
-	else:
-		if direction == Direction.LONG:
-			return close > d_pivots[0]
-		else:
-			return close < d_pivots[0]
+			return close > c_piv and close > p_piv
 
 def isMacdzConf(direction, reverse=False):
 	hist = round(float(macd_z.getCurrent(utils, m_chart)[2]), 5)
 
 	if reverse:
 		if direction == Direction.LONG:
-			return hist <= round(-VARIABLES['macdz_conf'] * 0.00001, 5)
+			return hist <= round(-VARIABLES['macdz_conf'] * 1e-05, 5)
 		else:
-			return hist >= round(VARIABLES['macdz_conf'] * 0.00001, 5)
+			return hist >= round(VARIABLES['macdz_conf'] * 1e-05, 5)
 	else:
 		if direction == Direction.LONG:
-			return hist >= round(VARIABLES['macdz_conf'] * 0.00001, 5)
+			return hist >= round(VARIABLES['macdz_conf'] * 1e-05, 5)
 		else:
-			return hist <= round(-VARIABLES['macdz_conf'] * 0.00001, 5)
+			return hist <= round(-VARIABLES['macdz_conf'] * 1e-05, 5)
 
 def isMacdzPosConf(direction, reverse=False):
 	hist = round(float(macd_z.getCurrent(utils, m_chart)[2]), 5)
@@ -814,49 +680,19 @@ def isRsiConf(direction, reverse=False):
 		else:
 			return stridx < VARIABLES['rsi_short']
 
-def isCloseABBollOne(direction, reverse=False):
-	upper, lower = boll_one.getCurrent(utils, m_chart)
-	close = m_chart.getCurrentBidOHLC(utils)[3]
-	if reverse:
-		if direction == Direction.LONG:
-			return close <= lower
-		else:
-			return close >= upper
-	else:
-		if direction == Direction.LONG:
-			return close >= upper
-		else:
-			return close <= lower
-
-def isDonchRet(direction, reverse=False):
-	high, low = donch.getCurrent(utils, m_chart)
-	mid = round(float((high+low)/2), 5)
-	_, high, low, _ = m_chart.getCurrentBidOHLC(utils)
-
-	if reverse:
-		if direction == Direction.LONG:
-			return high > mid
-		else:
-			return low < mid
-	else:
-		if direction == Direction.LONG:
-			return low < mid
-		else:
-			return high > mid
-
 def isABPivotLine(direction, reverse=False):
 	close = m_chart.getCurrentBidOHLC(utils)[3]
 	
 	if reverse:
 		if direction == Direction.LONG:
-			return close < trigger.pivot_line
+			return close < trigger.pivot_line - utils.convertToPrice(1.0)
 		else:
-			return close > trigger.pivot_line
+			return close > trigger.pivot_line + utils.convertToPrice(1.0)
 	else:
 		if direction == Direction.LONG:
-			return close > trigger.pivot_line
+			return close > trigger.pivot_line + utils.convertToPrice(1.0)
 		else:
-			return close < trigger.pivot_line
+			return close < trigger.pivot_line - utils.convertToPrice(1.0)
 
 def isBB(direction, reverse=False):
 	_open, _, _, close = m_chart.getCurrentBidOHLC(utils)
@@ -887,33 +723,32 @@ def isPosInDir(direction):
 
 	return False
 
-def confirmation(trigger, entry_type, reverse=False):
+def confirmation(trigger, reverse=False):
 	''' confirm entry '''
 
 	global pending_entry
 
-
-	if entry_type == EntryType.REGULAR:
+	if trigger.entry_type == EntryType.M_TRADE:
 		pending_entry = Trigger(direction=trigger.est_direction)
+		pending_entry.entry_type = trigger.entry_type
 
-	else:
-		pending_entry = Trigger(direction=trigger.re_entry)
-		trigger.re_entry = None
-		
-	if pending_entry.direction != trigger.pivot_direction or time_state == TimeState.EXIT_ONLY:
-		entry_type = EntryType.CLOSE
+	elif trigger.entry_type == EntryType.ADDITIONAL:
+		pending_entry = None
+		return
+
+	if time_state == TimeState.EXIT_ONLY:
+		pending_entry.entry_type = EntryType.CLOSE
 
 	if (
 		not trigger.pivot_line 
 		or time_state == TimeState.STOP 
 		or (isPosInDir(pending_entry.direction)
-			and entry_type != EntryType.CLOSE)
+			and pending_entry.entry_type != EntryType.CLOSE)
 	):
 		pending_entry = None
 		return False
 		
-	utils.log("confirmation", '{0} {1} {2}'.format(trigger.direction, entry_type, time_state))
-	pending_entry.entry_type = entry_type
+	utils.log("confirmation", '{0} {1} {2}'.format(trigger.direction, pending_entry.entry_type, time_state))
 	return True
 
 def report():
@@ -927,11 +762,12 @@ def report():
 	count = 0
 	for pos in utils.positions:
 		count += 1
-		utils.log('', "{}: {} Profit: {} | {}%".format(
+		utils.log('', "{}: {} Profit: {} | {}% | State: {}".format(
 			count,
 			pos.direction,
 			pos.getPipProfit(), 
-			pos.getPercentageProfit()
+			pos.getPercentageProfit(),
+			pos.data['stop_state']
 		))
 
 	utils.log('', "---\n")
@@ -939,11 +775,12 @@ def report():
 	count = 0
 	for pos in positions:
 		count += 1
-		utils.log('', "{}{}: {} Profit: {} | {}%".format(
-			'\nOPEN:\n' if pos.closetime == None else '',
+		utils.log('', "{}{}: {} Profit: {} | {}% | State: {}".format(
+			'(OPEN): ' if pos.closetime == None else '',
 			count, pos.direction,
 			pos.getPipProfit(), 
-			pos.getPercentageProfit()
+			pos.getPercentageProfit(),
+			pos.data['stop_state']
 		))
 
 
