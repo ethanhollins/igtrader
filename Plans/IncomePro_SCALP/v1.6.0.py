@@ -99,12 +99,13 @@ def init(utilities):
 	setGlobalVars()
 	setup(utilities)
 	
-	global rsi, macd_z, boll_one, donch, cci, d_pivots
+	global rsi, macd_z, cci, d_pivots, prev_d_pivots
 
 	rsi = utils.RSI(10)
 	macd_z = utils.MACD(4, 40, 3)
 	cci = utils.CCI(5)
 	d_pivots = None
+	prev_d_pivots = None
 
 def setup(utilities):
 	global utils, m_chart, h4_chart, d_chart, bank
@@ -403,8 +404,8 @@ def runSequence():
 		hist = macd_z.getCurrent(utils, m_chart)[2]
 		ch_idx = cci.getCurrent(utils, m_chart)
 
-		utils.log('IND', 'RSI: {:.2f} |HIST: {:.5f} |CCI: {:.5f}\n| D PIVOTS: {}'.format(
-			stridx, hist, ch_idx, d_pivots
+		utils.log('IND', 'RSI: {:.2f} |HIST: {:.5f} |CCI: {:.5f}\n| D PIVOTS: {}\n| PREV PIVS: {}'.format(
+			stridx, hist, ch_idx, d_pivots, prev_d_pivots
 		))
 
 	time = utils.convertTimestampToDatetime(utils.getLatestTimestamp())
@@ -444,8 +445,11 @@ def setPivot():
 		trigger.is_stopped = False
 
 	if london_time.hour == 4:
-		global d_pivots
-		d_pivots = getDailyPivots(d_chart.getCurrentBidOHLC(utils))
+		global d_pivots, prev_d_pivots
+		ohlc = d_chart.getBidOHLC(utils, 0, 2)
+		d_pivots = getDailyPivots(ohlc[1])
+		prev_d_pivots = getDailyPivots(ohlc[0])
+
 
 		global positions, trades, bank
 		time_state = TimeState.TRADING
@@ -598,31 +602,22 @@ def getMTrade():
 	return None
 
 def isIndecisivePivots():
-	# TODO: Make sure session pivots are used only
-	ohlc = h4_chart.getBidOHLC(utils, 0, 2)
-	c_piv = getDailyPivots(ohlc[1])
-	p_piv = getDailyPivots(ohlc[0])
-
 	return (
-		c_piv < close < p_piv
-		or p_piv < close < c_piv
+		d_pivots[0] < close < prev_d_pivots[0]
+		or prev_d_pivots[0] < close < d_pivots[0]
 	)
 
 def isOppPivots(direction, reverse=False):
-	ohlc = h4_chart.getBidOHLC(utils, 0, 2)
-	c_piv = getDailyPivots(ohlc[1])
-	p_piv = getDailyPivots(ohlc[0])
-
 	if reverse:
 		if direction == Constants.BUY:
-			return close > c_piv and close > p_piv
+			return close > d_pivots[0] and close > prev_d_pivots[0]
 		else:
-			return close < c_piv and close < p_piv
+			return close < d_pivots[0] and close < prev_d_pivots[0]
 	else:
 		if direction == Constants.BUY:
-			return close < c_piv and close < p_piv
+			return close < d_pivots[0] and close < prev_d_pivots[0]
 		else:
-			return close > c_piv and close > p_piv
+			return close > d_pivots[0] and close > prev_d_pivots[0]
 
 def isMacdzConf(direction, reverse=False):
 	hist = round(float(macd_z.getCurrent(utils, m_chart)[2]), 5)
