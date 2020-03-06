@@ -10,6 +10,8 @@ import json
 import numpy as np
 import traceback
 import random
+import pandas as pd
+import sys
 from timeit import default_timer as timer
 from enum import Enum
 from matplotlib import dates as mpl_dates
@@ -90,36 +92,36 @@ class Chart(object):
 		return idx
 
 	def doesTsExist(self, ts):
-		return Chart.tsExists(self.bids_ts, ts)
+		return np.where(self.bids_ts==ts)[0].shape[0] > 0
 
 	def getTsOffset(self, ts):
-		return Chart.getClosestIndex(self.bids_ts, ts)
+		return (np.abs(self.bids_ts - ts)).argmin()
 
 	def getLatestTimestamp(self):
 		return self.bids_ts[-1]
 
 	def getAllBidOHLC(self, backtester):
-		c_idx = Chart.getClosestIndex(self.bids_ts, self.c_ts)-1
+		c_idx = (np.abs(self.bids_ts - self.c_ts)).argmin()
 		return self.bids_ohlc[:c_idx+1]
 
 	def getAllAskOHLC(self, backtester):
-		c_idx = Chart.getClosestIndex(self.asks_ts, self.c_ts)-1
+		c_idx = (np.abs(self.asks_ts - self.c_ts)).argmin()
 		return self.asks_ohlc[:c_idx+1]
 
 	def getBidOHLC(self, backtester, shift, amount):
-		c_idx = Chart.getClosestIndex(self.bids_ts, self.c_ts)-1
+		c_idx = (np.abs(self.bids_ts - self.c_ts)).argmin()
 		return self.bids_ohlc[c_idx+1-shift-amount:c_idx+1-shift]
 
 	def getAskOHLC(self, backtester, shift, amount):
-		c_idx = Chart.getClosestIndex(self.asks_ts, self.c_ts)-1
+		c_idx = (np.abs(self.asks_ts - self.c_ts)).argmin()
 		return self.asks_ohlc[c_idx+1-shift-amount:c_idx+1-shift]
 
 	def getCurrentBidOHLC(self, backtester):
-		c_idx = Chart.getClosestIndex(self.bids_ts, self.c_ts)-1
+		c_idx = (np.abs(self.bids_ts - self.c_ts)).argmin()
 		return self.bids_ohlc[c_idx]
 
 	def getCurrentAskOHLC(self, backtester):
-		c_idx = Chart.getClosestIndex(self.asks_ts, self.c_ts)-1
+		c_idx = (np.abs(self.asks_ts - self.c_ts)).argmin()
 		return self.asks_ohlc[c_idx]
 
 	def isChart(self, product, period):
@@ -256,7 +258,10 @@ class Position(object):
 
 	def close(self):
 		self.closetime = self.backtester.c_ts
-		self.closeprice = self.backtester.getBid(self.product)
+		if self.direction == Constants.BUY:
+			self.closeprice = self.backtester.getBid(self.product)
+		else:
+			self.closeprice = self.backtester.getAsk(self.product)
 
 		del self.backtester.positions[self.backtester.positions.index(self)]
 		self.backtester.closed_positions.append(self)
@@ -416,49 +421,38 @@ class Backtester(object):
 		self.padding = 0
 		self.dropout = 0
 
-	def loadData(self, product, period):
-		if self.source == 'mt':
-			path = 'Data/MT_{0}_{1}.json'.format(product, period)
-			if os.path.exists(path):
-				values = self.getJsonFromFile(path)
-					
-				bids_ts = np.array([int(i[0]) for i in sorted(values.items(), key=lambda kv: kv[0])], dtype=np.int32)
-				bids_ohlc = np.array([[
-					float(i[1][0]),
-					float(i[1][1]),
-					float(i[1][2]),
-					float(i[1][3])
-				] for i in sorted(values.items(), key=lambda kv: kv[0])], dtype=np.float32)
-			else:
-				print('Error: Could not find data for chart product: {0}, period: {1}.'.format(product, period))
-				return None
-			chart = Chart(
-				product, period, 
-				bids_ts, bids_ohlc,
-				bids_ts, bids_ohlc
-			)
-			return chart
-		else:
-			for i in ['bid', 'ask']:
-				path = 'Data/{0}/{1}_{2}_{3}.json'.format(self.source, product, period, i)
-				if os.path.exists(path):
-					values = self.getJsonFromFile(path)
-					if i == 'bid':
-						bids_ts = np.array([int(i[0]) for i in sorted(values.items(), key=lambda kv: kv[0])], dtype=np.int32)
-						bids_ohlc = np.array([i[1] for i in sorted(values.items(), key=lambda kv: kv[0])], dtype=np.float32)
-					else:
-						asks_ts = np.array([int(i[0]) for i in sorted(values.items(), key=lambda kv: kv[0])], dtype=np.int32)
-						asks_ohlc = np.array([i[1] for i in sorted(values.items(), key=lambda kv: kv[0])], dtype=np.float32)
-				else:
-					print('Error: Could not find data for chart product: {0}, period: {1}.'.format(product, period))
-					return None
-			chart = Chart(
-				product, period, 
-				bids_ts, bids_ohlc,
-				asks_ts, asks_ohlc
-			)
-			return chart
+	def load(self, product, period):
+		start = Constants.TS_START_DATE
+		end = datetime.datetime.now()
 
+		data_dir = os.path.join('Data/', '{}/{}/{}/'.format(self.source, product, period))
+		frags = []
+		for y in range(start.year, end.year+1):
+			data_path = os.path.join(data_dir, '{}-{}.csv'.format(y, y+1))
+			if os.path.exists(data_path):
+				t_data = self.root.readCsv(data_path)
+				if y == start.year:
+					ts_start = self.convertDatetimeToTimestamp(start)
+					t_data = t_data.loc[t_data['timestamp'] >= ts_start]
+				elif y == end.year:
+					ts_end = self.convertDatetimeToTimestamp(end)
+					t_data = t_data.loc[t_data['timestamp'] <= ts_end]
+				frags.append(t_data)
+		data = pd.concat(frags).set_index('timestamp')
+
+		ask_keys = ['ask_open', 'ask_high', 'ask_low', 'ask_close']
+		bid_keys = ['bid_open', 'bid_high', 'bid_low', 'bid_close']
+		
+		bids_ts = data.index.values
+		asks_ts = np.copy(bids_ts)
+		bids_ohlc = data[bid_keys].values
+		asks_ohlc = data[ask_keys].values
+
+		return Chart(
+			product, period,
+			bids_ts, bids_ohlc,
+			asks_ts, asks_ohlc
+		)
 
 	def saveToFile(self, path, data):
 		return self.root.saveToFile(path, data)
@@ -697,6 +691,7 @@ class Backtester(object):
 		path = 'Plans/{0}.py'.format(self.name)
 		spec = importlib.util.spec_from_file_location(self.name, path)
 		module = importlib.util.module_from_spec(spec)
+		sys.modules[spec.name] = module
 		spec.loader.exec_module(module)
 		return module
 
@@ -1039,7 +1034,7 @@ class Backtester(object):
 		
 	def convertDatetimeToTimestamp(self, dt):
 		# dt = self.convertTimezone(dt, 'Australia/Melbourne')
-		if self.source == 'ig':
+		if self.source == 'ig' or self.source == 'oanda':
 			return int((dt - Constants.DT_START_DATE).total_seconds())
 		elif self.source == 'mt':
 			return int((dt - Constants.MT_DT_START_DATE).total_seconds())
@@ -1204,7 +1199,7 @@ class Backtester(object):
 		)
 
 	def createChart(self, product, period):
-		chart = self.loadData(product, period)
+		chart = self.load(product, period)
 		self.charts.append(chart)
 		return chart
 
@@ -1274,6 +1269,12 @@ class Backtester(object):
 
 	def getTradableBank(self):
 		return 10000
+
+	def getTotalProfit(self):
+		total = 0.0
+		for pos in self.closed_positions:
+			total += pos.getPercentageProfit()
+		return total
 
 	def SMA(self, period):
 		sma = SMA(period)

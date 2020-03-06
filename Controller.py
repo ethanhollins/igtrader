@@ -1,6 +1,7 @@
 import json
 import time
 import os
+import pandas as pd
 
 class Controller(object):
 
@@ -47,8 +48,10 @@ class Controller(object):
 			self.runQueue()
 		
 		result = False
-		while not result:
+		while result == False:
 			result = self.getComplete(root_name)
+			if type(result) == pd.DataFrame:
+				break
 		return result
 
 	def getComplete(self, root_name):
@@ -68,6 +71,14 @@ class Controller(object):
 	def getJsonFromFile(self, root_name, path, priority=0, **kwargs):
 		self.queue.append((root_name, self.pGetJsonFromFile, [path], priority, kwargs))
 
+	def saveCsv(self, root_name, path, data, priority=0, **kwargs):
+		self.queue.append((root_name, self.pSaveCsv, [path, data], priority, kwargs))
+		return True
+
+	def readCsv(self, root_name, path, priority=0, **kwargs):
+		self.queue.append((root_name, self.pReadCsv, [path], priority, kwargs))
+		return True
+
 	def pSaveToFile(self, path, data):
 		with open(path, 'w') as f:
 			f.write(data)
@@ -77,6 +88,14 @@ class Controller(object):
 	def pGetJsonFromFile(self, path):
 		with open(path, 'r') as f:
 			data = json.load(f)
+		return data
+
+	def pSaveCsv(self, path, data):
+		data.to_csv(path, sep=' ', header=True)
+		return True
+
+	def pReadCsv(self, path):
+		data = pd.read_csv(path, sep=' ')
 		return data
 
 	def performScheduledRestart(self):

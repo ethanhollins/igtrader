@@ -4,6 +4,7 @@ import Constants
 import json
 import requests
 import datetime
+import pandas as pd
 
 class OandaManager(object):
 
@@ -75,7 +76,6 @@ class OandaManager(object):
 		return chart
 
 	def getPrices(self, product, period, tz='Europe/London', start_dt=None, end_dt=None, count=None, result={}):
-		# tz = 'Australia/Melbourne'
 		if count:
 			if start_dt:
 				start_str = start_dt.strftime('%Y-%m-%dT%H:%M:%S.000000000Z')
@@ -102,8 +102,16 @@ class OandaManager(object):
 		)
 
 		if res.status_code == 200:
-			if 'bids' not in result: result['bids'] = {}
-			if 'asks' not in result: result['asks'] = {}
+			if len(result) == 0:
+				result['timestamp'] = []
+				result['ask_open'] = []
+				result['ask_high'] = []
+				result['ask_low'] = []
+				result['ask_close'] = []
+				result['bid_open'] = []
+				result['bid_high'] = []
+				result['bid_low'] = []
+				result['bid_close'] = []
 
 			data = res.json()
 			candles = data['candles']
@@ -113,21 +121,30 @@ class OandaManager(object):
 				time = datetime.datetime.strptime(i['time'], '%Y-%m-%dT%H:%M:%S.000000000Z')
 				ts = self.utils.convertUTCTimeToTimestamp(time)
 
-				result['bids'][ts] = [float(j) for j in i['bid'].values()]
-				result['asks'][ts] = [float(j) for j in i['ask'].values()]
+				result['timestamp'].append(ts)
+				asks = list(map(float, i['ask'].values()))
+				bids = list(map(float, i['bid'].values()))
+				result['ask_open'].append(asks[0])
+				result['ask_high'].append(asks[1])
+				result['ask_low'].append(asks[2])
+				result['ask_close'].append(asks[3])
+				result['bid_open'].append(bids[0])
+				result['bid_high'].append(bids[1])
+				result['bid_low'].append(bids[2])
+				result['bid_close'].append(bids[3])
 
 			if count:
 				if not self.isLastCandleFound(period, start_dt, end_dt, count):
 					last_dt = datetime.datetime.strptime(candles[-1]['time'], '%Y-%m-%dT%H:%M:%S.000000000Z')
 					return self.getPrices(product, period, start_dt=last_dt, end_dt=end_dt, count=5000, result=result)
 
-			return result
+			return pd.DataFrame(data=result).set_index('timestamp')
 		if res.status_code == 400:
 			print('({}) Bad Request: {}'.format(res.status_code, res.json()['errorMessage']))
 			if 'Maximum' in res.json()['errorMessage'] or 'future' in res.json()['errorMessage']:
 				return self.getPrices(product, period, start_dt=start_dt, end_dt=end_dt, count=5000, result={})
 			else:
-				return result
+				return pd.DataFrame(data=result).set_index('timestamp')
 		else:
 			print('Error:\n{0}'.format(res.json()))
 			return None
@@ -135,6 +152,18 @@ class OandaManager(object):
 	def isLastCandleFound(self, period, start_dt, end_dt, count):
 		if period == Constants.ONE_MINUTE:
 			return start_dt + datetime.timedelta(minutes=count) >= end_dt
+		elif period == Constants.TWO_MINUTES:
+			return start_dt + datetime.timedelta(minutes=count*2) >= end_dt
+		elif period == Constants.THREE_MINUTES:
+			return start_dt + datetime.timedelta(minutes=count*3) >= end_dt
+		elif period == Constants.FIVE_MINUTES:
+			return start_dt + datetime.timedelta(minutes=count*5) >= end_dt
+		elif period == Constants.TEN_MINUTES:
+			return start_dt + datetime.timedelta(minutes=count*10) >= end_dt
+		elif period == Constants.FIFTEEN_MINUTES:
+			return start_dt + datetime.timedelta(minutes=count*15) >= end_dt
+		elif period == Constants.THIRTY_MINUTES:
+			return start_dt + datetime.timedelta(minutes=count*30) >= end_dt
 		elif period == Constants.ONE_HOUR:
 			return start_dt + datetime.timedelta(hours=count) >= end_dt
 		elif period == Constants.FOUR_HOURS:
@@ -142,7 +171,7 @@ class OandaManager(object):
 		elif period == Constants.DAILY:
 			return start_dt + datetime.timedelta(hours=count*24) >= end_dt
 		else:
-			raise Exception('OandaManager (isLastCandleFound): Period not present.')
+			raise Exception('Period not found.')
 
 	'''
 	REST API helper functions

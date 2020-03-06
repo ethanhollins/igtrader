@@ -33,6 +33,8 @@ class RootAccount(object):
 
 		if self.root_name == 'backtester':
 			self.run_backtester(root_name)
+		elif self.root_name == 'collect':
+			self.run_collector(root_name, running_accounts)
 		else:
 			try:
 				self.set_credentials(root_name, running_accounts)
@@ -131,6 +133,25 @@ class RootAccount(object):
 						print('PlanError ({0}):\n{1}'.format(acc.accountid, traceback.format_exc()))
 		account.refreshTokens()
 
+	def run_collector(self, root_name, products):
+		f_path = 'Accounts/{0}.json'.format(root_name)
+		if os.path.exists(f_path):
+			with open(f_path, 'r') as f:
+				info = json.load(f)
+				self.broker = info['broker']
+				self.is_demo = info['isDemo']
+				self.key = info['key']
+
+		self.utils = Utilities()
+		self.manager = OandaManager(self)
+
+		for p in products:
+			product = p.split(' ')[0]
+			period = p.split(' ')[1]
+
+			self.manager.createChart(product, period)
+
+
 	def run_backtester(self, root_name):
 		f_path = 'Accounts/{0}.json'.format(root_name)
 		utils = Utilities()
@@ -221,6 +242,16 @@ class RootAccount(object):
 	def getJsonFromFile(self, path, priority=0, **kwargs):
 		self.controller.getJsonFromFile(self.root_name, path, priority=priority, **kwargs)
 		return self.controller.wait(self.root_name)
+
+	def saveCsv(self, path, data, priority=0, **kwargs):
+		if self.controller.saveCsv(self.root_name, path, data, priority=priority, **kwargs):
+			return self.controller.wait(self.root_name)
+		return False
+
+	def readCsv(self, path, priority=0, **kwargs):
+		if self.controller.readCsv(self.root_name, path, priority=priority, **kwargs):
+			return self.controller.wait(self.root_name)
+		return False
 
 	def showGraphs(self, results):
 		plt.style.use('seaborn')

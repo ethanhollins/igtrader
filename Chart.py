@@ -23,19 +23,28 @@ class Chart(object):
 		if product and period != None:
 			self.product = product
 			self.period = period
-			self.loadData()
+
+			data_path = os.path.join('Data/', '{}/{}/{}'.format(self.root.broker, product, period))
+			if os.path.exists(data_path) and len(os.listdir(data_path)) > 0:
+				load_data = self.load()
+			else:
+				load_data = None
+			self.update(load_data)
 		elif chart:
 			self.product = chart.product
 			self.period = chart.period
-			self.bids_ts = chart.bids_ts
-			self.bids_ohlc = chart.bids_ohlc
-			self.asks_ts = chart.asks_ts
-			self.asks_ohlc = chart.asks_ohlc
+
+			ask_keys = ['ask_open', 'ask_high', 'ask_low', 'ask_close']
+			bid_keys = ['bid_open', 'bid_high', 'bid_low', 'bid_close']
+			load_data = pd.DataFrame(
+				data=np.concatenate((chart.ask_ohlc, chart.bid_ohlc), axis=1),
+				columns=ask_keys + bid_keys,
+				index=chart.bids_ts
+			)
+			self.update(load_data)
 		else:
 			raise Exception('Chart object requires a product and period or chart.')
 
-		self.updateValues()
-		
 		if self.root.broker == 'ig':
 			self.getLiveIGData()
 		elif self.root.broker == 'fxcm':
@@ -44,140 +53,112 @@ class Chart(object):
 		self.last_update = None
 		self.is_open = False
 
-	def loadData(self):
+	def load(self, start=None, end=None):
+		if not start:
+			start = datetime.datetime.now()
+			start = start.replace(
+				year=start.year-1, month=1, day=1,
+				hour=0, minute=0, second=0, microsecond=0
+			)
+		if not end:
+			end = datetime.datetime.now()
 
-		for i in ['bid', 'ask']:
-			path = 'Data/{0}/{1}_{2}_{3}.json'.format(self.root.broker, self.product, self.period, i)
-			if os.path.exists(path):
-				values = self.root.getJsonFromFile(path)
+		data_dir = os.path.join('Data/', '{}/{}/{}/'.format(self.root.broker, self.product, self.period))
+		frags = []
+		for y in range(start.year, end.year+1):
+			data_path = os.path.join(data_dir, '{}-{}.csv'.format(y, y+1))
+			if os.path.exists(data_path):
+				t_data = self.root.readCsv(data_path)
+				if y == start.year:
+					ts_start = self.root.utils.convertDatetimeToTimestamp(start)
+					t_data = t_data.loc[t_data['timestamp'] >= ts_start]
+				elif y == end.year:
+					ts_end = self.root.utils.convertDatetimeToTimestamp(end)
+					t_data = t_data.loc[t_data['timestamp'] <= ts_end]
+				frags.append(t_data)
+		data = pd.concat(frags).set_index('timestamp')
+		data.index = data.index.astype(np.int32)
+		return data
 
-				if i == 'bid':
-					self.bids_ts = np.array(
-						[int(i[0]) for i in sorted(values.items(), key=lambda kv: kv[0])], 
-					dtype=np.int32)
-					self.bids_ohlc = np.round(np.array(
-						[i[1] for i in sorted(values.items(), key=lambda kv: kv[0])], 
-					dtype=np.float32), decimals=5)
+	def download(self, start=None, end=None, count=None, save=False):
+		
+		if self.root.broker == 'oanda':
+			if not count:
+				if not start:
+					start = Constants.TS_START_DATE
+				if not end:
+					end = datetime.datetime.now()
+			data = self.manager.getPrices(self.product, self.period, start_dt=start, end_dt=end, count=count)
 
-					for plan in self.subscribed_plans:
-						if self.bids_ts[-1] > plan.c_ts:
-							plan.c_ts = self.bids_ts[-1]
-				else:
-					self.asks_ts = np.array(
-						[int(i[0]) for i in sorted(values.items(), key=lambda kv: kv[0])],
-					dtype=np.int32)
-					self.asks_ohlc = np.round(np.array(
-						[i[1] for i in sorted(values.items(), key=lambda kv: kv[0])],
-					dtype=np.float32), decimals=5)
-			else:
-				self.bids_ts = np.array([], dtype=np.int32)
-				self.bids_ohlc = np.array([], dtype=np.float32)
-				self.asks_ts = np.array([], dtype=np.int32)
-				self.asks_ohlc = np.array([], dtype=np.float32)
-				break
-
-	def updateValues(self):
-		end_dt = datetime.datetime.now()
-		if self.bids_ts.size > 0:
-			start_dt = self.root.utils.convertTimestampToDatetime(self.getLatestTimestamp())
-
-			if self.root.broker == 'ig':
-				result = self.manager.getPrices(
-					self.getIGProduct(), self.getIGPricePeriod(), 
-					start_dt=start_dt, end_dt=end_dt
-				)
-			# elif self.root.broker == 'fxcm':
-				#TODO
-			elif self.root.broker == 'oanda':
-				result = self.manager.getPrices(
-					self.product, self.period, 
-					start_dt=start_dt, end_dt=end_dt
-				)
-
+		elif self.root.broker == 'ig':
+			if not count:
+				if not start:
+					start = Constants.TS_START_DATE
+				if not end:
+					end = datetime.datetime.now()
+			product = self.getIGProduct()
+			period = self.getIGPricePeriod()
+			data = self.manager.getPrices(product, period, start_dt=start, end_dt=end, count=count)
 		else:
+			raise Exception('Broker `{}` not found.'.format(self.root.broker))
+
+		if save:
+			if not start:
+				start = self.root.utils.convertTimestampToDatetime(data.index[0])
+				end = self.root.utils.convertTimestampToDatetime(data.index[-1])
+			self.save(data, start, end)
+		return data
+
+	def save(self, data, start, end):
+		data_dir = os.path.join('Data/', '{}/{}/{}/'.format(self.root.broker, self.product, self.period))
+		if not os.path.exists(data_dir):
+			os.makedirs(data_dir)
+
+		data = data.round(pd.Series([5]*8, index=data.columns))
+		data.index = data.index.astype(np.int32)
+		for y in range(start.year, end.year+1):
+			ts_start = self.root.utils.convertDatetimeToTimestamp(datetime.datetime(year=y, month=1, day=1))
+			ts_end = self.root.utils.convertDatetimeToTimestamp(datetime.datetime(year=y+1, month=1, day=1))
+			t_data = data.loc[(ts_start <= data.index) & (data.index < ts_end)]
+			if t_data.size == 0:
+				continue
+			data_path = os.path.join(data_dir, '{}-{}.csv'.format(y, y+1))
+			self.root.saveCsv(data_path, t_data)
+
+	def update(self, load_data):
+		end = datetime.datetime.now()
+		if type(load_data) == pd.DataFrame:
+			start = self.root.utils.convertTimestampToDatetime(load_data.index[-1])
+
+			data = self.download(start=start, end=end)
+			data = pd.concat((load_data, data))
+			data = data.loc[~data.index.duplicated(keep='first')]
+		else:
+			start = Constants.TS_START_DATE
+
 			if self.root.broker == 'ig':
-				result = self.manager.getPrices(self.getIGProduct(), self.getIGPricePeriod(), count=1000)
-			# elif self.root.broker == 'fxcm':
-				#TODO
+				data = self.download(count=1000)
 			elif self.root.broker == 'oanda':
-				start_dt = datetime.datetime(
-					year=2010, month=1, day=1
-				)
-				result = self.manager.getPrices(
-					self.product, self.period, 
-					start_dt=start_dt, end_dt=end_dt
-				)
+				data = self.download(start=start, end=end)
+			else:
+				raise Exception('Broker `{}` not found.'.format(self.root.broker))
 
-		if not result or len(result['bids']) == 0:
-			raise Exception("({}) Couldn't retrieve data.".format(self.root.idx))
+		ask_keys = ['ask_open', 'ask_high', 'ask_low', 'ask_close']
+		bid_keys = ['bid_open', 'bid_high', 'bid_low', 'bid_close']
 
-		latest_ts = sorted(result['bids'].items(), key=lambda kv: kv[0])[-1][0]
+		self.c_ask = data.iloc[-1][ask_keys].values
+		self.c_bid = data.iloc[-1][bid_keys].values
 
-		self.c_bid = result['bids'][latest_ts]
-		self.c_ask = result['asks'][latest_ts]
-		del result['bids'][latest_ts]
-		del result['asks'][latest_ts]
+		data = data.drop(data.index[-1])
+		self.save(data, start, end)
 
-		bids = {int(self.bids_ts[i]):[
-			round(float(self.bids_ohlc[i,0]), 5),
-			round(float(self.bids_ohlc[i,1]), 5),
-			round(float(self.bids_ohlc[i,2]), 5),
-			round(float(self.bids_ohlc[i,3]), 5)
-		] for i in range(self.bids_ts.size)}
-		asks = {int(self.asks_ts[i]):[
-			round(float(self.asks_ohlc[i,0]), 5),
-			round(float(self.asks_ohlc[i,1]), 5),
-			round(float(self.asks_ohlc[i,2]), 5),
-			round(float(self.asks_ohlc[i,3]), 5) 
-		] for i in range(self.asks_ts.size)}
+		self.bids_ts = data.index.values.astype(np.int32)
+		self.bids_ohlc = data[bid_keys].values.astype(np.float32)
+		self.asks_ts = data.index.values.astype(np.int32)
+		self.asks_ohlc = data[ask_keys].values.astype(np.float32)
 
-		bids = {**bids, **result['bids']}
-		asks = {**asks, **result['asks']}
-
-		self.bids_ts = np.array(
-			[i[0] for i in sorted(bids.items(), key=lambda kv: kv[0])],
-		dtype=np.int32)
-
-		self.bids_ohlc = np.round(np.array(
-			[i[1] for i in sorted(bids.items(), key=lambda kv: kv[0])],
-		dtype=np.float32), decimals=5)
-
-		self.asks_ts = np.array(
-			[i[0] for i in sorted(asks.items(), key=lambda kv: kv[0])],
-		dtype=np.int32)
-
-		self.asks_ohlc = np.round(np.array(
-			[i[1] for i in sorted(asks.items(), key=lambda kv: kv[0])],
-		dtype=np.float32), decimals=5)
-
-		print('curr bid:', str(self.c_bid))
-		print('curr ask:', str(self.c_ask))
-
-		path = 'Data/{0}/{1}_{2}_bid.json'.format(self.root.broker, self.product, self.period)
-		self.root.saveToFile(path, json.dumps(bids, indent=4))
-
-		path = 'Data/{0}/{1}_{2}_ask.json'.format(self.root.broker, self.product, self.period)
-		self.root.saveToFile(path, json.dumps(asks, indent=4))
-
-	def saveValues(self):
-		bids = {int(self.bids_ts[i]):[
-			round(float(self.bids_ohlc[i,0]), 5),
-			round(float(self.bids_ohlc[i,1]), 5),
-			round(float(self.bids_ohlc[i,2]), 5),
-			round(float(self.bids_ohlc[i,3]), 5)
-		] for i in range(self.bids_ts.size)}
-		asks = {int(self.asks_ts[i]):[
-			round(float(self.asks_ohlc[i,0]), 5),
-			round(float(self.asks_ohlc[i,1]), 5),
-			round(float(self.asks_ohlc[i,2]), 5),
-			round(float(self.asks_ohlc[i,3]), 5)
-		] for i in range(self.asks_ts.size)}
-
-		path = 'Data/{0}/{1}_{2}_bid.json'.format(self.root.broker, self.product, self.period)
-		self.root.saveToFile(path, json.dumps(bids, indent=4), priority=1)
-
-		path = 'Data/{0}/{1}_{2}_ask.json'.format(self.root.broker, self.product, self.period)
-		self.root.saveToFile(path, json.dumps(asks, indent=4), priority=1)
+		print('Current Bid: %s' % self.c_bid)
+		print('Current Ask: %s' % self.c_ask)
 
 	def isChart(self, product, period, broker):
 		return product == self.product and period == self.period and self.root.broker == broker
@@ -189,14 +170,11 @@ class Chart(object):
 			self.getLiveFXCMData()
 
 	def getLiveIGData(self):
-		period = ''
-		if self.period == Constants.FOUR_HOURS or self.period == Constants.DAILY:
-			period = Constants.IG_ONE_HOUR
-		elif self.period == Constants.ONE_MINUTE:
-			period = Constants.IG_LIVE_ONE_MINUTE
+		period = self.getIGLivePricePeriod()
+		product = self.getIGProduct()
 
-		items = ['Chart:{0}:{1}'.format(self.product, period)]
-
+		items = ['Chart:{0}:{1}'.format(product, period)]
+		print(items)
 		fields = [
 			'CONS_END', 'UTM',
 			'BID_OPEN', 'BID_HIGH', 'BID_LOW', 'BID_CLOSE',
@@ -211,9 +189,10 @@ class Chart(object):
 			self.onItemUpdateIG
 		)
 
-		items = ['MARKET:{0}'.format(self.product)]
+		items = ['MARKET:{0}'.format(product)]
 
 		fields = ['MARKET_STATE']
+		print(items)
 
 		self.root.controller.subscriptions[self.root.username].append(('MERGE', items, fields, self.onStatusUpdate))
 		self.manager.subscribe(
@@ -361,7 +340,18 @@ class Chart(object):
 		for t in threads:
 			t.join()
 
-		self.saveValues()
+		ask_keys = ['ask_open', 'ask_high', 'ask_low', 'ask_close']
+		bid_keys = ['bid_open', 'bid_high', 'bid_low', 'bid_close']
+		data = pd.DataFrame(
+			data=np.concatenate(
+				(self.bids_ts.reshape(self.bids_ts.size, 1), self.asks_ohlc, self.bids_ohlc),
+				axis=1
+			),
+			columns=['timestamp'] + bid_keys + ask_keys
+		).set_index('timestamp')
+		start = self.root.utils.convertTimestampToDatetime(data.index[0])
+		end = self.root.utils.convertTimestampToDatetime(data.index[-1])
+		self.save(data, start, end)
 
 	def onNewBar(self, plan, new_ts):
 		if plan.plan_state == PlanState.STARTED:
@@ -380,12 +370,20 @@ class Chart(object):
 	def getIGPricePeriod(self):
 		if self.period == Constants.ONE_MINUTE:
 			return Constants.IG_ONE_MINUTE
+		elif self.period == Constants.TEN_MINUTES:
+			return Constants.IG_TEN_MINUTES
 		elif self.period == Constants.ONE_HOUR:
 			return Constants.IG_ONE_HOUR
 		elif self.period == Constants.FOUR_HOURS:
 			return Constants.IG_FOUR_HOURS
 		elif self.period == Constants.DAILY:
 			return Constants.IG_DAILY
+
+	def getIGLivePricePeriod(self):
+		if self.period == Constants.FOUR_HOURS or self.period == Constants.DAILY:
+			return Constants.IG_ONE_HOUR
+		elif self.period == Constants.ONE_MINUTE:
+			return Constants.IG_LIVE_ONE_MINUTE
 
 	def getIGProduct(self):
 		if self.product == Constants.GBPUSD:
@@ -409,49 +407,29 @@ class Chart(object):
 	def getTimestampAtOffset(self, off):
 		return self.bids_ts[off]
 
-	@jit
-	def getClosestIndex(l, search):
-		start = 0
-		end = len(l)
-		idx = int((start+end)/2)
-		m_ts = l[idx]
-
-		while (
-			not m_ts == search and 
-			not start+1 == end and 
-			not start == end
-		):
-			idx = int((start+end)/2)
-			m_ts = l[idx]
-			if search > m_ts:
-				start = idx
-			elif search < m_ts:
-				end = idx
-		return idx
-
 	def getTsOffset(self, ts):
-		return Chart.getClosestIndex(self.bids_ts, ts)
+		return (np.abs(self.bids_ts - ts)).argmin()
 
 	def getAllBidOHLC(self, plan):
-		c_idx = Chart.getClosestIndex(self.bids_ts, plan.c_ts)
+		c_idx = (np.abs(self.bids_ts - plan.c_ts)).argmin()
 		return self.bids_ohlc[:c_idx+1]
 
 	def getAllAskOHLC(self, plan):
-		c_idx = Chart.getClosestIndex(self.asks_ts, plan.c_ts)
+		c_idx = (np.abs(self.asks_ts - plan.c_ts)).argmin()
 		return self.asks_ohlc[:c_idx+1]
 
 	def getBidOHLC(self, plan, shift, amount):
-		c_idx = Chart.getClosestIndex(self.bids_ts, plan.c_ts)
+		c_idx = (np.abs(self.bids_ts - plan.c_ts)).argmin()
 		return self.bids_ohlc[c_idx+1-shift-amount:c_idx+1-shift]
 
 	def getAskOHLC(self, plan, shift, amount):
-		c_idx = Chart.getClosestIndex(self.asks_ts, plan.c_ts)
+		c_idx = (np.abs(self.asks_ts - plan.c_ts)).argmin()
 		return self.asks_ohlc[c_idx+1-shift-amount:c_idx+1-shift]
 
 	def getCurrentBidOHLC(self, plan):
-		c_idx = Chart.getClosestIndex(self.bids_ts, plan.c_ts)
+		c_idx = (np.abs(self.bids_ts - plan.c_ts)).argmin()
 		return self.bids_ohlc[c_idx]
 
 	def getCurrentAskOHLC(self, plan):
-		c_idx = Chart.getClosestIndex(self.asks_ts, plan.c_ts)
+		c_idx = (np.abs(self.asks_ts - plan.c_ts)).argmin()
 		return self.asks_ohlc[c_idx]

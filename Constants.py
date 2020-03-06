@@ -11,7 +11,9 @@ Periods
 '''
 ONE_MINUTE = 'M1'
 TWO_MINUTES = 'M2'
-THREE_MINUTES = 'M5'
+THREE_MINUTES = 'M3'
+FIVE_MINUTES = 'M5'
+TEN_MINUTES = 'M10'
 FIFTEEN_MINUTES= 'M15'
 THIRTY_MINUTES = 'M30'
 ONE_HOUR = 'H1'
@@ -34,6 +36,7 @@ IG PERIODS
 IG_LIVE_ONE_MINUTE = '1MINUTE'
 
 IG_ONE_MINUTE = 'MINUTE'
+IG_TEN_MINUTES = 'MINUTE_10'
 IG_ONE_HOUR = 'HOUR'
 IG_FOUR_HOURS = 'HOUR_4'
 IG_DAILY = 'DAY'
@@ -60,6 +63,7 @@ REJECTED = 'REJECTED'
 Timestamps
 '''
 import datetime
+TS_START_DATE = datetime.datetime(year=2000, month=1, day=1)
 DT_START_DATE = datetime.datetime(year=1970, month=1, day=1)
 IG_START_DATE = datetime.datetime(year=1970, month=1, day=1, hour=11)
 

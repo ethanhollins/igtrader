@@ -7,7 +7,9 @@ import json
 import traceback
 import time
 import datetime
+import pandas as pd
 
+TWO_MINUTES = 60*2
 ONE_HOUR = 60*60
 
 class IGManager(object):
@@ -117,6 +119,81 @@ class IGManager(object):
 		self.root.controller.charts.append(chart)
 		return chart
 
+	# def getPrices(self, product, period, tz='Europe/London', start_dt=None, end_dt=None, count=None, result={}):
+	# 	if count:
+	# 		if start_dt:
+	# 			start_str = start_dt.strftime('%Y-%m-%dT%H:%M:%S.000000000Z')
+	# 			endpoint = 'instruments/{}/candles?price=BA' \
+	# 						'&from={}&count={}&granularity={}&alignmentTimezone={}&dailyAlignment=0'.format(
+	# 							product, start_str, count, period, tz
+	# 						)
+	# 		else:
+	# 			endpoint = 'instruments/{}/candles?price=BA' \
+	# 						'&count={}&granularity={}&alignmentTimezone={}&dailyAlignment=0'.format(
+	# 							product, count, period, tz
+	# 						)
+	# 	else:
+	# 		start_str = start_dt.strftime('%Y-%m-%dT%H:%M:%S.000000000Z')
+	# 		end_str = end_dt.strftime('%Y-%m-%dT%H:%M:%S.000000000Z')
+	# 		endpoint = 'instruments/{}/candles?price=BA' \
+	# 					'&from={}&to={}&granularity={}&alignmentTimezone={}&dailyAlignment=0'.format(
+	# 						product, start_str, end_str, period, tz
+	# 					)
+	# 	print(endpoint)
+	# 	res = requests.get(
+	# 		self.url + endpoint,
+	# 		headers=self.headers
+	# 	)
+
+	# 	if res.status_code == 200:
+	# 		if len(result) == 0:
+	# 			result['timestamp'] = []
+	# 			result['ask_open'] = []
+	# 			result['ask_high'] = []
+	# 			result['ask_low'] = []
+	# 			result['ask_close'] = []
+	# 			result['bid_open'] = []
+	# 			result['bid_high'] = []
+	# 			result['bid_low'] = []
+	# 			result['bid_close'] = []
+
+	# 		data = res.json()
+	# 		candles = data['candles']
+
+	# 		for i in candles:
+
+	# 			time = datetime.datetime.strptime(i['time'], '%Y-%m-%dT%H:%M:%S.000000000Z')
+	# 			ts = self.utils.convertUTCTimeToTimestamp(time)
+
+	# 			result['timestamp'].append(ts)
+	# 			asks = list(map(float, i['bid'].values()))
+	# 			bids = list(map(float, i['ask'].values()))
+	# 			result['ask_open'].append(asks[0])
+	# 			result['ask_high'].append(asks[1])
+	# 			result['ask_low'].append(asks[2])
+	# 			result['ask_close'].append(asks[3])
+	# 			result['bid_open'].append(bids[0])
+	# 			result['bid_high'].append(bids[1])
+	# 			result['bid_low'].append(bids[2])
+	# 			result['bid_close'].append(bids[3])
+
+	# 		if count:
+	# 			if not self.isLastCandleFound(period, start_dt, end_dt, count):
+	# 				last_dt = datetime.datetime.strptime(candles[-1]['time'], '%Y-%m-%dT%H:%M:%S.000000000Z')
+	# 				return self.getPrices(product, period, start_dt=last_dt, end_dt=end_dt, count=5000, result=result)
+
+	# 		return pd.DataFrame(data=result).set_index('timestamp')
+	# 	if res.status_code == 400:
+	# 		print('({}) Bad Request: {}'.format(res.status_code, res.json()['errorMessage']))
+	# 		if 'Maximum' in res.json()['errorMessage'] or 'future' in res.json()['errorMessage']:
+	# 			return self.getPrices(product, period, start_dt=start_dt, end_dt=end_dt, count=5000, result={})
+	# 		else:
+	# 			return pd.DataFrame(data=result).set_index('timestamp')
+	# 	else:
+	# 		print('Error:\n{0}'.format(res.json()))
+	# 		return None
+
+	# TODO: Change get prices func
 	def getPrices(self, product, period, start_dt=None, end_dt=None, count=0, page_number=1, result={}):
 		if not self.getTokens():
 			return None
@@ -145,42 +222,45 @@ class IGManager(object):
 		)
 
 		if res.status_code == 200:
+			if len(result) == 0:
+				result['timestamp'] = []
+				result['ask_open'] = []
+				result['ask_high'] = []
+				result['ask_low'] = []
+				result['ask_close'] = []
+				result['bid_open'] = []
+				result['bid_high'] = []
+				result['bid_low'] = []
+				result['bid_close'] = []
+
 			data = res.json()
-			if not 'bids' in result:
-				result['bids'] = {}
-			if not 'asks' in result:
-				result['asks'] = {}
 
 			for price in data['prices']:
 				if 'snapshotTimeUTC' in price:
 					ts = self.utils.convertUTCSnapshotToTimestamp(price['snapshotTimeUTC'])
 				else:
 					ts = self.utils.convertSnapshotToTimestamp(price['snapshotTime'])
-					
 
-				bid_open = price['openPrice']['bid']
-				bid_high = price['highPrice']['bid']
-				bid_low = price['lowPrice']['bid']
-				bid_close = price['closePrice']['bid']
+				result['timestamp'].append(ts)
 
-				ask_open = price['openPrice']['ask']
-				ask_high = price['highPrice']['ask']
-				ask_low = price['lowPrice']['ask']
-				ask_close = price['closePrice']['ask']
-
-				result['bids'][ts] = [
-					float(bid_open) if bid_open != None else float(ask_open),
-					float(bid_high) if bid_high != None else float(ask_high),
-					float(bid_low) if bid_low != None else float(ask_low),
-					float(bid_close) if bid_close != None else float(ask_close)
+				price_keys = ['openPrice', 'highPrice', 'lowPrice', 'closePrice']
+				asks = [
+					float(price[i]['ask']) if price[i]['ask'] else float(price[i]['bid']) != None 
+					for i in price_keys
+				]
+				bids = [
+					float(price[i]['bid']) if price[i]['bid'] else float(price[i]['ask']) != None 
+					for i in price_keys
 				]
 
-				result['asks'][ts] = [
-					float(ask_open) if ask_open != None else float(bid_open),
-					float(ask_high) if ask_high != None else float(bid_high),
-					float(ask_low) if ask_low != None else float(bid_low),
-					float(ask_close) if ask_close != None else float(bid_close)
-				]
+				result['ask_open'].append(asks[0])
+				result['ask_high'].append(asks[1])
+				result['ask_low'].append(asks[2])
+				result['ask_close'].append(asks[3])
+				result['bid_open'].append(bids[0])
+				result['bid_high'].append(bids[1])
+				result['bid_low'].append(bids[2])
+				result['bid_close'].append(bids[3])
 
 			if 'metadata' in data:
 				page_number = data['metadata']['pageData']['pageNumber']
@@ -189,9 +269,9 @@ class IGManager(object):
 				if page_number < total_pages:
 					return self.getPricesByDate(product, period, start_dt=start_dt, end_dt=end_dt, page_number=page_number+1, result=result)
 				else:
-					return result
+					return pd.DataFrame(data=result).set_index('timestamp')
 			else:
-				return result
+				return pd.DataFrame(data=result).set_index('timestamp')
 
 		else:
 			print('Error getting tokens:\n{0}'.format(res.json()))
