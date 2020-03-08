@@ -19,6 +19,9 @@ class Chart(object):
 		self.reset = False
 		self.c_bid = []
 		self.c_ask = []
+		
+		self.last_update = None
+		self.is_open = False
 
 		if product and period != None:
 			self.product = product
@@ -50,8 +53,6 @@ class Chart(object):
 		elif self.root.broker == 'fxcm':
 			self.getLiveFXCMData()
 
-		self.last_update = None
-		self.is_open = False
 
 	def load(self, start=None, end=None):
 		if not start:
@@ -137,7 +138,7 @@ class Chart(object):
 			start = Constants.TS_START_DATE
 
 			if self.root.broker == 'ig':
-				data = self.download(count=1000)
+				data = self.download(count=2000)
 			elif self.root.broker == 'oanda':
 				data = self.download(start=start, end=end)
 			else:
@@ -277,7 +278,22 @@ class Chart(object):
 				lon = self.root.utils.convertTimezone(now, 'Europe/London')
 				now = now.replace(tzinfo=None)
 
-				if self.period == Constants.FOUR_HOURS:
+				if self.period == Constants.ONE_MINUTE:
+					self.reset = True
+					now = Constants.IG_START_DATE + datetime.timedelta(milliseconds=int(item['values']['UTM']))
+					new_ts = self.root.utils.convertDatetimeToTimestamp(now)
+
+					self.addNewBar(new_ts)
+
+				elif self.period == Constants.TEN_MINUTES:
+					now = Constants.IG_START_DATE + datetime.timedelta(milliseconds=int(item['values']['UTM']))
+					if now.minute % 10 == 0:
+						self.reset = True
+						new_ts = self.root.utils.convertDatetimeToTimestamp(now)
+
+						self.addNewBar(new_ts)
+
+				elif self.period == Constants.FOUR_HOURS:
 					now = self.nearestHour(now)
 					lon = self.nearestHour(lon)
 					if lon.hour in Constants.FOUR_HOURS_BARS:
@@ -299,12 +315,6 @@ class Chart(object):
 						
 						self.addNewBar(new_ts)
 
-				elif self.period == Constants.ONE_MINUTE:
-					self.reset = True
-					now = Constants.IG_START_DATE + datetime.timedelta(milliseconds=int(item['values']['UTM']))
-					new_ts = self.root.utils.convertDatetimeToTimestamp(now)
-
-					self.addNewBar(new_ts)
 
 	def onItemUpdateFXCM(self, data, dataframe):
 		# print(data)
@@ -380,10 +390,14 @@ class Chart(object):
 			return Constants.IG_DAILY
 
 	def getIGLivePricePeriod(self):
-		if self.period == Constants.FOUR_HOURS or self.period == Constants.DAILY:
-			return Constants.IG_ONE_HOUR
-		elif self.period == Constants.ONE_MINUTE:
+		if self.period == Constants.ONE_MINUTE:
 			return Constants.IG_LIVE_ONE_MINUTE
+		elif self.period == Constants.TEN_MINUTES:
+			return Constants.IG_LIVE_ONE_MINUTE
+		elif self.period == Constants.FOUR_HOURS:
+			return Constants.IG_ONE_HOUR
+		elif self.period == Constants.DAILY:
+			return Constants.IG_ONE_HOUR
 
 	def getIGProduct(self):
 		if self.product == Constants.GBPUSD:

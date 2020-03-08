@@ -19,7 +19,7 @@ def init(utilities):
 
 	global weights, biases, mean, std
 	plan_name = '.'.join(os.path.basename(__file__).split('.')[:-1])
-	weights_path = os.path.join('\\'.join(__file__.split('/')[:-1]), plan_name+'_weights', 'weights.json')
+	weights_path = os.path.join('\\'.join(__file__.split('/')[:-1]), plan_name+'_0_weights', 'weights.json')
 	with open(weights_path, 'r') as f:
 		info = json.load(f)
 		weights = [np.array(i, np.float32) for i in info['weights'][:3]]
@@ -131,11 +131,13 @@ def getDirection():
 
 global count
 count = 0
+
 def onNewBar(chart):
 	ohlc = np.concatenate((chart.getCurrentAskOHLC(utils), chart.getCurrentBidOHLC(utils)))
 	data = np.array(chart.getBidOHLC(utils, 0, 500), dtype=np.float32)
 
-	inputs = normalize(getInputs(data))
+	inputs = getInputs(data)
+	inputs = normalize(inputs)
 	out = fwd_prop(inputs)
 	c_dir = getDirection()
 

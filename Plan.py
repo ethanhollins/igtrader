@@ -6,6 +6,7 @@ import Constants
 import time
 import json
 import traceback
+import sys
 
 from Indicators.ATR import ATR
 from Indicators.BOLL import BOLL
@@ -18,7 +19,7 @@ from Indicators.SMA import SMA
 from Indicators.DONCH import DONCH
 from Indicators.DONCH_CMC import DONCH_CMC
 
-START_OFF = 2000
+START_OFF = 1000
 
 class PlanState(Enum):
 	STOPPED = 0
@@ -79,6 +80,7 @@ class Plan(object):
 		path = 'Plans/{0}.py'.format(self.name)
 		spec = importlib.util.spec_from_file_location(self.name, path)
 		module = importlib.util.module_from_spec(spec)
+		sys.modules[spec.name] = module
 		spec.loader.exec_module(module)
 		return module
 
@@ -482,18 +484,13 @@ class Plan(object):
 		return 0	
 
 	def getBank(self):
-		# bank = self.account.equity
-		# if not bank:
 		return (
 			self.account.manager.accountInfo(self.account.accountid)['balance']['balance']
 			+ self.account.manager.accountInfo(self.account.accountid)['balance']['profitLoss']
 		)
-		# else:
-		# 	return bank
 
 	def getTotalBank(self):
-		return 10000
-		# return self.getBank() + self.external_bank
+		return self.getBank() + self.external_bank
 
 	def getTradableBank(self):
 		bank = self.getTotalBank()
