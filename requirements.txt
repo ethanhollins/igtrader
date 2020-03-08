@@ -7,3 +7,4 @@ requests==2.22.0
 mpl_finance==0.10.0
 fxcmpy==1.2.6
 python-socketio==4.4.0
+pandas==1.0.1
