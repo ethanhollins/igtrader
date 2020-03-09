@@ -290,7 +290,7 @@ class Chart(object):
 					now = Constants.IG_START_DATE + datetime.timedelta(milliseconds=int(item['values']['UTM']))
 					if (now.minute+1) % 10 == 0:
 						self.reset = True
-						new_ts = self.root.utils.convertDatetimeToTimestamp(now)
+						new_ts = self.root.utils.convertDatetimeToTimestamp((now - datetime.timedelta(minutes=(10-1))))
 
 						self.addNewBar(new_ts)
 
