@@ -130,18 +130,20 @@ global count
 count = 0
 
 def onNewBar(chart):
-	if utils.plan_state.value in (1,):
-		utils.log("", "\n[{}] onNewBar ({}) {} / {}".format(
-			utils.account.accountid, utils.name, 
-			utils.getTime().strftime('%H:%M:%S'), 
-			chart.getCurrentBidOHLC(utils)
-		))
 
 	data = np.array(chart.getBidOHLC(utils, 0, 500), dtype=np.float32)
 	inputs = getInputs(data)
 	inputs = normalize(inputs)
 	out = fwd_prop(inputs)
 	c_dir = getDirection()
+
+	if utils.plan_state.value in (1,):
+		utils.log("", "\n[{}] onNewBar ({}) {} / {}".format(
+			utils.account.accountid, utils.name, 
+			utils.getTime().strftime('%H:%M:%S'), 
+			chart.getCurrentBidOHLC(utils)
+		))
+		utils.log("", "Inputs: {}\nOut: {}".format(inputs, out))
 
 	if utils.plan_state.value in (4,):
 		time = utils.convertTimestampToDatetime(utils.getLatestTimestamp())
