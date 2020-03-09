@@ -157,6 +157,8 @@ def onNewBar(chart):
 			if utils.plan_state.value in (4,):
 				utils.log('', 'BUY (S&R)')
 
+			print('BUY (S&R)')
+			print(bank)
 			if bank:
 				pos = utils.stopAndReverse(
 					VARIABLES['PRODUCT'], 
@@ -169,6 +171,8 @@ def onNewBar(chart):
 			if utils.plan_state.value in (4,):
 				utils.log('', 'SELL (S&R)')
 
+			print('SELL (S&R)')
+			print(bank)
 			if bank:
 				pos = utils.stopAndReverse(
 					VARIABLES['PRODUCT'], 
@@ -181,6 +185,8 @@ def onNewBar(chart):
 				if utils.plan_state.value in (4,):
 					utils.log('', 'SELL (REG)')
 
+				print('SELL (REG)')
+				print(bank)
 				if bank:
 					pos = utils.sell(
 						VARIABLES['PRODUCT'], 
@@ -192,6 +198,8 @@ def onNewBar(chart):
 				if utils.plan_state.value in (4,):
 					utils.log('', 'BUY (REG)')
 				
+				print('BUY (REG)')
+				print(bank)
 				if bank:
 					pos = utils.buy(
 						VARIABLES['PRODUCT'], 
