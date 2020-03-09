@@ -101,7 +101,7 @@ class RootAccount(object):
 						print('isClientReconnect {0}'.format(datetime.datetime.now()))
 
 						chart.last_update = datetime.datetime.now()
-						self.controller.ls_clients[self.username] = self.reconnectLS(
+						self.controller.ls_clients[self.username] = self.manager.reconnectLS(
 							self.controller.ls_clients[self.username],
 							self.controller.subscriptions[self.username]
 						)
