@@ -148,8 +148,8 @@ class Chart(object):
 		ask_keys = ['ask_open', 'ask_high', 'ask_low', 'ask_close']
 		bid_keys = ['bid_open', 'bid_high', 'bid_low', 'bid_close']
 
-		self.c_ask = data.iloc[-1][ask_keys].values
-		self.c_bid = data.iloc[-1][bid_keys].values
+		self.c_ask = data.iloc[-1][ask_keys].values.tolist()
+		self.c_bid = data.iloc[-1][bid_keys].values.tolist()
 
 		data = data.drop(data.index[-1])
 		self.save(data, start, end)
