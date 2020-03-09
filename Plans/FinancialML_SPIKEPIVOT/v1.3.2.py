@@ -118,10 +118,7 @@ def getInputs(data):
 
 			c_data[1] = convertToPips((ad_data[2] - data[i,3]) * (ad_data[2] / ad_data[3]))
 
-		# print(ad_data)
-		# print(c_data)
 		X.append(c_data)
-	# print(data)
 	return X[-1]
 
 def getDirection():

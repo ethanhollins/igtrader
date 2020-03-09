@@ -70,7 +70,6 @@ class Chart(object):
 			data_path = os.path.join(data_dir, '{}-{}.csv'.format(y, y+1))
 			if os.path.exists(data_path):
 				t_data = self.root.readCsv(data_path)
-				print(t_data)
 				if y == start.year:
 					ts_start = self.root.utils.convertDatetimeToTimestamp(start)
 					t_data = t_data.loc[t_data['timestamp'] >= ts_start]
@@ -289,7 +288,7 @@ class Chart(object):
 
 				elif self.period == Constants.TEN_MINUTES:
 					now = Constants.IG_START_DATE + datetime.timedelta(milliseconds=int(item['values']['UTM']))
-					if now.minute % 10 == 0:
+					if (now.minute+1) % 10 == 0:
 						self.reset = True
 						new_ts = self.root.utils.convertDatetimeToTimestamp(now)
 
