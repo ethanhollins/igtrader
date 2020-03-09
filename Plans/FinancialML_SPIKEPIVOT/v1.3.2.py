@@ -131,11 +131,11 @@ count = 0
 
 def onNewBar(chart):
 	if utils.plan_state.value in (1,):
-		utils.log("\n[{0}] onNewBar ({1}) {2}".format(
-			utils.account.accountid, utils.name), 
+		utils.log("\n[{}] onNewBar ({}) {} / {}".format(
+			utils.account.accountid, utils.name, 
 			utils.getTime().strftime('%H:%M:%S'), 
 			chart.getCurrentBidOHLC(utils)
-		)
+		))
 
 	data = np.array(chart.getBidOHLC(utils, 0, 500), dtype=np.float32)
 	inputs = getInputs(data)
