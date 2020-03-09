@@ -130,7 +130,7 @@ class RootAccount(object):
 				except Exception as e:
 					if not 'onLoop' in str(e):
 						plan.plan_state = PlanState.STOPPED
-						print('PlanError ({0}):\n{1}'.format(acc.accountid, traceback.format_exc()))
+						print('PlanError ({0}):\n{1}'.format(account.accountid, traceback.format_exc()))
 		account.refreshTokens()
 
 	def run_collector(self, root_name, products):

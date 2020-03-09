@@ -266,6 +266,9 @@ class Plan(object):
 		tpPrice=None, tpRange=None,
 		attempts=0
 	):
+		if self.account.root.broker == 'ig':
+			product = self.getIGProduct(product)
+
 		ref = self.account.manager.createPosition(
 			self.account.accountid,
 			product, Constants.BUY, lotsize, 
@@ -335,6 +338,9 @@ class Plan(object):
 		tpPrice=None, tpRange=None,
 		attempts=0
 	):
+		if self.account.root.broker == 'ig':
+			product = self.getIGProduct(product)
+
 		ref = self.account.manager.createPosition(
 			self.account.accountid,
 			product, Constants.SELL, lotsize, 
@@ -410,6 +416,9 @@ class Plan(object):
 				direction = pos.direction
 				pos.close()
 
+		if self.account.root.broker == 'ig':
+			product = self.getIGProduct(product)
+
 		new_pos = None
 		if direction:
 			if direction == Constants.BUY:
@@ -451,6 +460,22 @@ class Plan(object):
 			self.charts.append(chart)
 		return chart
 
+	def getIGProduct(self, product):
+		if product == Constants.GBPUSD:
+			return Constants.IG_GBPUSD_MINI
+
+	def getIGPricePeriod(self, period):
+		if period == Constants.ONE_MINUTE:
+			return Constants.IG_ONE_MINUTE
+		elif period == Constants.TEN_MINUTES:
+			return Constants.IG_TEN_MINUTES
+		elif period == Constants.ONE_HOUR:
+			return Constants.IG_ONE_HOUR
+		elif period == Constants.FOUR_HOURS:
+			return Constants.IG_FOUR_HOURS
+		elif period == Constants.DAILY:
+			return Constants.IG_DAILY
+
 	def getBid(self, product):
 		for chart in self.charts:
 			if chart.product == product:
@@ -467,6 +492,7 @@ class Plan(object):
 				return chart.c_ask[3]
 		print('Error: Must be subscribed to chart to get ask.')
 		return None
+
 
 	def getLowestPeriodChart(self):
 		low_chart = None

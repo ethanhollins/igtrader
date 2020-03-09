@@ -22,7 +22,7 @@ def setup(utilities):
 	if len(utils.charts) > 0:
 		chart = utils.charts[0]
 	else:
-		chart = utils.getChart(VARIABLES['PRODUCT'], Constants.ONE_MINUTE)
+		chart = utils.getChart(VARIABLES['PRODUCT'], Constants.TEN_MINUTES)
 
 def onNewBar(chart):
 	''' Function called on every new bar '''
@@ -46,7 +46,7 @@ def onLoop():
 			start = time.time()
 			pos = utils.sell(VARIABLES['PRODUCT'], 1, slRange=20, tpRange=20)
 			print(str(time.time() - start))
-			pos.close()
+			# pos.close()
 			print(str(time.time() - start))
 			pos = utils.buy(VARIABLES['PRODUCT'], 2, slRange=20, tpRange=20)
 			print(str(time.time() - start))

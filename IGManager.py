@@ -415,7 +415,7 @@ class IGManager(object):
 			"direction": direction,
 			"size": lotsize,
 			"orderType": orderType,
-			"timeInForce": "FILL_OR_KILL",
+			"timeInForce": "EXECUTE_AND_ELIMINATE",
 			"level": None,
 			"guaranteedStop": str(is_gslo).lower(),
 			"stopLevel": slPrice,
