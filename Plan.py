@@ -409,15 +409,15 @@ class Plan(object):
 		slPrice=None, slRange=None, 
 		tpPrice=None, tpRange=None
 	):
+		if self.account.root.broker == 'ig':
+			product = self.getIGProduct(product)
+
 		direction = None
 		for i in range(len(self.positions)-1, -1,-1):
 			pos = self.positions[i]
 			if pos.product == product:
 				direction = pos.direction
 				pos.close()
-
-		if self.account.root.broker == 'ig':
-			product = self.getIGProduct(product)
 
 		new_pos = None
 		if direction:
