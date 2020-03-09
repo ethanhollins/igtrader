@@ -155,9 +155,9 @@ def onNewBar(chart):
 	if c_dir == Constants.BUY:
 		if out[0] > threshold:
 			if utils.plan_state.value in (4,):
-				utils.log('', 'BUY (S&R)')
+				utils.log('', 'SELL (S&R)')
 
-			print('BUY (S&R)')
+			print('SELL (S&R)')
 			print(bank)
 			if bank:
 				pos = utils.stopAndReverse(
@@ -169,9 +169,9 @@ def onNewBar(chart):
 	elif c_dir == Constants.SELL:
 		if out[1] > threshold:
 			if utils.plan_state.value in (4,):
-				utils.log('', 'SELL (S&R)')
+				utils.log('', 'BUY (S&R)')
 
-			print('SELL (S&R)')
+			print('BUY (S&R)')
 			print(bank)
 			if bank:
 				pos = utils.stopAndReverse(
