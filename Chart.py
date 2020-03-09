@@ -359,7 +359,7 @@ class Chart(object):
 				(self.bids_ts.reshape(self.bids_ts.size, 1), self.asks_ohlc, self.bids_ohlc),
 				axis=1
 			),
-			columns=['timestamp'] + bid_keys + ask_keys
+			columns=['timestamp'] + ask_keys + bid_keys
 		).set_index('timestamp')
 		start = self.root.utils.convertTimestampToDatetime(data.index[0])
 		end = self.root.utils.convertTimestampToDatetime(data.index[-1])
