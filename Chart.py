@@ -118,6 +118,7 @@ class Chart(object):
 
 		data = data.round(pd.Series([5]*8, index=data.columns))
 		data.index = data.index.astype(np.int32)
+		print(data)
 		for y in range(start.year, end.year+1):
 			ts_start = self.root.utils.convertDatetimeToTimestamp(datetime.datetime(year=y, month=1, day=1))
 			ts_end = self.root.utils.convertDatetimeToTimestamp(datetime.datetime(year=y+1, month=1, day=1))
