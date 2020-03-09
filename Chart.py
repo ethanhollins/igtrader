@@ -238,9 +238,9 @@ class Chart(object):
 			b_close = item['values']['BID_CLOSE']
 			b_close = float(b_close) if b_close else 0
 
-			if len(self.c_bid) == 0 or b_close == 0 or self.c_bid[3] == 0 or self.reset:
+			if len(self.c_bid) == 0 or self.c_bid[3] == 0 or self.reset:
 				self.c_bid = [b_open, b_high, b_low, b_close]
-			else:
+			elif b_close:
 				self.c_bid = [
 					self.c_bid[0],
 					b_high if b_high > self.c_bid[1] else self.c_bid[1],
@@ -260,10 +260,10 @@ class Chart(object):
 			a_close = item['values']['OFR_CLOSE']
 			a_close = float(a_close) if a_close else 0
 
-			if len(self.c_ask) == 0 or a_close == 0 or self.c_ask[3] == 0 or self.reset:
+			if len(self.c_ask) == 0 or self.c_ask[3] == 0 or self.reset:
 				self.c_ask = [a_open, a_high, a_low, a_close]
 				self.reset = False
-			else:
+			elif a_close:
 				self.c_ask = [
 					self.c_ask[0],
 					a_high if a_high > self.c_ask[1] else self.c_ask[1],
