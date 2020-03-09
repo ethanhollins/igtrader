@@ -157,67 +157,47 @@ def onNewBar(chart):
 			if utils.plan_state.value in (4,):
 				utils.log('', 'BUY (S&R)')
 
-			# print()
-			# print('SELL (S&R) {} - {} | {:.5f}'.format(chart.c_ts, ohlc, ohlc[7]))
 			if bank:
 				pos = utils.stopAndReverse(
 					VARIABLES['PRODUCT'], 
 					utils.getLotsize(bank, VARIABLES['risk'], VARIABLES['stoprange']), 
 					slRange = VARIABLES['stoprange']
 				)
-			profit = utils.getTotalProfit()
-			# print('Result (%): {:.2f} Result (Pips): {:.2f}'.format(profit, profit * VARIABLES['stoprange']))
-			# print('Pos Entry: {:.5f}'.format(utils.positions[0].entryprice))
 
 	elif c_dir == Constants.SELL:
 		if out[1] > threshold:
 			if utils.plan_state.value in (4,):
 				utils.log('', 'SELL (S&R)')
 
-			# print()
-			# print('BUY (S&R) {} - {} | {:.5f}'.format(chart.c_ts, ohlc, ohlc[3]))
 			if bank:
 				pos = utils.stopAndReverse(
 					VARIABLES['PRODUCT'], 
 					utils.getLotsize(bank, VARIABLES['risk'], VARIABLES['stoprange']), 
 					slRange = VARIABLES['stoprange']
 				)
-			profit = utils.getTotalProfit()
-			# print('Result (%): {:.2f} Result (Pips): {:.2f}'.format(profit, profit * VARIABLES['stoprange']))
-			# print('Pos Entry: {:.5f}'.format(utils.positions[0].entryprice))
 	else:
 		if out[0] > out[1]:
 			if out[0] > threshold:
 				if utils.plan_state.value in (4,):
 					utils.log('', 'SELL (REG)')
 
-				# print()
-				# print('SELL (REG) {} - {} | {:.5f}'.format(chart.c_ts, ohlc, ohlc[7]))
 				if bank:
 					pos = utils.sell(
 						VARIABLES['PRODUCT'], 
 						utils.getLotsize(bank, VARIABLES['risk'], VARIABLES['stoprange']), 
 						slRange = VARIABLES['stoprange']
 					)
-				profit = utils.getTotalProfit()
-				# print('Result (%): {:.2f} Result (Pips): {:.2f}'.format(profit, profit * VARIABLES['stoprange']))
-				# print('Pos Entry: {:.5f}'.format(utils.positions[0].entryprice))
 		else:
 			if out[1] > threshold:
 				if utils.plan_state.value in (4,):
 					utils.log('', 'BUY (REG)')
 				
-				# print()
-				# print('BUY (REG) {} - {} | {:.5f}'.format(chart.c_ts, ohlc, ohlc[3]))
 				if bank:
 					pos = utils.buy(
 						VARIABLES['PRODUCT'], 
 						utils.getLotsize(bank, VARIABLES['risk'], VARIABLES['stoprange']), 
 						slRange = VARIABLES['stoprange']
 					)
-				profit = utils.getTotalProfit()
-				# print('Result (%): {:.2f} Result (Pips): {:.2f}'.format(profit, profit * VARIABLES['stoprange']))
-				# print('Pos Entry: {:.5f}'.format(utils.positions[0].entryprice))
 
 	if utils.plan_state.value in (4,):
 		report()

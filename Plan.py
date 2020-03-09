@@ -477,6 +477,12 @@ class Plan(object):
 				low_chart = chart
 		return low_chart
 
+	def getTotalProfit(self):
+		total = 0.0
+		for pos in self.closed_positions:
+			total += pos.getPercentageProfit()
+		return total
+
 	def getLotsize(self, bank, risk, stoprange):
 		if self.getAUDUSDBid():
 			return max(round((bank * (risk / 100) / stoprange) * self.getAUDUSDBid(), 2), self.lotsize_min)
