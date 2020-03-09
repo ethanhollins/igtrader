@@ -118,7 +118,7 @@ class Chart(object):
 
 		data = data.round(pd.Series([5]*8, index=data.columns))
 		data.index = data.index.astype(np.int32)
-		print(data)
+		data.index.name = 'timestamp'
 		for y in range(start.year, end.year+1):
 			ts_start = self.root.utils.convertDatetimeToTimestamp(datetime.datetime(year=y, month=1, day=1))
 			ts_end = self.root.utils.convertDatetimeToTimestamp(datetime.datetime(year=y+1, month=1, day=1))
@@ -361,7 +361,6 @@ class Chart(object):
 			),
 			columns=['timestamp'] + bid_keys + ask_keys
 		).set_index('timestamp')
-		print(data)
 		start = self.root.utils.convertTimestampToDatetime(data.index[0])
 		end = self.root.utils.convertTimestampToDatetime(data.index[-1])
 		self.save(data, start, end)
