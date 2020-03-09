@@ -131,7 +131,7 @@ count = 0
 
 def onNewBar(chart):
 	if utils.plan_state.value in (1,):
-		utils.log("\n[{}] onNewBar ({}) {} / {}".format(
+		utils.log("", "\n[{}] onNewBar ({}) {} / {}".format(
 			utils.account.accountid, utils.name, 
 			utils.getTime().strftime('%H:%M:%S'), 
 			chart.getCurrentBidOHLC(utils)
