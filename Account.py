@@ -23,17 +23,28 @@ class Account(object):
 		self.funds = 0
 		self.equity = 0
 
+		self.last_save = time.time()
+
 		self.plans = [Plan(
 			self, i,
+			plans[i]['name'],
 			plans[i]['variables'],
 			plans[i]['storage']
-		) for i in plans]
+		) for i in range(len(plans))]
 
-	def getRootDict(self):
+	def checkSave(self):
+		if time.time() - self.last_save > 60:
+			for plan in self.plans:
+				if plan.needs_save:
+					print('Saving Positions ({})...'.format(plan.idx))
+					plan.savePositions()
+					plan.needs_save = False
+			self.last_save = time.time()
+
+
+	def getRootDict(self, name=''):
 		root_path = 'Accounts/{0}.json'.format(self.root.root_name)
-		with open(root_path, 'r') as f:
-			root_dict = json.load(f)
-		return root_dict
+		return self.root.getJsonFromFile(root_path, name=name)
 
 	def getLiveData(self):
 		if self.root.broker == 'ig':
@@ -155,7 +166,7 @@ class Account(object):
 											else:
 												plan.onClose(pos)
 
-								plan.savePositions()
+								plan.needs_save = True
 								
 				elif opu['status'] == 'UPDATED':
 
@@ -179,7 +190,6 @@ class Account(object):
 									pos.tp = None
 
 								plan.onModified(pos)
-								plan.savePositions()
 
 			elif opu['dealStatus'] == 'REJECTED':
 				for plan in self.plans:

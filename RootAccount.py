@@ -116,10 +116,13 @@ class RootAccount(object):
 				t = Thread(target=self.onLoop, args=(acc,))
 				t.start()
 				threads.append(t)
-			
+
 			for t in threads:
 				t.join()
-				
+			
+			for acc in self.accounts:
+				acc.checkSave()
+
 			self.manager.refreshTokens()
 
 	def onLoop(self, account):
@@ -239,9 +242,14 @@ class RootAccount(object):
 			return self.controller.wait(self.root_name)
 		return False
 
-	def getJsonFromFile(self, path, priority=0, **kwargs):
-		self.controller.getJsonFromFile(self.root_name, path, priority=priority, **kwargs)
-		return self.controller.wait(self.root_name)
+	def saveJsonToFile(self, path, data, priority=0, name='', **kwargs):
+		if self.controller.saveJsonToFile(self.root_name+name, path, data, priority=priority, **kwargs):
+			return self.controller.wait(self.root_name+name)
+		return False
+
+	def getJsonFromFile(self, path, priority=0, name='', **kwargs):
+		self.controller.getJsonFromFile(self.root_name+name, path, priority=priority, **kwargs)
+		return self.controller.wait(self.root_name+name)
 
 	def saveCsv(self, path, data, priority=0, **kwargs):
 		if self.controller.saveCsv(self.root_name, path, data, priority=priority, **kwargs):

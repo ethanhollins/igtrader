@@ -44,11 +44,11 @@ class Controller(object):
 		self.is_queue = False
 
 	def wait(self, root_name):
-		if not self.is_queue:
-			self.runQueue()
-		
 		result = False
 		while result == False:
+			if not self.is_queue:
+				self.runQueue()
+
 			result = self.getComplete(root_name)
 			if type(result) == pd.DataFrame:
 				break
@@ -68,6 +68,10 @@ class Controller(object):
 		self.queue.append((root_name, self.pSaveToFile, [path, data], priority, kwargs))
 		return True
 
+	def saveJsonToFile(self, root_name, path, data, priority=0, **kwargs):
+		self.queue.append((root_name, self.pSaveJsonToFile, [path, data], priority, kwargs))
+		return True
+
 	def getJsonFromFile(self, root_name, path, priority=0, **kwargs):
 		self.queue.append((root_name, self.pGetJsonFromFile, [path], priority, kwargs))
 
@@ -82,6 +86,12 @@ class Controller(object):
 	def pSaveToFile(self, path, data):
 		with open(path, 'w') as f:
 			f.write(data)
+
+		return True
+
+	def pSaveJsonToFile(self, path, data):
+		with open(path, 'w') as f:
+			f.write(json.dumps(data, indent=4))
 
 		return True
 

@@ -28,8 +28,9 @@ class PlanState(Enum):
 
 class Plan(object):
 
-	def __init__(self, account, name, variables, storage):
+	def __init__(self, account, idx, name, variables, storage):
 		self.account = account
+		self.idx = idx
 		self.name = name
 
 		self.positions = []
@@ -42,6 +43,7 @@ class Plan(object):
 		self.storage = storage
 
 		self.c_ts = 0
+		self.needs_save = False
 
 		self.initialize()
 	
@@ -92,9 +94,9 @@ class Plan(object):
 				self.variables.pop(k, None)
 
 	def getSavedPositions(self):
-		info = self.account.getRootDict()
+		info = self.account.getRootDict(name=str(self.idx))
 		found_positions = []
-		for i in info['accounts'][self.account.accountid]['plans'][self.name]['positions']:
+		for i in info['accounts'][self.account.accountid]['plans'][self.idx]['positions']:
 			if 'is_dummy' in i and i['is_dummy']:
 				pos = Position(self.account, None, None, None)
 				pos.setDict(i)
@@ -114,7 +116,7 @@ class Plan(object):
 				del self.positions[i]
 
 	def getBankConfig(self):
-		info = self.account.getRootDict()
+		info = self.account.getRootDict(name=str(self.idx))
 		self.external_bank = float(info['accounts'][self.account.accountid]['external_bank'])
 		self.maximum_bank = float(info['accounts'][self.account.accountid]['maximum_bank'])
 		self.minimum_bank = float(info['accounts'][self.account.accountid]['minimum_bank'])
@@ -157,25 +159,22 @@ class Plan(object):
 				'data': pos.data,
 				'is_dummy': pos.is_dummy
 			})
-		info = self.account.getRootDict()
+		info = self.account.getRootDict(name=str(self.idx))
 		root_path = 'Accounts/{0}.json'.format(self.account.root.root_name)
-		with open(root_path, 'w') as f:
-			info['accounts'][self.account.accountid]['plans'][self.name]['positions'] = save
-			f.write(json.dumps(info, indent=4))
+		info['accounts'][self.account.accountid]['plans'][self.idx]['positions'] = save
+		self.account.root.saveJsonToFile(root_path, info, name=str(self.idx))
 
 	def saveStorage(self):
-		info = self.account.getRootDict()
+		info = self.account.getRootDict(name=str(self.idx))
 		root_path = 'Accounts/{0}.json'.format(self.account.root.root_name)
-		with open(root_path, 'w') as f:
-			info['accounts'][self.account.accountid]['plans'][self.name]['storage'] = self.storage
-			f.write(json.dumps(info, indent=4))
+		info['accounts'][self.account.accountid]['plans'][self.idx]['storage'] = self.storage
+		self.account.root.saveJsonToFile(root_path, info, name=str(self.idx))
 
 	def saveVariables(self):
-		info = self.account.getRootDict()
+		info = self.account.getRootDict(name=str(self.idx))
 		root_path = 'Accounts/{0}.json'.format(self.account.root.root_name)
-		with open(root_path, 'w') as f:
-			info['accounts'][self.account.accountid]['plans'][self.name]['variables'] = self.variables
-			f.write(json.dumps(info, indent=4))
+		info['accounts'][self.account.accountid]['plans'][self.idx]['variables'] = self.variables
+		self.account.root.saveJsonToFile(root_path, info, name=str(self.idx))
 
 	def onStopLoss(self, pos):
 		if self.plan_state == PlanState.STARTED:
@@ -329,7 +328,7 @@ class Plan(object):
 				self.plan_state = PlanState.STOPPED
 				print('PlanError ({0}):\n{1}'.format(self.account.accountid, traceback.format_exc()))
 
-		self.savePositions()
+		self.needs_save = True
 		return pos
 
 	def sell(self,
@@ -401,7 +400,7 @@ class Plan(object):
 				self.plan_state = PlanState.STOPPED
 				print('PlanError ({0}):\n{1}'.format(self.account.accountid, traceback.format_exc()))
 
-		self.savePositions()
+		self.needs_save = True
 		return pos
 
 	def stopAndReverse(self, 
@@ -410,12 +409,12 @@ class Plan(object):
 		tpPrice=None, tpRange=None
 	):
 		if self.account.root.broker == 'ig':
-			product = self.getIGProduct(product)
+			ig_product = self.getIGProduct(product)
 
 		direction = None
 		for i in range(len(self.positions)-1, -1,-1):
 			pos = self.positions[i]
-			if pos.product == product:
+			if pos.product == ig_product:
 				direction = pos.direction
 				pos.close()
 

@@ -192,7 +192,7 @@ class IGManager(object):
 				total_pages = data['metadata']['pageData']['totalPages']
 
 				if page_number < total_pages:
-					return self.getPricesByDate(product, period, start_dt=start_dt, end_dt=end_dt, page_number=page_number+1, result=result)
+					return self.getPrices(product, period, start_dt=start_dt, end_dt=end_dt, page_number=page_number+1, result=result)
 				else:
 					return pd.DataFrame(data=result).set_index('timestamp')
 			else:
