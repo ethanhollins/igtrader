@@ -97,7 +97,7 @@ def onNewBar(chart):
 			utils.getTime().strftime('%H:%M:%S'), 
 			chart.getCurrentBidOHLC(utils)
 		))
-		utils.log("", "Inputs: {}\nOut: {}".format(inputs, out))
+		utils.log("", "Out: {}".format(out))
 
 	if utils.plan_state.value in (4,):
 		time = utils.convertTimestampToDatetime(utils.getLatestTimestamp())
