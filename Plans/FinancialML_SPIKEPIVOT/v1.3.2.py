@@ -7,6 +7,7 @@ import datetime
 
 VARIABLES = {
 	'PRODUCT': Constants.GBPUSD,
+	'plan': 0,
 	'risk': 1.0,
 	'stoprange': 55.0
 }
@@ -19,7 +20,7 @@ def init(utilities):
 
 	global weights, biases, mean, std
 	plan_name = '.'.join(os.path.basename(__file__).split('.')[:-1])
-	weights_path = os.path.join('\\'.join(__file__.split('/')[:-1]), plan_name+'_0_weights', 'weights.json')
+	weights_path = os.path.join('\\'.join(__file__.split('/')[:-1]), plan_name+'_0_weights', '{}.json'.format(VARIABLES['plan']))
 	with open(weights_path, 'r') as f:
 		info = json.load(f)
 		weights = [np.array(i, np.float32) for i in info['weights'][:3]]
