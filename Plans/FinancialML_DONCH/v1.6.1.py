@@ -92,12 +92,13 @@ def onNewBar(chart):
 	c_dir = getDirection()
 
 	if utils.plan_state.value in (1,):
-		utils.log("", "\n[{}] onNewBar ({}) {} / {}".format(
-			utils.account.accountid, utils.name, 
+		utils.log("", "\n[{} ({})] onNewBar ({}) {} / {}".format(
+			utils.account.accountid, VARIABLES['plan'],
+			utils.name, 
 			utils.getTime().strftime('%H:%M:%S'), 
 			chart.getCurrentBidOHLC(utils)
 		))
-		utils.log("", "Out: {}".format(out))
+		utils.log("", "({}) Out: {}".format(VARIABLES['plan'], out))
 
 	if utils.plan_state.value in (4,):
 		time = utils.convertTimestampToDatetime(utils.getLatestTimestamp())
