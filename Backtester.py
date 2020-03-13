@@ -529,6 +529,11 @@ class Backtester(object):
 				input('Enter cmd or step: ')
 			elif self.method == 'compare':
 				data = self.getInterimData(data)
+				progress = int((i+1)/all_ts.size * 50.0)
+				print('[{}{}]'.format(
+					'='*(progress), 
+					('>' if 50-progress > 0 else '')+('-'*int(50-progress-1))
+				), end='\n' if i == all_ts.size-1 else '\r', flush=True)
 
 		if self.method == 'compare':
 			data = self.getCompletedData(data)

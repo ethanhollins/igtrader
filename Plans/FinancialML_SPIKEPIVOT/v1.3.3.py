@@ -20,11 +20,11 @@ def init(utilities):
 
 	global weights, biases, mean, std
 	plan_name = '.'.join(os.path.basename(__file__).split('.')[:-1])
-	weights_path = os.path.join('\\'.join(__file__.split('/')[:-1]), plan_name+'_10m_test_1', '{}.json'.format(VARIABLES['plan']))
+	weights_path = os.path.join('\\'.join(__file__.split('/')[:-1]), plan_name+'_10m_5', '{}.json'.format(VARIABLES['plan']))
 	with open(weights_path, 'r') as f:
 		info = json.load(f)
-		weights = [np.array(i, np.float32) for i in info['weights'][:3]]
-		biases = [np.array(i, np.float32) for i in info['weights'][3:]]
+		weights = [np.array(i, np.float32) for i in info['weights'][:4]]
+		biases = [np.array(i, np.float32) for i in info['weights'][4:]]
 		mean = info['mean']
 		std = info['std']
 
@@ -221,7 +221,7 @@ def fwd_prop(inpt):
 	for i in range(1, len(weights)):
 		x = relu(x)		
 		x = np.matmul(x, weights[i]) + biases[i]
-	return relu(x)
+	return sigmoid(x)
 
 def report():
 	utils.log('', "POSITIONS:\nCLOSED:")
