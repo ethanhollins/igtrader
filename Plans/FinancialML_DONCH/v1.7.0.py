@@ -20,7 +20,7 @@ def init(utilities):
 
 	global weights, biases, mean, std
 	plan_name = '.'.join(os.path.basename(__file__).split('.')[:-1])
-	weights_path = os.path.join('\\'.join(__file__.split('/')[:-1]), plan_name+'_10m_010619_50p_4m', '{}.json'.format(VARIABLES['plan']))
+	weights_path = os.path.join('\\'.join(__file__.split('/')[:-1]), plan_name+'_3', '{}.json'.format(VARIABLES['plan']))
 	with open(weights_path, 'r') as f:
 		info = json.load(f)
 		weights = [np.array(i, np.float32) for i in info['weights'][:3]]
@@ -37,7 +37,7 @@ def setup(utilities):
 	if len(utils.charts) > 0:
 		chart = utils.charts[0]
 	else:
-		chart = utils.getChart(VARIABLES['PRODUCT'], Constants.TEN_MINUTES)
+		chart = utils.getChart(VARIABLES['PRODUCT'], Constants.THIRTY_MINUTES)
 
 	bank = utils.getTradableBank()
 
@@ -48,103 +48,58 @@ def convertToPips(x):
 def normalize(x):
 	return (x - mean) / std
 
+# Get donchian data
 @jit
-def isLongSpike(data, threshold):
-	s_idx = int((data.shape[0]-1)/2)
-	s_high = convertToPips(data[s_idx, 1]) - threshold
-
-	for j in range(data.shape[0]):
-		if j == s_idx:
-			continue
-		c_high = convertToPips(data[j, 1])
-		if c_high > s_high:
-			return False
-	return True
-
-@jit
-def isShortSpike(data, threshold):
-	s_idx = int((data.shape[0]-1)/2)
-	s_low = convertToPips(data[s_idx, 2]) + threshold
-
-	for j in range(data.shape[0]):
-		if j == s_idx:
-			continue
-		c_low = convertToPips(data[j, 2])
-		if c_low < s_low:
-			return False
-	return True
-
-@jit
-def getInputs(data):
-	spike_threshold = 1.0
-	lookback = 3
-	c_data = np.array([0,0], dtype=np.float32) # LONG DIST, SHORT DIST
-
-	# Spike LONG, Swing LONG, Spike SHORT, Swing SHORT, Current High, Current Low
-	ad_data = [0,0,0,0, max(data[:lookback,1]), min(data[:lookback,2])] 
+def getInputs(high, low, period, lookup):
 	X = []
+	last_high = 0
+	last_low = 0
+	for i in range(period, high.shape[0]):
+		c_high = 0.
+		c_low = 0.
+		x = []
 
-	for i in range(lookback, data.shape[0]):
-		c_data = np.copy(c_data)
+		for j in range(i+1-period, i+1):
+			if c_high == 0 or high[j] > c_high:
+				c_high = high[j]
+			if c_low == 0 or low[j] < c_low:
+				c_low = low[j]
 
-		ad_data[4] = data[i,1] if data[i,1] > ad_data[4] else ad_data[4]
-		ad_data[5] = data[i,2] if data[i,2] < ad_data[5] else ad_data[5]
+		if last_high and last_low:
+			x.append(convertToPips(c_high - last_high))
+			x.append(convertToPips(c_low - last_low))
 
-		if c_data[0]:
-			c_data[0] = convertToPips((data[i,3] - ad_data[0]) * (ad_data[1] / ad_data[0]))
+			if len(X) > 0:
+				X.append(X[-1][-(lookup-1):] + [x])
+			else:
+				X.append([x])
 
-		if c_data[1]:
-			c_data[1] = convertToPips((ad_data[2] - data[i,3]) * (ad_data[2] / ad_data[3]))
+		last_high = c_high
+		last_low = c_low
 
-		# Get Current Spike Info
-		if isLongSpike(
-			data[i+1-lookback:i+1],
-			spike_threshold
-		):
-			s_idx = int((lookback-1)/2)
-			ad_data[0] = data[i-s_idx, 1]
-			ad_data[1] = ad_data[5]
-			ad_data[5] = min(data[i+1-lookback:i+1, 2])
- 
-			c_data[0] = convertToPips((data[i,3] - ad_data[0]) * (ad_data[1] / ad_data[0]))
-
-		if isShortSpike(
-			data[i+1-lookback:i+1],
-			spike_threshold
-		):
-			s_idx = int((lookback-1)/2)
-			ad_data[2] = data[i-s_idx, 2]
-			ad_data[3] = ad_data[4] 
-			ad_data[4] = max(data[i+1-lookback:i+1, 1])
-
-			c_data[1] = convertToPips((ad_data[2] - data[i,3]) * (ad_data[2] / ad_data[3]))
-
-		X.append(c_data)
-	return X[-1]
+	return np.array(X[lookup-1:], dtype=np.float32)[-1]
 
 def getDirection():
 	for pos in utils.positions:
 		return pos.direction
 	return 0
 
-global count
-count = 0
-
 def onNewBar(chart):
 
 	data = np.array(chart.getBidOHLC(utils, 0, 500), dtype=np.float32)
-	inputs = getInputs(data)
-	inputs = normalize(inputs)
-	out = fwd_prop(inputs)
+	inputs = getInputs(data[:,1], data[:,2], 4, 2)
+	inputs = normalize(inputs).reshape(1, inputs.shape[0], inputs.shape[1])
+	out = fwd_prop(inputs)[0]
 	c_dir = getDirection()
 
 	if utils.plan_state.value in (1,):
-		utils.log("", "\n[{}] onNewBar ({}) {} / {}".format(
-			utils.account.accountid, utils.name, 
+		utils.log("", "\n[{} ({})] onNewBar ({}) {} / {}".format(
+			utils.account.accountid, VARIABLES['plan'],
+			utils.name, 
 			utils.getTime().strftime('%H:%M:%S'), 
 			chart.getCurrentBidOHLC(utils)
 		))
-		utils.log("", "Inputs: {}\nOut: {}".format(inputs, out))
+		utils.log("", "({}) Inputs: {}\nOut: {}".format(VARIABLES['plan'], inputs, out))
 
 	if utils.plan_state.value in (4,):
 		time = utils.convertTimestampToDatetime(utils.getLatestTimestamp())
@@ -217,11 +172,28 @@ def sigmoid(x):
 
 @jit(forceobj=True)
 def fwd_prop(inpt):
-	x = np.matmul(inpt, weights[0]) + biases[0]
-	for i in range(1, len(weights)):
-		x = relu(x)		
-		x = np.matmul(x, weights[i]) + biases[i]
-	return sigmoid(x)
+	w = [np.copy(i) for i in weights]
+	b = [np.copy(i) for i in biases]
+	for i in range(inpt.shape[1]):
+		c_i = inpt[:,i,:]
+		c_i = c_i.reshape(c_i.shape[0], 1, c_i.shape[1])
+		x = np.matmul(c_i, w[0])
+		x = relu(x)
+
+		if i+1 == inpt.shape[1]:
+			break
+
+		x = np.matmul(x.reshape(x.shape[0], x.shape[2], x.shape[1]), np.ones([1,c_i.shape[2]]))
+		x = relu(x.reshape(x.shape[0], x.shape[2], x.shape[1]))
+		w[0] = x
+	
+	x = np.matmul(x, w[1]) + b[1]
+	x = relu(x)
+
+	x = np.matmul(x, w[2]) + b[2]
+	x = sigmoid(x).reshape(x.shape[0], x.shape[2])
+
+	return x
 
 def report():
 	utils.log('', "POSITIONS:\nCLOSED:")

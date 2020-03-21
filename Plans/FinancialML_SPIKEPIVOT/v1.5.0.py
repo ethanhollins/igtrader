@@ -20,7 +20,7 @@ def init(utilities):
 
 	global weights, biases, mean, std
 	plan_name = '.'.join(os.path.basename(__file__).split('.')[:-1])
-	weights_path = os.path.join('\\'.join(__file__.split('/')[:-1]), plan_name+'_10m_010619_50p_4m', '{}.json'.format(VARIABLES['plan']))
+	weights_path = os.path.join('\\'.join(__file__.split('/')[:-1]), plan_name+'_30m_010619', '{}.json'.format(VARIABLES['plan']))
 	with open(weights_path, 'r') as f:
 		info = json.load(f)
 		weights = [np.array(i, np.float32) for i in info['weights'][:3]]
@@ -37,7 +37,7 @@ def setup(utilities):
 	if len(utils.charts) > 0:
 		chart = utils.charts[0]
 	else:
-		chart = utils.getChart(VARIABLES['PRODUCT'], Constants.TEN_MINUTES)
+		chart = utils.getChart(VARIABLES['PRODUCT'], Constants.THIRTY_MINUTES)
 
 	bank = utils.getTradableBank()
 
@@ -168,6 +168,9 @@ def onNewBar(chart):
 					utils.getLotsize(bank, VARIABLES['risk'], VARIABLES['stoprange']), 
 					slRange = VARIABLES['stoprange']
 				)
+		if out[3] > threshold:
+			for pos in utils.positions:
+				pos.close()
 
 	elif c_dir == Constants.SELL:
 		if out[1] > threshold:
@@ -180,6 +183,9 @@ def onNewBar(chart):
 					utils.getLotsize(bank, VARIABLES['risk'], VARIABLES['stoprange']), 
 					slRange = VARIABLES['stoprange']
 				)
+		if out[2] > threshold:
+			for pos in utils.positions:
+				pos.close()
 	else:
 		if out[0] > out[1]:
 			if out[0] > threshold:

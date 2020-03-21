@@ -95,33 +95,33 @@ class Chart(object):
 		return np.where(self.bids_ts==ts)[0].shape[0] > 0
 
 	def getTsOffset(self, ts):
-		return (np.abs(self.bids_ts - ts)).argmin()
+		return (np.abs(self.bids_ts - ts)).argmin()-1
 
 	def getLatestTimestamp(self):
 		return self.bids_ts[-1]
 
 	def getAllBidOHLC(self, backtester):
-		c_idx = (np.abs(self.bids_ts - self.c_ts)).argmin()
+		c_idx = (np.abs(self.bids_ts - self.c_ts)).argmin()-1
 		return self.bids_ohlc[:c_idx+1]
 
 	def getAllAskOHLC(self, backtester):
-		c_idx = (np.abs(self.asks_ts - self.c_ts)).argmin()
+		c_idx = (np.abs(self.asks_ts - self.c_ts)).argmin()-1
 		return self.asks_ohlc[:c_idx+1]
 
 	def getBidOHLC(self, backtester, shift, amount):
-		c_idx = (np.abs(self.bids_ts - self.c_ts)).argmin()
+		c_idx = (np.abs(self.bids_ts - self.c_ts)).argmin()-1
 		return self.bids_ohlc[c_idx+1-shift-amount:c_idx+1-shift]
 
 	def getAskOHLC(self, backtester, shift, amount):
-		c_idx = (np.abs(self.asks_ts - self.c_ts)).argmin()
+		c_idx = (np.abs(self.asks_ts - self.c_ts)).argmin()-1
 		return self.asks_ohlc[c_idx+1-shift-amount:c_idx+1-shift]
 
 	def getCurrentBidOHLC(self, backtester):
-		c_idx = (np.abs(self.bids_ts - self.c_ts)).argmin()
+		c_idx = (np.abs(self.bids_ts - self.c_ts)).argmin()-1
 		return self.bids_ohlc[c_idx]
 
 	def getCurrentAskOHLC(self, backtester):
-		c_idx = (np.abs(self.asks_ts - self.c_ts)).argmin()
+		c_idx = (np.abs(self.asks_ts - self.c_ts)).argmin()-1
 		return self.asks_ohlc[c_idx]
 
 	def isChart(self, product, period):
@@ -520,13 +520,27 @@ class Backtester(object):
 
 		print('Pre-processing complete ({0})... {1:.2f}s'.format(self.name, timer() - start_time))
 
+		# CMD Vars
+		next_p = None
+
 		start_time = timer()
 		for i in range(all_ts.size):
 			self.c_ts = all_ts[i]
 			self.runloop(all_charts[i])
 
 			if self.method == 'step':
-				input('Enter cmd or step: ')
+				if not next_p:
+					cmd = input('Enter cmd or step: ')
+					if cmd.lower().startswith('next'):
+						period = cmd.split(' ')[1]
+						if self.isPeriod(period):
+							next_p = period
+				else:
+					for c in all_charts[i]:
+						if c.period == next_p:
+							next_p = None
+
+
 			elif self.method == 'compare':
 				data = self.getInterimData(data)
 				progress = int((i+1)/all_ts.size * 50.0)
@@ -708,10 +722,13 @@ class Backtester(object):
 				self.variables.pop(k, None)
 
 	def runloop(self, charts):
-		self.checkSl()
-		self.checkTp()
 		for chart in charts:
 			chart.c_ts = self.c_ts
+			
+		self.checkSl()
+		self.checkTp()
+
+		for chart in charts:
 			try:
 				self.module.onNewBar(chart)
 			except Exception as e:
@@ -991,6 +1008,13 @@ class Backtester(object):
 						if not 'has no attribute \'onTakeProfit\'' in str(e):
 							print('PlanError ({0}):\n{1}'.format('Backtester', traceback.format_exc()))
 
+	def isPeriod(self, period):
+		for chart in self.charts:
+			if chart.period == period:
+				return True
+
+		return False
+
 	'''
 	Utilities
 	'''
@@ -1250,18 +1274,12 @@ class Backtester(object):
 			None
 
 	def getBid(self, product):
-		for chart in self.charts:
-			if chart.product == product:
-				return chart.getCurrentBidOHLC(self)[3]
-		print('Error: Must be subscribed to chart to get bid.')
-		return None
+		chart = self.getLowestPeriodChart()
+		return chart.getCurrentBidOHLC(self)[3]
 
 	def getAsk(self, product):
-		for chart in self.charts:
-			if chart.product == product:
-				return chart.getCurrentAskOHLC(self)[3]
-		print('Error: Must be subscribed to chart to get ask.')
-		return None
+		chart = self.getLowestPeriodChart()
+		return chart.getCurrentAskOHLC(self)[3]
 
 	def getLotsize(self, bank, risk, stoprange):
 		return round(bank * (risk / 100) / stoprange, 2)

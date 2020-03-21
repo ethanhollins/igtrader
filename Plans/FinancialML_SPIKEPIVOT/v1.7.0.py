@@ -9,7 +9,7 @@ VARIABLES = {
 	'PRODUCT': Constants.GBPUSD,
 	'plan': 0,
 	'risk': 1.0,
-	'stoprange': 80.0
+	'stoprange': 200.0
 }
 
 def init(utilities):
@@ -20,11 +20,11 @@ def init(utilities):
 
 	global weights, biases, mean, std
 	plan_name = '.'.join(os.path.basename(__file__).split('.')[:-1])
-	weights_path = os.path.join('\\'.join(__file__.split('/')[:-1]), plan_name+'_10m_010619_50p_4m', '{}.json'.format(VARIABLES['plan']))
+	weights_path = os.path.join('\\'.join(__file__.split('/')[:-1]), plan_name+'_d_2016_100g_70p_32x32x32_60min', '{}.json'.format(VARIABLES['plan']))
 	with open(weights_path, 'r') as f:
 		info = json.load(f)
-		weights = [np.array(i, np.float32) for i in info['weights'][:3]]
-		biases = [np.array(i, np.float32) for i in info['weights'][3:]]
+		weights = [np.array(i, np.float32) for i in info['weights'][:4]]
+		biases = [np.array(i, np.float32) for i in info['weights'][4:]]
 		mean = info['mean']
 		std = info['std']
 
@@ -37,7 +37,7 @@ def setup(utilities):
 	if len(utils.charts) > 0:
 		chart = utils.charts[0]
 	else:
-		chart = utils.getChart(VARIABLES['PRODUCT'], Constants.TEN_MINUTES)
+		chart = utils.getChart(VARIABLES['PRODUCT'], Constants.DAILY)
 
 	bank = utils.getTradableBank()
 
@@ -127,9 +127,6 @@ def getDirection():
 		return pos.direction
 	return 0
 
-global count
-count = 0
-
 def onNewBar(chart):
 
 	data = np.array(chart.getBidOHLC(utils, 0, 500), dtype=np.float32)
@@ -203,6 +200,27 @@ def onNewBar(chart):
 						utils.getLotsize(bank, VARIABLES['risk'], VARIABLES['stoprange']), 
 						slRange = VARIABLES['stoprange']
 					)
+
+	for pos in utils.positions:
+		profit = pos.getPipProfit()
+		profit_multi = np.floor(profit/VARIABLES['stoprange'])
+		if pos.direction == Constants.BUY:
+			new_sl_pips = VARIABLES['stoprange'] * (profit_multi-1)
+			new_sl = pos.entryprice + utils.convertToPrice(new_sl_pips)
+			if new_sl > pos.sl:
+				if new_sl_pips >= VARIABLES['stoprange']*2:
+					pos.modifySL(new_sl)
+				elif new_sl_pips >= VARIABLES['stoprange']*1.5:
+					pos.modifySL(0)
+		else:
+			new_sl_pips = VARIABLES['stoprange'] * (profit_multi-1)
+			new_sl = pos.entryprice - utils.convertToPrice(new_sl_pips)
+
+			if new_sl < pos.sl:
+				if new_sl_pips >= VARIABLES['stoprange']*2:
+					pos.modifySL(new_sl)
+				elif new_sl_pips >= VARIABLES['stoprange']*1.5:
+					pos.modifySL(0)
 
 	if utils.plan_state.value in (4,):
 		report()

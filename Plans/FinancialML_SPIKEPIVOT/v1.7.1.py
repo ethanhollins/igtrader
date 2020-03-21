@@ -9,7 +9,7 @@ VARIABLES = {
 	'PRODUCT': Constants.GBPUSD,
 	'plan': 0,
 	'risk': 1.0,
-	'stoprange': 80.0
+	'stoprange': 200.0
 }
 
 def init(utilities):
@@ -20,7 +20,7 @@ def init(utilities):
 
 	global weights, biases, mean, std
 	plan_name = '.'.join(os.path.basename(__file__).split('.')[:-1])
-	weights_path = os.path.join('\\'.join(__file__.split('/')[:-1]), plan_name+'_10m_010619_50p_4m', '{}.json'.format(VARIABLES['plan']))
+	weights_path = os.path.join('\\'.join(__file__.split('/')[:-1]), plan_name+'_d_18_50g', '{}.json'.format(VARIABLES['plan']))
 	with open(weights_path, 'r') as f:
 		info = json.load(f)
 		weights = [np.array(i, np.float32) for i in info['weights'][:3]]
@@ -37,7 +37,7 @@ def setup(utilities):
 	if len(utils.charts) > 0:
 		chart = utils.charts[0]
 	else:
-		chart = utils.getChart(VARIABLES['PRODUCT'], Constants.TEN_MINUTES)
+		chart = utils.getChart(VARIABLES['PRODUCT'], Constants.DAILY)
 
 	bank = utils.getTradableBank()
 
@@ -127,9 +127,6 @@ def getDirection():
 		return pos.direction
 	return 0
 
-global count
-count = 0
-
 def onNewBar(chart):
 
 	data = np.array(chart.getBidOHLC(utils, 0, 500), dtype=np.float32)
@@ -156,6 +153,9 @@ def onNewBar(chart):
 		utils.log('', 'BID: {}'.format(chart.getCurrentBidOHLC(utils)))
 		utils.log('', 'Inputs: {}'.format(inputs))
 		utils.log('', 'Out: {}'.format(out))
+
+	VARIABLES['stoprange'] = min(max(out[2], 30), 250)
+	tp_increment = min(max(out[3], 30), 250)
 
 	if c_dir == Constants.BUY:
 		if out[0] > threshold:
@@ -204,6 +204,27 @@ def onNewBar(chart):
 						slRange = VARIABLES['stoprange']
 					)
 
+	for pos in utils.positions:
+		profit = pos.getPipProfit()
+		profit_multi = np.floor(profit/tp_increment)
+		if pos.direction == Constants.BUY:
+			new_sl_pips = tp_increment * (profit_multi-1)
+			new_sl = pos.entryprice + utils.convertToPrice(new_sl_pips)
+			if new_sl > pos.sl:
+				if new_sl_pips >= tp_increment*2:
+					pos.modifySL(new_sl)
+				elif new_sl_pips >= tp_increment*1.5:
+					pos.modifySL(0)
+		else:
+			new_sl_pips = tp_increment * (profit_multi-1)
+			new_sl = pos.entryprice - utils.convertToPrice(new_sl_pips)
+
+			if new_sl < pos.sl:
+				if new_sl_pips >= tp_increment*2:
+					pos.modifySL(new_sl)
+				elif new_sl_pips >= tp_increment*1.5:
+					pos.modifySL(0)
+
 	if utils.plan_state.value in (4,):
 		report()
 
@@ -221,7 +242,19 @@ def fwd_prop(inpt):
 	for i in range(1, len(weights)):
 		x = relu(x)		
 		x = np.matmul(x, weights[i]) + biases[i]
-	return sigmoid(x)
+
+	x[:2] = sigmoid(x[:2])
+
+	t_x = np.copy(x[2])
+	x[2] = (t_x - t_x.min()) / (t_x.max() - t_x.min())
+	x[2] = np.sum(x[2])/x[2].size
+	x[2] *= (250-30) + 30
+	
+	t_x = np.copy(x[3])
+	x[3] = (t_x - t_x.min()) / (t_x.max() - t_x.min())
+	x[3] = np.sum(x[3])/x[3].size
+	x[3] *= (250-30) + 30
+	return x
 
 def report():
 	utils.log('', "POSITIONS:\nCLOSED:")
