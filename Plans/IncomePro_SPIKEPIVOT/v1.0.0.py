@@ -105,8 +105,8 @@ def onNewBar(chart):
 	global is_onb
 	is_onb = True
 
-	time = utils.convertTimestampToDatetime(utils.getLatestTimestamp())
-	london_time = utils.convertTimezone(time, 'Europe/London')
+	# time = utils.convertTimestampToDatetime(utils.getLatestTimestamp())
+	# london_time = utils.convertTimezone(time, 'Europe/London')
 	''' Function called on every new bar '''
 	if chart.period == Constants.ONE_MINUTE:
 		# if utils.plan_state.value in (4,):
@@ -122,6 +122,10 @@ def onNewBar(chart):
 	elif chart.period == Constants.FOUR_HOURS:
 		
 		if utils.plan_state.value in (4,):
+			time = utils.convertTimestampToDatetime(utils.getLatestTimestamp())
+			london_time = utils.convertTimezone(time, 'Europe/London')
+
+
 			utils.log("\nTime", time.strftime('%d/%m/%y %H:%M:%S'))
 			utils.log("London Time", london_time.strftime('%d/%m/%y %H:%M:%S') + '\n')
 			utils.log('H4 OHLC', h4_chart.getCurrentBidOHLC(utils))
@@ -252,15 +256,16 @@ def getTakeProfit():
 					return pos.modifySL(pos.entryprice)
 
 def runSequence():
-
-	getSwing(long_trigger)
-	getSwing(short_trigger)
+	
+	entrySetup(long_trigger)
+	entrySetup(short_trigger)
 
 	getSpikePivot(long_trigger)
 	getSpikePivot(short_trigger)
 
-	entrySetup(long_trigger)
-	entrySetup(short_trigger)
+	getSwing(long_trigger)
+	getSwing(short_trigger)
+
 
 def getSwing(trigger):
 	_, high, low, _ = np.around(h4_chart.getCurrentBidOHLC(utils), 5)
@@ -275,14 +280,14 @@ def getSpikePivot(trigger):
 
 	if trigger.direction == Direction.LONG:
 		spike = ohlc[1][1] - utils.convertToPrice(1.0)
-		if ohlc[0][1] < spike and ohlc[2][1] < spike:
+		if ohlc[0][1] <= spike and ohlc[2][1] <= spike:
 			trigger.pivot_line = ohlc[1][1]
 			trigger.c_swing = trigger.next_swing
 			trigger.next_swing = min(ohlc[1][2], ohlc[2][2])
 			trigger.entry_state = EntryState.ONE
 	else:
 		spike = ohlc[1][2] + utils.convertToPrice(1.0)
-		if ohlc[0][2] > spike and ohlc[2][2] > spike:
+		if ohlc[0][2] >= spike and ohlc[2][2] >= spike:
 			trigger.pivot_line = ohlc[1][2]
 			trigger.c_swing = trigger.next_swing
 			trigger.next_swing = max(ohlc[1][1], ohlc[2][1])
