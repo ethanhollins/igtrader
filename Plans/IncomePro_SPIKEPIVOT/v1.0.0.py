@@ -117,7 +117,8 @@ def onNewBar(chart):
 		# 	utils.log("\n[{0}] onNewBar ({1})".format(utils.account.accountid, utils.name), utils.getTime().strftime('%d/%m/%y %H:%M:%S'))
 		
 		# checkTime()
-		getTakeProfit()
+		if not utils.plan_state.value in (3,):
+			getTakeProfit()
 
 	elif chart.period == Constants.FOUR_HOURS:
 		
