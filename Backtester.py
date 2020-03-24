@@ -378,6 +378,7 @@ class PlanState(Enum):
 	BACKTEST = 2
 	RUN = 3
 	STEP = 4
+	COMPARE = 5
 
 class Backtester(object):
 
@@ -515,6 +516,8 @@ class Backtester(object):
 		data = {}
 		if self.method == 'step':
 			self.plan_state = PlanState.STEP
+		elif self.method == 'compare':
+			self.plan_state = PlanState.COMPARE
 		else:
 			self.plan_state = PlanState.RUN
 
@@ -531,7 +534,7 @@ class Backtester(object):
 			if self.method == 'step':
 				if not next_p:
 					cmd = input('Enter cmd or step: ')
-					if cmd.lower().startswith('next'):
+					if cmd.lower().startswith('next '):
 						period = cmd.split(' ')[1]
 						if self.isPeriod(period):
 							next_p = period

@@ -103,6 +103,7 @@ class Chart(object):
 		else:
 			raise Exception('Broker `{}` not found.'.format(self.root.broker))
 
+		data = data[~data.index.duplicated(keep='first')]	
 		if save:
 			if not start:
 				start = self.root.utils.convertTimestampToDatetime(data.index[0])
@@ -295,15 +296,11 @@ class Chart(object):
 						self.addNewBar(new_ts)
 
 				elif self.period == Constants.FOUR_HOURS:
-					now = self.nearestHour(now)
-					lon = self.nearestHour(lon)
+					now = Constants.IG_START_DATE + datetime.timedelta(milliseconds=int(item['values']['UTM']))
+					lon = self.root.utils.convertTimezone(now, 'Europe/London')
 					if lon.hour in Constants.FOUR_HOURS_BARS:
 						self.reset = True
-						
-						prev_hour = Constants.FOUR_HOURS_BARS[Constants.FOUR_HOURS_BARS.index(lon.hour)-1]
-						dist = 24 - (prev_hour - lon.hour) % 24
-
-						new_ts = self.root.utils.convertDatetimeToTimestamp(now - datetime.timedelta(hours=dist))
+						new_ts = self.root.utils.convertDatetimeToTimestamp(now)
 						
 						self.addNewBar(new_ts)
 				
@@ -326,7 +323,7 @@ class Chart(object):
 		print('--------')
 
 	def addNewBar(self, new_ts):
-		print('Bid: {0}\nAsk: {1}'.format(self.c_bid, self.c_ask))
+		last_n = self.bids_ts.size
 
 		self.bids_ts = np.append(self.bids_ts, new_ts)
 		self.bids_ohlc = np.append(
@@ -342,27 +339,38 @@ class Chart(object):
 			axis=0
 		)
 
-		threads = []
-		for plan in self.subscribed_plans:
-			t = Thread(target=self.onNewBar, args=(plan, new_ts))
-			t.start()
-			threads.append(t)
-		
-		for t in threads:
-			t.join()
+		new_n = min(
+			self.bids_ts.size, self.bids_ohlc.shape[0], 
+			self.asks_ts.size, self.asks_ohlc.shape[0]
+		)
 
-		ask_keys = ['ask_open', 'ask_high', 'ask_low', 'ask_close']
-		bid_keys = ['bid_open', 'bid_high', 'bid_low', 'bid_close']
-		data = pd.DataFrame(
-			data=np.concatenate(
-				(self.bids_ts.reshape(self.bids_ts.size, 1), self.asks_ohlc, self.bids_ohlc),
-				axis=1
-			),
-			columns=['timestamp'] + ask_keys + bid_keys
-		).set_index('timestamp')
-		start = self.root.utils.convertTimestampToDatetime(data.index[0])
-		end = self.root.utils.convertTimestampToDatetime(data.index[-1])
-		self.save(data, start, end)
+		self.bids_ts = self.bids_ts[:new_n]
+		self.bids_ohlc = self.bids_ohlc[:new_n]
+		self.asks_ts = self.asks_ts[:new_n]
+		self.asks_ohlc = self.asks_ohlc[:new_n]
+
+		if new_n > last_n:
+			threads = []
+			for plan in self.subscribed_plans:
+				t = Thread(target=self.onNewBar, args=(plan, new_ts))
+				t.start()
+				threads.append(t)
+			
+			for t in threads:
+				t.join()
+
+			ask_keys = ['ask_open', 'ask_high', 'ask_low', 'ask_close']
+			bid_keys = ['bid_open', 'bid_high', 'bid_low', 'bid_close']
+			data = pd.DataFrame(
+				data=np.concatenate(
+					(self.bids_ts.reshape(self.bids_ts.size, 1), self.asks_ohlc, self.bids_ohlc),
+					axis=1
+				),
+				columns=['timestamp'] + ask_keys + bid_keys
+			).set_index('timestamp')
+			start = self.root.utils.convertTimestampToDatetime(data.index[0])
+			end = self.root.utils.convertTimestampToDatetime(data.index[-1])
+			self.save(data, start, end)
 
 	def onNewBar(self, plan, new_ts):
 		if plan.plan_state == PlanState.STARTED:

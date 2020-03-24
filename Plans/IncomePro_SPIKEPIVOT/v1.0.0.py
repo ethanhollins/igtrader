@@ -113,8 +113,8 @@ def onNewBar(chart):
 		# 	# utils.log("\nTime", time.strftime('%d/%m/%y %H:%M:%S'))
 		# 	utils.log("London Time", london_time.strftime('%d/%m/%y %H:%M:%S'))
 		# 	utils.log("M1 OHLC", m_chart.getCurrentBidOHLC(utils))
-		# elif utils.plan_state.value in (1,):
-		# 	utils.log("\n[{0}] onNewBar ({1})".format(utils.account.accountid, utils.name), utils.getTime().strftime('%d/%m/%y %H:%M:%S'))
+		if utils.plan_state.value in (1,):
+			print('.', end='', flush=True)
 		
 		# checkTime()
 		if not utils.plan_state.value in (3,):
@@ -130,6 +130,8 @@ def onNewBar(chart):
 			utils.log("\nTime", time.strftime('%d/%m/%y %H:%M:%S'))
 			utils.log("London Time", london_time.strftime('%d/%m/%y %H:%M:%S') + '\n')
 			utils.log('H4 OHLC', h4_chart.getCurrentBidOHLC(utils))
+		elif utils.plan_state.value in (1,):
+			utils.log("\n[{0}] onNewBar ({1})".format(utils.account.accountid, utils.name), utils.getTime().strftime('%d/%m/%y %H:%M:%S'))
 
 		runSequence()
 		if utils.plan_state.value in (4,):
