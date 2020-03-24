@@ -305,11 +305,9 @@ class Chart(object):
 						self.addNewBar(new_ts)
 
 				elif self.period == Constants.FOUR_HOURS:
-					print("CONS END H4")
 					now = Constants.IG_START_DATE + datetime.timedelta(milliseconds=int(item['values']['UTM']))
 					lon = self.root.utils.convertTimezone(now, 'Europe/London')
-					if lon.hour in Constants.FOUR_HOURS_BARS:
-						print("NEW H4 CONF")
+					if (lon.hour+1) in Constants.FOUR_HOURS_BARS:
 						self.reset = True
 						new_ts = self.root.utils.convertDatetimeToTimestamp(now)
 						
@@ -334,9 +332,6 @@ class Chart(object):
 		print('--------')
 
 	def addNewBar(self, new_ts):
-		if self.period == Constants.FOUR_HOURS:
-			print("NEW H4 BAR. {} | {}".format(new_ts, self.c_bid))
-
 		last_n = self.bids_ts.size
 
 		self.bids_ts = np.append(self.bids_ts, new_ts)
