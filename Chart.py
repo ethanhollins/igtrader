@@ -89,7 +89,7 @@ class Chart(object):
 					start = Constants.TS_START_DATE
 				if not end:
 					end = datetime.datetime.now()
-			data = self.manager.getPrices(self.product, self.period, start_dt=start, end_dt=end, count=count)
+			data = self.manager.getPrices(self.product, self.period, start_dt=start, end_dt=end, count=count, result={})
 
 		elif self.root.broker == 'ig':
 			if not count:
@@ -99,7 +99,7 @@ class Chart(object):
 					end = datetime.datetime.now()
 			product = self.getIGProduct()
 			period = self.getIGPricePeriod()
-			data = self.manager.getPrices(product, period, start_dt=start, end_dt=end, count=count)
+			data = self.manager.getPrices(product, period, start_dt=start, end_dt=end, count=count, result={})
 		else:
 			raise Exception('Broker `{}` not found.'.format(self.root.broker))
 

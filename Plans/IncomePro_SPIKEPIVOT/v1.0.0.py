@@ -280,6 +280,8 @@ def getSwing(trigger):
 
 def getSpikePivot(trigger):
 	ohlc = np.around(h4_chart.getBidOHLC(utils, 0, 3), 5)
+	if ohlc.shape[0] < 3:
+		return
 
 	if trigger.direction == Direction.LONG:
 		spike = ohlc[1][1] - utils.convertToPrice(1.0)
