@@ -309,7 +309,7 @@ class Chart(object):
 					lon = self.root.utils.convertTimezone(now, 'Europe/London')
 					if (lon.hour+1) in Constants.FOUR_HOURS_BARS:
 						self.reset = True
-						new_ts = self.root.utils.convertDatetimeToTimestamp(now)
+						new_ts = self.root.utils.convertDatetimeToTimestamp(now - datetime.timedelta(hours=(4-1)))
 						
 						self.addNewBar(new_ts)
 				
