@@ -140,7 +140,7 @@ class Chart(object):
 			start = Constants.TS_START_DATE
 
 			if self.root.broker == 'ig':
-				data = self.download(count=2000)
+				data = self.download(count=100)
 			elif self.root.broker == 'oanda':
 				data = self.download(start=start, end=end)
 			else:
@@ -159,6 +159,16 @@ class Chart(object):
 		self.bids_ohlc = data[bid_keys].values.astype(np.float32)
 		self.asks_ts = data.index.values.astype(np.int32)
 		self.asks_ohlc = data[ask_keys].values.astype(np.float32)
+
+		n = min(
+			self.bids_ts.size, self.bids_ohlc.shape[0], 
+			self.asks_ts.size, self.asks_ohlc.shape[0]
+		)
+
+		self.bids_ts = self.bids_ts[-n:]
+		self.bids_ohlc = self.bids_ohlc[-n:]
+		self.asks_ts = self.asks_ts[-n:]
+		self.asks_ohlc = self.asks_ohlc[-n:]
 
 		print('Current Bid: %s' % self.c_bid)
 		print('Current Ask: %s' % self.c_ask)
@@ -225,8 +235,8 @@ class Chart(object):
 
 	def onItemUpdateIG(self, item):
 		self.last_update = datetime.datetime.now()
-
 		if 'values' in item:
+			print(self.period)
 			b_open = item['values']['BID_OPEN']
 			b_open = float(b_open) if b_open else 0
 			
@@ -296,9 +306,11 @@ class Chart(object):
 						self.addNewBar(new_ts)
 
 				elif self.period == Constants.FOUR_HOURS:
+					print("CONS END H4")
 					now = Constants.IG_START_DATE + datetime.timedelta(milliseconds=int(item['values']['UTM']))
 					lon = self.root.utils.convertTimezone(now, 'Europe/London')
 					if lon.hour in Constants.FOUR_HOURS_BARS:
+						print("NEW H4 CONF")
 						self.reset = True
 						new_ts = self.root.utils.convertDatetimeToTimestamp(now)
 						
@@ -323,6 +335,9 @@ class Chart(object):
 		print('--------')
 
 	def addNewBar(self, new_ts):
+		if self.period == Constants.FOUR_HOURS:
+			print("NEW H4 BAR. {} | {}".format(new_ts, self.c_bid))
+
 		last_n = self.bids_ts.size
 
 		self.bids_ts = np.append(self.bids_ts, new_ts)
@@ -371,6 +386,8 @@ class Chart(object):
 			start = self.root.utils.convertTimestampToDatetime(data.index[0])
 			end = self.root.utils.convertTimestampToDatetime(data.index[-1])
 			self.save(data, start, end)
+		else:
+			print("ERROR: Size difference. {} | {}".format(last_n, new_n))
 
 	def onNewBar(self, plan, new_ts):
 		if plan.plan_state == PlanState.STARTED:
