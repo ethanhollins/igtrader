@@ -76,14 +76,10 @@ def setup(utilities):
 	utils = utilities
 	if len(utils.charts) > 0:
 		for chart in utils.charts:
-			if utils.plan_state.value in (2,):
-				if chart.period == Constants.FIVE_MINUTES:
-					m_chart = chart
-			else:
-				if chart.period == Constants.ONE_MINUTE:
-					m_chart = chart
-
-			if chart.period == Constants.FOUR_HOURS:
+			if chart.period == Constants.ONE_MINUTE or chart.period == Constants.FIVE_MINUTES:
+				m_chart = chart
+				
+			elif chart.period == Constants.FOUR_HOURS:
 				h4_chart = chart
 	else:
 		if utils.plan_state.value in (2,):

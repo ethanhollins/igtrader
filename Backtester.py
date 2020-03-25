@@ -95,33 +95,33 @@ class Chart(object):
 		return np.where(self.bids_ts==ts)[0].shape[0] > 0
 
 	def getTsOffset(self, ts):
-		return (np.abs(self.bids_ts - ts)).argmin()-1
+		return (np.abs(self.bids_ts - ts)).argmin()
 
 	def getLatestTimestamp(self):
 		return self.bids_ts[-1]
 
 	def getAllBidOHLC(self, backtester):
-		c_idx = (np.abs(self.bids_ts - self.c_ts)).argmin()-1
+		c_idx = (np.abs(self.bids_ts - self.c_ts)).argmin()
 		return self.bids_ohlc[:c_idx+1]
 
 	def getAllAskOHLC(self, backtester):
-		c_idx = (np.abs(self.asks_ts - self.c_ts)).argmin()-1
+		c_idx = (np.abs(self.asks_ts - self.c_ts)).argmin()
 		return self.asks_ohlc[:c_idx+1]
 
 	def getBidOHLC(self, backtester, shift, amount):
-		c_idx = (np.abs(self.bids_ts - self.c_ts)).argmin()-1
+		c_idx = (np.abs(self.bids_ts - self.c_ts)).argmin()
 		return self.bids_ohlc[c_idx+1-shift-amount:c_idx+1-shift]
 
 	def getAskOHLC(self, backtester, shift, amount):
-		c_idx = (np.abs(self.asks_ts - self.c_ts)).argmin()-1
+		c_idx = (np.abs(self.asks_ts - self.c_ts)).argmin()
 		return self.asks_ohlc[c_idx+1-shift-amount:c_idx+1-shift]
 
 	def getCurrentBidOHLC(self, backtester):
-		c_idx = (np.abs(self.bids_ts - self.c_ts)).argmin()-1
+		c_idx = (np.abs(self.bids_ts - self.c_ts)).argmin()
 		return self.bids_ohlc[c_idx]
 
 	def getCurrentAskOHLC(self, backtester):
-		c_idx = (np.abs(self.asks_ts - self.c_ts)).argmin()-1
+		c_idx = (np.abs(self.asks_ts - self.c_ts)).argmin()
 		return self.asks_ohlc[c_idx]
 
 	def isChart(self, product, period):
@@ -435,7 +435,7 @@ class Backtester(object):
 				if y == start.year:
 					ts_start = self.convertDatetimeToTimestamp(start)
 					t_data = t_data.loc[t_data['timestamp'] >= ts_start]
-				elif y == end.year:
+				if y == end.year:
 					ts_end = self.convertDatetimeToTimestamp(end)
 					t_data = t_data.loc[t_data['timestamp'] <= ts_end]
 				frags.append(t_data)
@@ -479,26 +479,31 @@ class Backtester(object):
 
 			self.module.setup(self)
 
+		for chart in self.charts:
+			offset = self.getPeriodNumber(chart.period)*60
+			chart.bids_ts += offset
+			chart.asks_ts += offset
+
 		all_ts = np.sort(np.unique(np.concatenate([
 			chart.bids_ts
 			for chart in self.charts
 		])))
 
 		if start:
-			start_idx = max(Chart.getClosestIndex(all_ts, start) + start_off, self.getMinPeriod())
+			start_idx = max((np.abs(all_ts - start)).argmin() + start_off, self.getMinPeriod())
 		else:
 			start_idx = self.getMinPeriod()
 
 		if end:
-			end_idx = Chart.getClosestIndex(all_ts, end)+end_off+1
+			end_idx = (np.abs(all_ts - end)).argmin()
 		else:
 			end_idx = all_ts.size
 
 		all_ts = all_ts[start_idx:end_idx]
 
 		for chart in self.charts:
-			start_idx = max(Chart.getClosestIndex(chart.bids_ts, all_ts[0])-1000, 0)
-			end_idx = Chart.getClosestIndex(chart.bids_ts, all_ts[-1])+1
+			start_idx = max((np.abs(chart.bids_ts - all_ts[0])).argmin()-1000, 0)
+			end_idx = (np.abs(chart.bids_ts - all_ts[-1])).argmin()+2
 
 			chart.bids_ts = chart.bids_ts[start_idx:end_idx]
 			chart.bids_ohlc = chart.bids_ohlc[start_idx:end_idx]
@@ -1018,6 +1023,8 @@ class Backtester(object):
 
 		return False
 
+
+
 	'''
 	Utilities
 	'''
@@ -1256,9 +1263,9 @@ class Backtester(object):
 		elif period == Constants.THREE_MINUTES:
 			return 3
 		elif period == Constants.FIVE_MINUTES:
-			return 3
-		elif period == Constants.FIFTEEN_MINUTES:
 			return 5
+		elif period == Constants.FIFTEEN_MINUTES:
+			return 15
 		elif period == Constants.THIRTY_MINUTES:
 			return 30
 		elif period == Constants.ONE_HOUR:

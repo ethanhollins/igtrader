@@ -73,7 +73,7 @@ class Chart(object):
 				if y == start.year:
 					ts_start = self.root.utils.convertDatetimeToTimestamp(start)
 					t_data = t_data.loc[t_data['timestamp'] >= ts_start]
-				elif y == end.year:
+				if y == end.year:
 					ts_end = self.root.utils.convertDatetimeToTimestamp(end)
 					t_data = t_data.loc[t_data['timestamp'] <= ts_end]
 				frags.append(t_data)
@@ -151,7 +151,7 @@ class Chart(object):
 
 		self.c_ask = data.iloc[-1][ask_keys].values.tolist()
 		self.c_bid = data.iloc[-1][bid_keys].values.tolist()
-
+		
 		data = data.drop(data.index[-1])
 		self.save(data, start, end)
 
@@ -169,7 +169,7 @@ class Chart(object):
 		self.bids_ohlc = self.bids_ohlc[-n:]
 		self.asks_ts = self.asks_ts[-n:]
 		self.asks_ohlc = self.asks_ohlc[-n:]
-
+		
 		print('Current Bid: %s' % self.c_bid)
 		print('Current Ask: %s' % self.c_ask)
 
