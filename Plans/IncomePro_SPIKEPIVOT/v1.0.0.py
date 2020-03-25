@@ -85,9 +85,6 @@ def setup(utilities):
 
 	bank = utils.getTradableBank()
 
-	for pos in utils.positions:
-		positions.append(pos)
-
 def setGlobalVars():
 	global long_trigger, short_trigger, is_onb
 	global pending_entry
@@ -105,18 +102,10 @@ def onNewBar(chart):
 	global is_onb
 	is_onb = True
 
-	# time = utils.convertTimestampToDatetime(utils.getLatestTimestamp())
-	# london_time = utils.convertTimezone(time, 'Europe/London')
-	''' Function called on every new bar '''
-	if chart.period == Constants.ONE_MINUTE:
-		# if utils.plan_state.value in (4,):
-		# 	# utils.log("\nTime", time.strftime('%d/%m/%y %H:%M:%S'))
-		# 	utils.log("London Time", london_time.strftime('%d/%m/%y %H:%M:%S'))
-		# 	utils.log("M1 OHLC", m_chart.getCurrentBidOHLC(utils))
+	if chart.period == Constants.ONE_MINUTE or chart.period == Constants.FIVE_MINUTES:
 		if utils.plan_state.value in (1,):
 			print('.', end='', flush=True)
-		
-		# checkTime()
+
 		if not utils.plan_state.value in (3,):
 			getTakeProfit()
 

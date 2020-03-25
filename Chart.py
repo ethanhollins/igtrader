@@ -229,8 +229,6 @@ class Chart(object):
 					or item['values']['MARKET_STATE'] == 'EDIT')
 			):
 				self.is_open = False
-				self.c_bid = []
-				self.c_ask = []
 				print('[{}] Closed.'.format(self.product))
 
 	def onItemUpdateIG(self, item):
