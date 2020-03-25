@@ -140,7 +140,7 @@ class Chart(object):
 			start = Constants.TS_START_DATE
 
 			if self.root.broker == 'ig':
-				data = self.download(count=100)
+				data = self.download(count=2000)
 			elif self.root.broker == 'oanda':
 				data = self.download(start=start, end=end)
 			else:

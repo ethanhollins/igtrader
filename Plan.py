@@ -52,7 +52,6 @@ class Plan(object):
 	'''
 
 	def initialize(self):
-		self.plan_state = PlanState.BACKTEST
 
 		self.getBankConfig()
 
@@ -60,6 +59,8 @@ class Plan(object):
 		self.setPlanVariables()
 		self.module.init(self)
 
+		self.plan_state = PlanState.BACKTEST
+		
 		chart = self.getLowestPeriodChart()
 		start_ts = chart.getTimestampAtOffset(max(chart.bids_ts.size-START_OFF, 0))
 
