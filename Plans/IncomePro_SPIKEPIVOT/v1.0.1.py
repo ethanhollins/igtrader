@@ -6,7 +6,8 @@ VARIABLES = {
 	'PRODUCT': Constants.GBPUSD,
 	'BANK': None,
 	'risk': 1.0,
-	'stoprange': 55.0
+	'stoprange': 55.0,
+	'tp_increment': 55.0
 }
 
 class Direction(Enum):
@@ -233,28 +234,22 @@ def getTakeProfit():
 	for pos in utils.positions:
 		if pos.direction == Constants.BUY:
 			profit = utils.convertToPips(high - pos.entryprice)
-			profit_multi = (profit/VARIABLES['stoprange'])
+			profit_multi = (profit/VARIABLES['tp_increment'])
 
 			if profit_multi >= 2.0:
-				sl_pips = (np.floor(profit_multi) - 1) * VARIABLES['stoprange']
+				sl_pips = (np.floor(profit_multi) - 1) * VARIABLES['tp_increment']
 				sl = round(pos.entryprice + utils.convertToPrice(sl_pips), 5)
 				if sl > pos.sl:
 					return pos.modifySL(sl)
-			elif profit_multi >= 1.5:
-				if pos.entryprice > pos.sl:
-					return pos.modifySL(pos.entryprice)
 		else:
 			profit = utils.convertToPips(pos.entryprice - low)
-			profit_multi = (profit/VARIABLES['stoprange'])
+			profit_multi = (profit/VARIABLES['tp_increment'])
 
 			if profit_multi >= 2.0:
-				sl_pips = (np.floor(profit_multi) - 1) * VARIABLES['stoprange']
+				sl_pips = (np.floor(profit_multi) - 1) * VARIABLES['tp_increment']
 				sl = round(pos.entryprice - utils.convertToPrice(sl_pips), 5)
 				if sl < pos.sl:
 					return pos.modifySL(sl)
-			elif profit_multi >= 1.5:
-				if pos.entryprice < pos.sl:
-					return pos.modifySL(pos.entryprice)
 
 def runSequence():
 	

@@ -1255,6 +1255,8 @@ class Backtester(object):
 			return 2
 		elif period == Constants.THREE_MINUTES:
 			return 3
+		elif period == Constants.FIVE_MINUTES:
+			return 3
 		elif period == Constants.FIFTEEN_MINUTES:
 			return 5
 		elif period == Constants.THIRTY_MINUTES:
