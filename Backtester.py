@@ -932,7 +932,7 @@ class Backtester(object):
 			time = mpl_dates.date2num(self.convertTimestampToDatetime(self.c_ts))
 			
 			for chart in all_charts[i]:
-				ohlc = chart.getCurrentBidOHLC(self)
+				ohlc = chart.getCurrentBidOHLC()
 			
 			for i in range(len(overlays)):
 				ind = overlays[i]
@@ -948,8 +948,8 @@ class Backtester(object):
 
 	def checkSl(self):
 		chart = self.getLowestPeriodChart()
-		_, _, bid_low, _ = chart.getCurrentBidOHLC(self)
-		_, ask_high, _, _ = chart.getCurrentAskOHLC(self)
+		_, _, bid_low, _ = chart.getCurrentBidOHLC()
+		_, ask_high, _, _ = chart.getCurrentAskOHLC()
 
 		for i in range(len(self.positions)-1, -1, -1):
 			pos = self.positions[i]
@@ -983,8 +983,8 @@ class Backtester(object):
 
 	def checkTp(self):
 		chart = self.getLowestPeriodChart()
-		_, bid_high, _, _ = chart.getCurrentBidOHLC(self)
-		_, _, ask_low, _ = chart.getCurrentAskOHLC(self)
+		_, bid_high, _, _ = chart.getCurrentBidOHLC()
+		_, _, ask_low, _ = chart.getCurrentAskOHLC()
 
 		for i in range(len(self.positions)-1, -1, -1):
 			pos = self.positions[i]
@@ -1287,11 +1287,11 @@ class Backtester(object):
 
 	def getBid(self, product):
 		chart = self.getLowestPeriodChart()
-		return chart.getCurrentBidOHLC(self)[3]
+		return chart.getCurrentBidOHLC()[3]
 
 	def getAsk(self, product):
 		chart = self.getLowestPeriodChart()
-		return chart.getCurrentAskOHLC(self)[3]
+		return chart.getCurrentAskOHLC()[3]
 
 	def getLotsize(self, bank, risk, stoprange):
 		return round(bank * (risk / 100) / stoprange, 2)
