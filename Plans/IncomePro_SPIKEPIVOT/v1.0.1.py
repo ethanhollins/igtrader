@@ -362,7 +362,7 @@ def confirmation(trigger, entry_type, reverse=False):
 def report():
 	''' Prints report for debugging '''
 	if utils.plan_state.value in (1,):
-		utils.log('', "[{}] Report:\n".format(utils.account.accountid))
+		utils.log('', "[{}] Report:".format(utils.account.accountid))
 
 	utils.log('', "\n")
 
