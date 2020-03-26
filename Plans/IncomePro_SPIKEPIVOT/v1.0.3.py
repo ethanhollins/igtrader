@@ -104,6 +104,7 @@ def setGlobalVars():
 
 	pending_entry = None
 	bank = utils.getTradableBank()
+	time_state = TimeState.TRADING
 
 def onNewBar(chart):
 	global is_onb
@@ -129,6 +130,7 @@ def onNewBar(chart):
 		elif utils.plan_state.value in (1,):
 			utils.log("\n[{0}] onNewBar ({1})".format(utils.account.accountid, utils.name), utils.getTime().strftime('%d/%m/%y %H:%M:%S'))
 
+		checkTime()
 		runSequence()
 		if utils.plan_state.value in (4,1):
 			report()
@@ -225,6 +227,11 @@ def checkTime():
 	time = utils.convertTimestampToDatetime(utils.getLatestTimestamp())
 	london_time = utils.convertTimezone(time, 'Europe/London')
 
+	if time_state == TimeState.TRADING and london_time.weekday() == 4 and london_time.hour >= 16:
+		time_state = TimeState.STOPPED
+	elif time_state == TimeState.STOPPED:
+		time_state = TimeState.TRADING
+
 def getTakeProfit():
 	_, high, low, _ = np.around(m_chart.getCurrentBidOHLC(), 5)
 
@@ -250,8 +257,9 @@ def getTakeProfit():
 
 def runSequence():
 	
-	entrySetup(long_trigger)
-	entrySetup(short_trigger)
+	if time_state == TimeState.TRADING:
+		entrySetup(long_trigger)
+		entrySetup(short_trigger)
 
 	getSpikePivot(long_trigger)
 	getSpikePivot(short_trigger)
@@ -297,6 +305,7 @@ def entrySetup(trigger):
 
 			elif entryConfirmation(trigger):
 				trigger.entry_state = EntryState.COMPLETE
+				cancelOppTrigger(trigger.direction)
 				return confirmation(trigger, EntryType.REGULAR)
 
 def entryConfirmation(trigger):
@@ -314,6 +323,12 @@ def cancelConfirmation(trigger):
 		))
 
 	return isSwingCancelConf(trigger)
+
+def cancelOppTrigger(direction):
+	if direction == Direction.LONG:
+		short_trigger.pivot_line = 0
+	else:
+		long_trigger.pivot_line = 0
 
 def isPivotLineConf(trigger):
 	close = np.around(h4_chart.getCurrentBidOHLC()[3], 5)

@@ -104,6 +104,7 @@ def setGlobalVars():
 
 	pending_entry = None
 	bank = utils.getTradableBank()
+	time_state = TimeState.TRADING
 
 def onNewBar(chart):
 	global is_onb
@@ -127,8 +128,12 @@ def onNewBar(chart):
 			utils.log("London Time", london_time.strftime('%d/%m/%y %H:%M:%S') + '\n')
 			utils.log('H4 OHLC', h4_chart.getCurrentBidOHLC())
 		elif utils.plan_state.value in (1,):
-			utils.log("\n[{0}] onNewBar ({1})".format(utils.account.accountid, utils.name), utils.getTime().strftime('%d/%m/%y %H:%M:%S'))
+			utils.log("\n[{}] onNewBar ({})".format(
+				utils.account.accountid, utils.name), 
+				'{} {}'.format(utils.getTime().strftime('%d/%m/%y %H:%M:%S'), h4_chart.getCurrentBidOHLC())
+			)
 
+		checkTime()
 		runSequence()
 		if utils.plan_state.value in (4,1):
 			report()
@@ -225,6 +230,11 @@ def checkTime():
 	time = utils.convertTimestampToDatetime(utils.getLatestTimestamp())
 	london_time = utils.convertTimezone(time, 'Europe/London')
 
+	if time_state == TimeState.TRADING and london_time.weekday() == 4 and london_time.hour >= 16:
+		time_state = TimeState.STOPPED
+	elif time_state == TimeState.STOPPED:
+		time_state = TimeState.TRADING
+
 def getTakeProfit():
 	_, high, low, _ = np.around(m_chart.getCurrentBidOHLC(), 5)
 
@@ -250,8 +260,9 @@ def getTakeProfit():
 
 def runSequence():
 	
-	entrySetup(long_trigger)
-	entrySetup(short_trigger)
+	if time_state == TimeState.TRADING:
+		entrySetup(long_trigger)
+		entrySetup(short_trigger)
 
 	getSpikePivot(long_trigger)
 	getSpikePivot(short_trigger)
@@ -367,7 +378,8 @@ def report():
 
 	utils.log('', "\n")
 
-	utils.log('', h4_chart.c_ts)
+	utils.log('', 'TS: {} OHLC: {}'.format(h4_chart.c_ts, h4_chart.getCurrentBidOHLC()))
+	utils.log('', 'TimeState: {}'.format(time_state))
 	utils.log('', "LONG T: {0}".format(long_trigger))
 	utils.log('', "SHORT T: {0}".format(short_trigger))
 

@@ -104,6 +104,7 @@ def setGlobalVars():
 
 	pending_entry = None
 	bank = utils.getTradableBank()
+	time_state = TimeState.TRADING
 
 def onNewBar(chart):
 	global is_onb
@@ -129,6 +130,7 @@ def onNewBar(chart):
 		elif utils.plan_state.value in (1,):
 			utils.log("\n[{0}] onNewBar ({1})".format(utils.account.accountid, utils.name), utils.getTime().strftime('%d/%m/%y %H:%M:%S'))
 
+		checkTime()
 		runSequence()
 		if utils.plan_state.value in (4,1):
 			report()
@@ -225,6 +227,11 @@ def checkTime():
 	time = utils.convertTimestampToDatetime(utils.getLatestTimestamp())
 	london_time = utils.convertTimezone(time, 'Europe/London')
 
+	if time_state == TimeState.TRADING and london_time.weekday() == 4 and london_time.hour >= 16:
+		time_state = TimeState.STOPPED
+	elif time_state == TimeState.STOPPED:
+		time_state = TimeState.TRADING
+
 def getTakeProfit():
 	_, high, low, _ = np.around(m_chart.getCurrentBidOHLC(), 5)
 
@@ -250,8 +257,9 @@ def getTakeProfit():
 
 def runSequence():
 	
-	entrySetup(long_trigger)
-	entrySetup(short_trigger)
+	if time_state == TimeState.TRADING:
+		entrySetup(long_trigger)
+		entrySetup(short_trigger)
 
 	getSpikePivot(long_trigger)
 	getSpikePivot(short_trigger)
@@ -273,20 +281,23 @@ def getSpikePivot(trigger):
 	if ohlc.shape[0] < 3:
 		return
 
+	long_spike = ohlc[1][1] - utils.convertToPrice(1.0)
+	short_spike = ohlc[1][2] + utils.convertToPrice(1.0)
+
 	if trigger.direction == Direction.LONG:
-		spike = ohlc[1][1] - utils.convertToPrice(1.0)
-		if ohlc[0][1] <= spike and ohlc[2][1] <= spike:
-			trigger.pivot_line = ohlc[1][1]
-			trigger.c_swing = trigger.next_swing
-			trigger.next_swing = min(ohlc[1][2], ohlc[2][2])
-			trigger.entry_state = EntryState.ONE
+		if ohlc[0][1] <= long_spike and ohlc[2][1] <= long_spike:
+			if not (ohlc[0][2] >= short_spike and ohlc[2][2] >= short_spike):
+				trigger.pivot_line = ohlc[1][1]
+				trigger.c_swing = trigger.next_swing
+				trigger.next_swing = min(ohlc[1][2], ohlc[2][2])
+				trigger.entry_state = EntryState.ONE
 	else:
-		spike = ohlc[1][2] + utils.convertToPrice(1.0)
-		if ohlc[0][2] >= spike and ohlc[2][2] >= spike:
-			trigger.pivot_line = ohlc[1][2]
-			trigger.c_swing = trigger.next_swing
-			trigger.next_swing = max(ohlc[1][1], ohlc[2][1])
-			trigger.entry_state = EntryState.ONE
+		if ohlc[0][2] >= short_spike and ohlc[2][2] >= short_spike:
+			if not (ohlc[0][1] <= long_spike and ohlc[2][1] <= long_spike):
+				trigger.pivot_line = ohlc[1][2]
+				trigger.c_swing = trigger.next_swing
+				trigger.next_swing = max(ohlc[1][1], ohlc[2][1])
+				trigger.entry_state = EntryState.ONE
 
 def entrySetup(trigger):
 	if trigger.pivot_line:
