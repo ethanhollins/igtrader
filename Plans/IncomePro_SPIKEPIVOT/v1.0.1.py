@@ -83,7 +83,7 @@ def setup(utilities):
 				h4_chart = chart
 	else:
 		if utils.plan_state.value in (2,):
-			m_chart = utils.getChart(VARIABLES['PRODUCT'], Constants.ONE_MINUTE)
+			m_chart = utils.getChart(VARIABLES['PRODUCT'], Constants.FIVE_MINUTES)
 		else:
 			m_chart = utils.getChart(VARIABLES['PRODUCT'], Constants.ONE_MINUTE)
 
@@ -129,7 +129,7 @@ def onNewBar(chart):
 			utils.log("\n[{0}] onNewBar ({1})".format(utils.account.accountid, utils.name), utils.getTime().strftime('%d/%m/%y %H:%M:%S'))
 
 		runSequence()
-		if utils.plan_state.value in (4,):
+		if utils.plan_state.value in (4,1):
 			report()
 
 	is_onb = False
@@ -363,9 +363,10 @@ def report():
 	''' Prints report for debugging '''
 	if utils.plan_state.value in (1,):
 		utils.log('', "\n[{}] Report:".format(utils.account.accountid))
-		
+
 	utils.log('', "\n")
 
+	utils.log('', h4_chart.c_ts)
 	utils.log('', "LONG T: {0}".format(long_trigger))
 	utils.log('', "SHORT T: {0}".format(short_trigger))
 
