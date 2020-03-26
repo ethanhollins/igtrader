@@ -114,7 +114,6 @@ def onNewBar(chart):
 
 		if not utils.plan_state.value in (3,):
 			getTakeProfit()
-			report()
 
 	elif chart.period == Constants.FOUR_HOURS:
 		
@@ -362,6 +361,9 @@ def confirmation(trigger, entry_type, reverse=False):
 
 def report():
 	''' Prints report for debugging '''
+	if utils.plan_state.value in (1,):
+		utils.log('', "[{}] Report:\n".format(utils.account.accountid))
+
 	utils.log('', "\n")
 
 	utils.log('', "LONG T: {0}".format(long_trigger))
@@ -399,6 +401,5 @@ def report():
 			sl_pips
 		))
 
-	utils.log('', h4_chart.c_ts)
 	utils.log('', utils.getTime().strftime('%d/%m/%y %H:%M:%S'))
 	utils.log('', "--|\n")

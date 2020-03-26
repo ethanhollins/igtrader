@@ -78,6 +78,11 @@ class Plan(object):
 		self.getSavedPositions()
 		self.savePositions()
 		self.plan_state = PlanState.STARTED
+		
+		try:
+			self.module.report()
+		except:
+			pass
 
 	def execPlan(self):
 		path = 'Plans/{0}.py'.format(self.name)
