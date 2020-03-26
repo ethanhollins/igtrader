@@ -100,27 +100,27 @@ class Chart(object):
 	def getLatestTimestamp(self):
 		return self.bids_ts[-1]
 
-	def getAllBidOHLC(self, backtester):
+	def getAllBidOHLC(self):
 		c_idx = (np.abs(self.bids_ts - self.c_ts)).argmin()
 		return self.bids_ohlc[:c_idx+1]
 
-	def getAllAskOHLC(self, backtester):
+	def getAllAskOHLC(self):
 		c_idx = (np.abs(self.asks_ts - self.c_ts)).argmin()
 		return self.asks_ohlc[:c_idx+1]
 
-	def getBidOHLC(self, backtester, shift, amount):
+	def getBidOHLC(self, shift, amount):
 		c_idx = (np.abs(self.bids_ts - self.c_ts)).argmin()
 		return self.bids_ohlc[c_idx+1-shift-amount:c_idx+1-shift]
 
-	def getAskOHLC(self, backtester, shift, amount):
+	def getAskOHLC(self, shift, amount):
 		c_idx = (np.abs(self.asks_ts - self.c_ts)).argmin()
 		return self.asks_ohlc[c_idx+1-shift-amount:c_idx+1-shift]
 
-	def getCurrentBidOHLC(self, backtester):
+	def getCurrentBidOHLC(self):
 		c_idx = (np.abs(self.bids_ts - self.c_ts)).argmin()
 		return self.bids_ohlc[c_idx]
 
-	def getCurrentAskOHLC(self, backtester):
+	def getCurrentAskOHLC(self):
 		c_idx = (np.abs(self.asks_ts - self.c_ts)).argmin()
 		return self.asks_ohlc[c_idx]
 

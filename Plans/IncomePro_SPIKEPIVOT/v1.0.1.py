@@ -83,7 +83,7 @@ def setup(utilities):
 				h4_chart = chart
 	else:
 		if utils.plan_state.value in (2,):
-			m_chart = utils.getChart(VARIABLES['PRODUCT'], Constants.FIVE_MINUTES)
+			m_chart = utils.getChart(VARIABLES['PRODUCT'], Constants.ONE_MINUTE)
 		else:
 			m_chart = utils.getChart(VARIABLES['PRODUCT'], Constants.ONE_MINUTE)
 
@@ -114,6 +114,7 @@ def onNewBar(chart):
 
 		if not utils.plan_state.value in (3,):
 			getTakeProfit()
+			report()
 
 	elif chart.period == Constants.FOUR_HOURS:
 		
@@ -124,7 +125,7 @@ def onNewBar(chart):
 
 			utils.log("\nTime", time.strftime('%d/%m/%y %H:%M:%S'))
 			utils.log("London Time", london_time.strftime('%d/%m/%y %H:%M:%S') + '\n')
-			utils.log('H4 OHLC', h4_chart.getCurrentBidOHLC(utils))
+			utils.log('H4 OHLC', h4_chart.getCurrentBidOHLC())
 		elif utils.plan_state.value in (1,):
 			utils.log("\n[{0}] onNewBar ({1})".format(utils.account.accountid, utils.name), utils.getTime().strftime('%d/%m/%y %H:%M:%S'))
 
@@ -225,7 +226,7 @@ def checkTime():
 	london_time = utils.convertTimezone(time, 'Europe/London')
 
 def getTakeProfit():
-	_, high, low, _ = np.around(m_chart.getCurrentBidOHLC(utils), 5)
+	_, high, low, _ = np.around(m_chart.getCurrentBidOHLC(), 5)
 
 	for pos in utils.positions:
 		if pos.direction == Constants.BUY:
@@ -260,7 +261,7 @@ def runSequence():
 
 
 def getSwing(trigger):
-	_, high, low, _ = np.around(h4_chart.getCurrentBidOHLC(utils), 5)
+	_, high, low, _ = np.around(h4_chart.getCurrentBidOHLC(), 5)
 
 	if trigger.direction == Direction.LONG:
 		trigger.next_swing = low if low < trigger.next_swing or trigger.next_swing == 0 else trigger.next_swing
@@ -268,7 +269,7 @@ def getSwing(trigger):
 		trigger.next_swing = high if high > trigger.next_swing or trigger.next_swing == 0 else trigger.next_swing
 
 def getSpikePivot(trigger):
-	ohlc = np.around(h4_chart.getBidOHLC(utils, 0, 3), 5)
+	ohlc = np.around(h4_chart.getBidOHLC(0, 3), 5)
 	if ohlc.shape[0] < 3:
 		return
 
@@ -315,7 +316,7 @@ def cancelConfirmation(trigger):
 	return isSwingCancelConf(trigger)
 
 def isPivotLineConf(trigger):
-	close = np.around(h4_chart.getCurrentBidOHLC(utils)[3], 5)
+	close = np.around(h4_chart.getCurrentBidOHLC()[3], 5)
 
 	if trigger.direction == Direction.LONG:
 		return close > trigger.pivot_line
@@ -323,7 +324,7 @@ def isPivotLineConf(trigger):
 		return close < trigger.pivot_line
 
 def isSwingCancelConf(trigger):
-	close = np.around(h4_chart.getCurrentBidOHLC(utils)[3], 5)
+	close = np.around(h4_chart.getCurrentBidOHLC()[3], 5)
 
 	if trigger.direction == Direction.LONG:
 		return close < trigger.c_swing
@@ -398,5 +399,6 @@ def report():
 			sl_pips
 		))
 
+	utils.log('', h4_chart.c_ts)
 	utils.log('', utils.getTime().strftime('%d/%m/%y %H:%M:%S'))
 	utils.log('', "--|\n")

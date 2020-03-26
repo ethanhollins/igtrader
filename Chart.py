@@ -19,6 +19,7 @@ class Chart(object):
 		self.reset = False
 		self.c_bid = []
 		self.c_ask = []
+		self.c_ts = 0
 		
 		self.last_update = None
 		self.is_open = False
@@ -169,6 +170,7 @@ class Chart(object):
 		self.bids_ohlc = self.bids_ohlc[-n:]
 		self.asks_ts = self.asks_ts[-n:]
 		self.asks_ohlc = self.asks_ohlc[-n:]
+		self.c_ts = self.bids_ts[-1]
 		
 		print('Current Bid: %s' % self.c_bid)
 		print('Current Ask: %s' % self.c_ask)
@@ -357,6 +359,8 @@ class Chart(object):
 		self.asks_ohlc = self.asks_ohlc[:new_n]
 
 		if new_n > last_n:
+			self.c_ts = new_ts
+
 			threads = []
 			for plan in self.subscribed_plans:
 				t = Thread(target=self.onNewBar, args=(plan, new_ts))
@@ -442,26 +446,26 @@ class Chart(object):
 	def getTsOffset(self, ts):
 		return (np.abs(self.bids_ts - ts)).argmin()
 
-	def getAllBidOHLC(self, plan):
-		c_idx = (np.abs(self.bids_ts - plan.c_ts)).argmin()
+	def getAllBidOHLC(self):
+		c_idx = (np.abs(self.bids_ts - self.c_ts)).argmin()
 		return self.bids_ohlc[:c_idx+1]
 
-	def getAllAskOHLC(self, plan):
-		c_idx = (np.abs(self.asks_ts - plan.c_ts)).argmin()
+	def getAllAskOHLC(self):
+		c_idx = (np.abs(self.asks_ts - self.c_ts)).argmin()
 		return self.asks_ohlc[:c_idx+1]
 
-	def getBidOHLC(self, plan, shift, amount):
-		c_idx = (np.abs(self.bids_ts - plan.c_ts)).argmin()
+	def getBidOHLC(self, shift, amount):
+		c_idx = (np.abs(self.bids_ts - self.c_ts)).argmin()
 		return self.bids_ohlc[c_idx+1-shift-amount:c_idx+1-shift]
 
-	def getAskOHLC(self, plan, shift, amount):
-		c_idx = (np.abs(self.asks_ts - plan.c_ts)).argmin()
+	def getAskOHLC(self, shift, amount):
+		c_idx = (np.abs(self.asks_ts - self.c_ts)).argmin()
 		return self.asks_ohlc[c_idx+1-shift-amount:c_idx+1-shift]
 
-	def getCurrentBidOHLC(self, plan):
-		c_idx = (np.abs(self.bids_ts - plan.c_ts)).argmin()
+	def getCurrentBidOHLC(self):
+		c_idx = (np.abs(self.bids_ts - self.c_ts)).argmin()
 		return self.bids_ohlc[c_idx]
 
-	def getCurrentAskOHLC(self, plan):
-		c_idx = (np.abs(self.asks_ts - plan.c_ts)).argmin()
+	def getCurrentAskOHLC(self):
+		c_idx = (np.abs(self.asks_ts - self.c_ts)).argmin()
 		return self.asks_ohlc[c_idx]
