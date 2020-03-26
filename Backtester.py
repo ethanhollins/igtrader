@@ -1233,8 +1233,8 @@ class Backtester(object):
 	def getChartFromChart(self, chart):
 		return Chart(
 			chart.product, chart.period,
-			chart.bids_ts, chart.bids_ohlc,
-			chart.asks_ts, chart.asks_ohlc
+			np.copy(chart.bids_ts), np.copy(chart.bids_ohlc),
+			np.copy(chart.asks_ts), np.copy(chart.asks_ohlc)
 		)
 
 	def createChart(self, product, period):

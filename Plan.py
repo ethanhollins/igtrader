@@ -67,11 +67,11 @@ class Plan(object):
 		bt = Backtester(self.account.root, self.name, self.variables)
 		self.module, _ = bt.backtestRun(start=start_ts, plan=self)
 		
-		self.c_ts = bt.c_ts
+		self.c_ts = bt.c_ts - self.getPeriodNumber(chart.period)*60
 		while self.c_ts < self.getLatestChartTimestamp():
 			bt = Backtester(self.account.root, self.name, self.variables)
 			self.module, _ = bt.backtestRun(start=self.c_ts, start_off=1, plan=self)
-			self.c_ts = bt.c_ts
+			self.c_ts = bt.c_ts - self.getPeriodNumber(chart.period)*60
 		self.module.setup(self)
 
 		self.updatePositions()
@@ -498,15 +498,48 @@ class Plan(object):
 		print('Error: Must be subscribed to chart to get ask.')
 		return None
 
-
 	def getLowestPeriodChart(self):
 		low_chart = None
 		for chart in self.charts:
+			low_period = None
 			if low_chart:
-				low_chart = chart if chart.period < low_chart.period else low_chart
+				low_period = self.getPeriodNumber(low_chart.period)
+			period = self.getPeriodNumber(chart.period)
+			if low_period:
+				low_chart = chart if period < low_period else low_chart
 			else:
 				low_chart = chart
 		return low_chart
+
+	def getPeriodNumber(self, period):
+		if period == Constants.ONE_MINUTE:
+			return 1
+		elif period == Constants.TWO_MINUTES:
+			return 2
+		elif period == Constants.THREE_MINUTES:
+			return 3
+		elif period == Constants.FIVE_MINUTES:
+			return 5
+		elif period == Constants.FIFTEEN_MINUTES:
+			return 15
+		elif period == Constants.THIRTY_MINUTES:
+			return 30
+		elif period == Constants.ONE_HOUR:
+			return 60
+		elif period == Constants.TWO_HOURS:
+			return 60*2
+		elif period == Constants.THREE_HOURS:
+			return 60*3
+		elif period == Constants.FOUR_HOURS:
+			return 60*4
+		elif period == Constants.DAILY:
+			return 60*24
+		elif period == Constants.WEEKLY:
+			return 60*24*7
+		elif period == Constants.MONTHLY:
+			return 60*24*7*4
+		else:
+			None
 
 	def getTotalProfit(self):
 		total = 0.0

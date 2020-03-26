@@ -7,6 +7,7 @@ class Position(object):
 		self.utils = self.account.root.manager.utils
 		self.orderid = orderid
 		self.product = product
+		self.chart_product = self.convertIGProduct(self.product)
 		self.direction = direction
 
 		self.ref = None
@@ -114,14 +115,14 @@ class Position(object):
 	def breakeven(self):
 		min_price = 0.00040
 		if self.direction == Constants.BUY:
-			if self.plan.getBid(self.product) > self.entryprice + min_price:
+			if self.plan.getBid(self.chart_product) > self.entryprice + min_price:
 				if self.is_dummy:
 					self.sl = self.entryprice
 					return True
 				else:
 					result = self.account.root.manager.modifyPosition(self.account.accountid, self.orderid, self.entryprice, self.tp)
 					return result != None
-			elif self.plan.getBid(self.product) < self.entryprice - min_price:
+			elif self.plan.getBid(self.chart_product) < self.entryprice - min_price:
 				if self.is_dummy:
 					self.tp = self.entryprice
 					return True
@@ -133,14 +134,14 @@ class Position(object):
 				return False
 
 		else:
-			if self.plan.getAsk(self.product) < self.entryprice - min_price:
+			if self.plan.getAsk(self.chart_product) < self.entryprice - min_price:
 				if self.is_dummy:
 					self.sl = self.entryprice
 					return True
 				else:
 					result = self.account.root.manager.modifyPosition(self.account.accountid, self.orderid, self.entryprice, self.tp)
 					return result != None
-			elif self.plan.getAsk(self.product) > self.entryprice + min_price:
+			elif self.plan.getAsk(self.chart_product) > self.entryprice + min_price:
 				if self.is_dummy:
 					self.tp = self.entryprice
 					return True
@@ -243,9 +244,9 @@ class Position(object):
 
 		if not self.closeprice:
 			if self.direction == Constants.BUY:
-				profit = self.plan.getBid(self.product) - self.entryprice
+				profit = self.plan.getBid(self.chart_product) - self.entryprice
 			else:
-				profit = self.entryprice - self.plan.getAsk(self.product)
+				profit = self.entryprice - self.plan.getAsk(self.chart_product)
 		else:
 			if self.direction == Constants.BUY:
 				profit = self.closeprice - self.entryprice
@@ -257,12 +258,12 @@ class Position(object):
 	def getPercentageProfit(self):
 		if self.is_dummy:
 			return 0
-
+			
 		if not self.closeprice:
 			if self.direction == Constants.BUY:
-				profit = self.plan.getBid(self.product) - self.entryprice
+				profit = self.plan.getBid(self.chart_product) - self.entryprice
 			else:
-				profit = self.entryprice - self.plan.getAsk(self.product)
+				profit = self.entryprice - self.plan.getAsk(self.chart_product)
 		else:
 			if self.direction == Constants.BUY:
 				profit = self.closeprice - self.entryprice
@@ -281,3 +282,7 @@ class Position(object):
 			profit = 0
 
 		return round(profit, 2)
+
+	def convertIGProduct(self, product):
+		if product == Constants.IG_GBPUSD_MINI:
+			return Constants.GBPUSD
