@@ -423,7 +423,7 @@ class Chart(object):
 
 	def getIGProduct(self):
 		if self.product == Constants.GBPUSD:
-			return Constants.IG_GBPUSD_MINI
+			return Constants.IG_GBPUSD
 
 	def nearestMinute(self, dt):
 		return (
