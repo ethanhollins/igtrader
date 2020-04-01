@@ -316,6 +316,7 @@ class Chart(object):
 						self.addNewBar(new_ts)
 
 				elif self.period == Constants.FOUR_HOURS:
+					lon = self.nearestHour(lon)
 					if lon.hour in Constants.FOUR_HOURS_BARS:
 						self.reset = True
 						new_ts = self.root.utils.convertDatetimeToTimestamp(now - datetime.timedelta(hours=(4)))
