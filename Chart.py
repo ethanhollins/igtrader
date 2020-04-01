@@ -316,16 +316,10 @@ class Chart(object):
 						self.addNewBar(new_ts)
 
 				elif self.period == Constants.FOUR_HOURS:
-					now = Constants.IG_START_DATE + datetime.timedelta(milliseconds=int(item['values']['UTM']))
-					lon = self.root.utils.convertTimezone(now, 'Europe/London')
-					if (lon.hour+1) in Constants.FOUR_HOURS_BARS:
+					if lon.hour in Constants.FOUR_HOURS_BARS:
 						self.reset = True
-						new_ts = self.root.utils.convertDatetimeToTimestamp(now - datetime.timedelta(hours=(4-1)))
-						
+						new_ts = self.root.utils.convertDatetimeToTimestamp(now - datetime.timedelta(hours=(4)))
 						self.addNewBar(new_ts)
-					else:
-						now = self.root.utils.convertTimezone(datetime.datetime.now(), 'Europe/London')
-						print('End of HOUR: {} - {}'.format(lon.strftime('%H:%M:%S'), now.strftime('%H:%M:%S')))
 				
 				elif self.period == Constants.DAILY:
 					now = self.nearestHour(now)
