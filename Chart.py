@@ -23,6 +23,8 @@ class Chart(object):
 		
 		self.last_update = None
 		self.is_open = False
+		self.last_bid_open = None
+		self.last_ask_open = None
 
 		if product and period != None:
 			self.product = product
@@ -152,6 +154,8 @@ class Chart(object):
 
 		self.c_ask = data.iloc[-1][ask_keys].values.tolist()
 		self.c_bid = data.iloc[-1][bid_keys].values.tolist()
+		self.last_ask_open = self.c_ask[0]
+		self.last_bid_open = self.c_bid[0]
 		
 		data = data.drop(data.index[-1])
 		self.save(data, start, end)
@@ -171,7 +175,7 @@ class Chart(object):
 		self.asks_ts = self.asks_ts[-n:]
 		self.asks_ohlc = self.asks_ohlc[-n:]
 		self.c_ts = self.bids_ts[-1]
-		
+
 		print('Current Bid: %s' % self.c_bid)
 		print('Current Ask: %s' % self.c_ask)
 
@@ -283,7 +287,14 @@ class Chart(object):
 
 			cons_end = int(item['values']['CONS_END']) if item['values']['CONS_END'] else None
 
-			if cons_end == 1:
+			is_new_bar = (
+				cons_end == 1 or b_open != self.last_bid_open or a_open != last_ask_open
+			)
+
+			if is_new_bar:
+				self.last_bid_open = b_open
+				self.last_ask_open = a_open
+
 				now = datetime.datetime.now()
 				now = self.root.utils.setTimezone(now, 'Australia/Melbourne')
 				lon = self.root.utils.convertTimezone(now, 'Europe/London')
@@ -312,6 +323,9 @@ class Chart(object):
 						new_ts = self.root.utils.convertDatetimeToTimestamp(now - datetime.timedelta(hours=(4-1)))
 						
 						self.addNewBar(new_ts)
+					else:
+						now = self.root.utils.convertTimezone(datetime.datetime.now(), 'Europe/London')
+						print('End of HOUR: {} - {}'.format(lon.strftime('%H:%M:%S'), now.strftime('%H:%M:%S')))
 				
 				elif self.period == Constants.DAILY:
 					now = self.nearestHour(now)
@@ -332,6 +346,9 @@ class Chart(object):
 		print('--------')
 
 	def addNewBar(self, new_ts):
+		if np.count_nonzero(self.bids_ts == new_ts) > 0:
+			return
+
 		last_n = self.bids_ts.size
 
 		self.bids_ts = np.append(self.bids_ts, new_ts)
