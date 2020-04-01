@@ -288,7 +288,7 @@ class Chart(object):
 			cons_end = int(item['values']['CONS_END']) if item['values']['CONS_END'] else None
 
 			is_new_bar = (
-				cons_end == 1 or b_open != self.last_bid_open or a_open != last_ask_open
+				cons_end == 1 or b_open != self.last_bid_open or a_open != self.last_ask_open
 			)
 
 			if is_new_bar:
