@@ -494,6 +494,7 @@ class Plan(object):
 	def getAsk(self, product):
 		for chart in self.charts:
 			if chart.product == product:
+				print(chart.c_ask[3])
 				return chart.c_ask[3]
 		print('Error: Must be subscribed to chart to get ask.')
 		return None
