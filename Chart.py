@@ -152,6 +152,8 @@ class Chart(object):
 		ask_keys = ['ask_open', 'ask_high', 'ask_low', 'ask_close']
 		bid_keys = ['bid_open', 'bid_high', 'bid_low', 'bid_close']
 
+		print(self.isWeekend())
+
 		self.c_ask = data.iloc[-1][ask_keys].values.tolist()
 		self.c_bid = data.iloc[-1][bid_keys].values.tolist()
 		self.last_ask_open = self.c_ask[0]
@@ -449,6 +451,26 @@ class Chart(object):
 			dt.replace(second=0, microsecond=0, minute=0, hour=dt.hour)
 			+ datetime.timedelta(hours=dt.minute//30)
 		)
+
+	def isWeekend(self):
+		now = datetime.datetime.now()
+		now = self.root.utils.setTimezone(now, 'Australia/Melbourne')
+		lon = self.root.utils.convertTimezone(now, 'Europe/London')
+
+		if lon.weekday() >= 4:
+			w_start = datetime.datetime(lon.year,lon.month,lon.day,11)
+			w_start = self.root.utils.setTimezone(w_start, 'Europe/London')
+			fri_off = w_start.weekday() - 4
+			w_start -= datetime.timedelta(days=fri_off)
+			w_end = w_start + datetime.timedelta(days=2)
+			print(w_start)
+			print(lon)
+			print(w_end)
+
+			if w_start <= lon < w_end:
+				return True
+
+		return False
 
 	def getLatestTimestamp(self):
 		return self.bids_ts[-1]
