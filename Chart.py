@@ -152,14 +152,18 @@ class Chart(object):
 		ask_keys = ['ask_open', 'ask_high', 'ask_low', 'ask_close']
 		bid_keys = ['bid_open', 'bid_high', 'bid_low', 'bid_close']
 
-		print(self.isWeekend())
 
-		self.c_ask = data.iloc[-1][ask_keys].values.tolist()
-		self.c_bid = data.iloc[-1][bid_keys].values.tolist()
+		if self.isWeekend():
+			self.c_ask = [0]*4
+			self.c_bid = [0]*4
+		else:
+			self.c_ask = data.iloc[-1][ask_keys].values.tolist()
+			self.c_bid = data.iloc[-1][bid_keys].values.tolist()
+			data = data.drop(data.index[-1])
+			
 		self.last_ask_open = self.c_ask[0]
 		self.last_bid_open = self.c_bid[0]
 		
-		data = data.drop(data.index[-1])
 		self.save(data, start, end)
 
 		self.bids_ts = data.index.values.astype(np.int32)
@@ -256,6 +260,7 @@ class Chart(object):
 
 			if len(self.c_bid) == 0 or self.c_bid[3] == 0 or self.reset:
 				self.c_bid = [b_open, b_high, b_low, b_close]
+				self.last_bid_open = self.c_bid[0]
 			elif b_close:
 				self.c_bid = [
 					self.c_bid[0],
@@ -278,6 +283,7 @@ class Chart(object):
 
 			if len(self.c_ask) == 0 or self.c_ask[3] == 0 or self.reset:
 				self.c_ask = [a_open, a_high, a_low, a_close]
+				self.last_ask_open = self.c_ask[0]
 				self.reset = False
 			elif a_close:
 				self.c_ask = [
@@ -290,13 +296,12 @@ class Chart(object):
 			cons_end = int(item['values']['CONS_END']) if item['values']['CONS_END'] else None
 
 			is_new_bar = (
-				cons_end == 1 or b_open != self.last_bid_open or a_open != self.last_ask_open
+				cons_end == 1 or 
+				(self.last_bid_open != 0 and b_open != self.last_bid_open) or 
+				(self.last_ask_open != 0 and a_open != self.last_ask_open)
 			)
 
 			if is_new_bar:
-				self.last_bid_open = b_open
-				self.last_ask_open = a_open
-
 				now = datetime.datetime.now()
 				now = self.root.utils.setTimezone(now, 'Australia/Melbourne')
 				lon = self.root.utils.convertTimezone(now, 'Europe/London')
@@ -463,10 +468,6 @@ class Chart(object):
 			fri_off = w_start.weekday() - 4
 			w_start -= datetime.timedelta(days=fri_off)
 			w_end = w_start + datetime.timedelta(days=2)
-			print(w_start)
-			print(lon)
-			print(w_end)
-
 			if w_start <= lon < w_end:
 				return True
 
