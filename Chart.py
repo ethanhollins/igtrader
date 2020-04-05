@@ -153,13 +153,13 @@ class Chart(object):
 		bid_keys = ['bid_open', 'bid_high', 'bid_low', 'bid_close']
 
 
-		if self.isWeekend():
-			self.c_ask = [0]*4
-			self.c_bid = [0]*4
-		else:
-			self.c_ask = data.iloc[-1][ask_keys].values.tolist()
-			self.c_bid = data.iloc[-1][bid_keys].values.tolist()
+		self.c_ask = data.iloc[-1][ask_keys].values.tolist()
+		self.c_bid = data.iloc[-1][bid_keys].values.tolist()
+
+		if not self.isWeekend():
 			data = data.drop(data.index[-1])
+		else:
+			self.reset = True
 			
 		self.last_ask_open = self.c_ask[0]
 		self.last_bid_open = self.c_bid[0]
