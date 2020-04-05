@@ -458,7 +458,7 @@ class Chart(object):
 		lon = self.root.utils.convertTimezone(now, 'Europe/London')
 
 		if lon.weekday() >= 4:
-			w_start = datetime.datetime(lon.year,lon.month,lon.day,11)
+			w_start = datetime.datetime(lon.year,lon.month,lon.day,23)
 			w_start = self.root.utils.setTimezone(w_start, 'Europe/London')
 			fri_off = w_start.weekday() - 4
 			w_start -= datetime.timedelta(days=fri_off)
