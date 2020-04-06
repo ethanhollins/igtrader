@@ -246,8 +246,8 @@ class Chart(object):
 	def onItemUpdateIG(self, item):
 		self.last_update = datetime.datetime.now()
 		if 'values' in item:
-			if not item['values']['BID_OPEN']:
-				return
+			# if not item['values']['BID_OPEN']:
+			# 	return
 
 			b_open = item['values']['BID_OPEN']
 			b_open = float(b_open) if b_open else 0
