@@ -41,12 +41,12 @@ class CCI(object):
 		else:
 			return None
 	
-	def getCurrent(self, plan, chart):
-		return self.getValue(chart.getBidOHLC(plan, 0, 1000))
+	def getCurrent(self, chart):
+		return self.getValue(chart.getBidOHLC(0, 1000))
 
-	def get(self, plan, chart, shift, amount):
+	def get(self, chart, shift, amount):
 		vals = []
-		c_idx = chart.getTsOffset(plan.c_ts)
+		c_idx = chart.getTsOffset(chart.c_ts)
 		for i in range(c_idx+1-shift-amount, c_idx+1-shift):
 			vals.append(self.getValue(chart.bids_ohlc[max(i+1-1000, 0):i+1]))
 		return vals

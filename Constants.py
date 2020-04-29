@@ -63,7 +63,7 @@ REJECTED = 'REJECTED'
 Timestamps
 '''
 import datetime
-TS_START_DATE = datetime.datetime(year=2000, month=1, day=1)
+TS_START_DATE = datetime.datetime(year=2020, month=1, day=1)
 DT_START_DATE = datetime.datetime(year=1970, month=1, day=1)
 IG_START_DATE = datetime.datetime(year=1970, month=1, day=1, hour=11)
 
