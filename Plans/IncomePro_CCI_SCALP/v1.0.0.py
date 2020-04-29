@@ -264,7 +264,7 @@ def handleRegularEntry(entry):
 
 		if entry.direction == Direction.LONG:
 			if entry.entry_type == EntryType.RE_ENTRY:
-				tp = utils.getAsk() + utils.convertToPrice(VARIABLES['profitrange'])
+				tp = utils.getAsk(VARIABLES['PRODUCT']) + utils.convertToPrice(VARIABLES['profitrange'])
 				tp = tp if tp > entry.tp_price else tp_price
 
 				pos = utils.buy(
@@ -283,7 +283,7 @@ def handleRegularEntry(entry):
 
 		else:
 			if entry.entry_type == EntryType.RE_ENTRY:
-				tp = utils.getBid() - utils.convertToPrice(VARIABLES['profitrange'])
+				tp = utils.getBid(VARIABLES['PRODUCT']) - utils.convertToPrice(VARIABLES['profitrange'])
 				tp = tp if tp < entry.tp_price else tp_price
 
 				pos = utils.sell(
@@ -763,8 +763,6 @@ def isCciSignalAngle(direction, reverse=False):
 	chidx = cci.get(m_chart, 0, 4)
 	signal_prev = sum(chidx[:2]) / 2
 	signal_curr = sum(chidx[2:4]) / 2
-	print('Sig: {:.5f} {:.5f}'.format(signal_curr, signal_prev))
-
 
 	if reverse:
 		if direction == Direction.LONG:
