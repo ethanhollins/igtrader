@@ -841,8 +841,8 @@ def report():
 	if utils.plan_state.value in (1,):
 		utils.log('', "\n[{}] Report:".format(utils.account.accountid))
 
-	utils.log('', "\n")
-
+	utils.log('', "")
+	utils.log('IND','CCI: {:.2f}'.format(cci.getCurrent(m_chart)))
 	utils.log('', 'TS: {} OHLC: {}'.format(m_chart.c_ts, m_chart.getCurrentBidOHLC()))
 	utils.log('', 'TimeState: {}\n'.format(time_state))
 	utils.log('', "LONG T: {}\n".format(long_trigger))
