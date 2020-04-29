@@ -265,7 +265,7 @@ def handleRegularEntry(entry):
 		if entry.direction == Direction.LONG:
 			if entry.entry_type == EntryType.RE_ENTRY:
 				tp = utils.getAsk(VARIABLES['PRODUCT']) + utils.convertToPrice(VARIABLES['profitrange'])
-				tp = tp if tp > entry.tp_price else tp_price
+				tp = tp if tp > entry.tp_price else entry.tp_price
 
 				pos = utils.buy(
 					VARIABLES['PRODUCT'], 
@@ -284,7 +284,7 @@ def handleRegularEntry(entry):
 		else:
 			if entry.entry_type == EntryType.RE_ENTRY:
 				tp = utils.getBid(VARIABLES['PRODUCT']) - utils.convertToPrice(VARIABLES['profitrange'])
-				tp = tp if tp < entry.tp_price else tp_price
+				tp = tp if tp < entry.tp_price else entry.tp_price
 
 				pos = utils.sell(
 					VARIABLES['PRODUCT'], 
