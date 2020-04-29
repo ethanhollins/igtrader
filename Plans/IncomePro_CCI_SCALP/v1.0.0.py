@@ -842,7 +842,7 @@ def report():
 		utils.log('', "\n[{}] Report:".format(utils.account.accountid))
 
 	utils.log('', "")
-	utils.log('IND','CCI: {:.2f}'.format(cci.getCurrent(m_chart)))
+	utils.log('IND','CCI: {:.5f}'.format(cci.getCurrent(m_chart)))
 	utils.log('', 'TS: {} OHLC: {}'.format(m_chart.c_ts, m_chart.getCurrentBidOHLC()))
 	utils.log('', 'TimeState: {}\n'.format(time_state))
 	utils.log('', "LONG T: {}\n".format(long_trigger))
