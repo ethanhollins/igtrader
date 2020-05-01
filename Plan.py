@@ -354,6 +354,7 @@ class Plan(object):
 			tpPrice = tpPrice, tpRange = tpRange,
 			is_gslo = self.is_gslo
 		)
+		print('ref: {}'.format(ref))
 
 		pos = None
 		start = time.time()

@@ -109,8 +109,9 @@ def init(utilities):
 	setGlobalVars()
 	setup(utilities)
 
-	global cci
+	global cci, boll
 	cci = utils.CCI(5)
+	boll = utils.BOLL(15, 2)
 
 def setup(utilities):
 	global utils, m_chart, bank
@@ -380,8 +381,9 @@ def checkTime():
 		elif london_time >= exit_profit_one:
 			time_state = TimeState.EXIT_PROFIT_ONE
 		elif time_state != TimeState.TRADING:
-			global sess_positions
+			global sess_positions, bank
 			sess_positions = []
+			bank = utils.getTradableBank()
 			time_state = TimeState.TRADING
 	else:
 		time_state = TimeState.STOPPED

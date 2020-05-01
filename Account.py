@@ -111,6 +111,10 @@ class Account(object):
 		if 'OPU' in item['values'] and item['values']['OPU']:
 			opu = json.loads(item['values']['OPU'])
 			if opu['dealStatus'] == 'ACCEPTED':
+				
+				if 'dealReference' in opu:
+					print('OPU: {}'.format(opu['dealReference']))
+				
 				if opu['status'] == 'OPEN':
 					pos = Position(
 						self, opu['dealId'],
