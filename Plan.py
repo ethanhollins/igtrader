@@ -38,6 +38,8 @@ class Plan(object):
 		self.charts = []
 		self.indicators = []
 
+		self.callback_queue = []
+
 		self.plan_state = PlanState.STOPPED
 		self.variables = variables
 		self.storage = storage
@@ -182,6 +184,26 @@ class Plan(object):
 		info['accounts'][self.account.accountid]['plans'][self.idx]['variables'] = self.variables
 		self.account.root.saveJsonToFile(root_path, info, name=str(self.idx))
 
+	def onEntry(self, pos):
+		if self.plan_state == PlanState.STARTED:
+			if pos:
+				print('[{0}] Confirmed {1} ({2}) at {3} sl: {4} tp: {5}'.format(
+					pos.orderid, pos.direction, pos.lotsize, pos.entryprice, pos.sl, pos.tp
+				))
+				
+				pos.plan = self
+				self.positions.append(pos)
+
+			try:
+				self.module.onEntry(pos)
+			except Exception as e:
+				if not 'has no attribute \'onEntry\'' in str(e):
+					self.plan_state = PlanState.STOPPED
+					print('PlanError ({0}):\n{1}'.format(self.account.accountid, traceback.format_exc()))
+			
+			self.needs_save = True
+
+
 	def onStopLoss(self, pos):
 		if self.plan_state == PlanState.STARTED:
 			if pos:
@@ -282,60 +304,9 @@ class Plan(object):
 			tpPrice = tpPrice, tpRange = tpRange,
 			is_gslo = self.is_gslo
 		)
-		
-		pos = None
-		start = time.time()
-		while True:
-			for i in self.account.position_queue:
-				if i.ref == ref:
-					del self.account.position_queue[self.account.position_queue.index(i)]
-					self.positions.append(i)
-					i.plan = self
-					pos = i
-					break
-			
-			for i in self.account.rejected_queue:
-				if i == ref:
-					if attempts >= 5:
-						raise Exception('PlanError ({0}): Exceeded max position attempts ({1}).\n{2}'.format(
-							self.account.accountid, attempts, result
-						))
-						return
 
-					elif 'RETRY_ON_REJECTED' in self.module.VARIABLES and self.module.VARIABLES['RETRY_ON_REJECTED']:
-						return self.buy(
-							product, lotsize, orderType=orderType, 
-							slPrice=slPrice, slRange=slRange, 
-							tpPrice=tpPrice, tpRange=tpRange,
-							attempts= attempts + 1
-						)
-					else:
-						raise Exception('PlanError ({0}): Position REJECTED.\n{2}'.format(
-							self.account.accountid, result
-						))
-						return
-
-			if pos:
-				break
-			elif time.time() - start > 10:
-				print('PlanError ({0}): Unable to retrieve position.'.format(self.account.accountid))
-				return None
-			time.sleep(0.01)
-
-		if pos:
-			print('[{0}] Confirmed {1} ({2}) at {3} sl: {4} tp: {5}'.format(
-				pos.orderid, pos.direction, pos.lotsize, pos.entryprice, pos.sl, pos.tp
-			))
-
-		try:
-			self.module.onEntry(pos)
-		except Exception as e:
-			if not 'has no attribute \'onEntry\'' in str(e):
-				self.plan_state = PlanState.STOPPED
-				print('PlanError ({0}):\n{1}'.format(self.account.accountid, traceback.format_exc()))
-
-		self.needs_save = True
-		return pos
+		self.callback_queue.append((ref, Constants.IG_OPEN))
+		return ref
 
 	def sell(self,
 		product, lotsize, orderType='MARKET', 
@@ -354,61 +325,9 @@ class Plan(object):
 			tpPrice = tpPrice, tpRange = tpRange,
 			is_gslo = self.is_gslo
 		)
-		print('ref: {}'.format(ref))
 
-		pos = None
-		start = time.time()
-		while True:
-			for i in self.account.position_queue:
-				if i.ref == ref:
-					del self.account.position_queue[self.account.position_queue.index(i)]
-					i.plan = self
-					self.positions.append(i)
-					pos = i
-					break
-			
-			for i in self.account.rejected_queue:
-				if i == ref:
-					if attempts >= 5:
-						raise Exception('PlanError ({0}): Exceeded max position attempts ({1}).\n{2}'.format(
-							self.account.accountid, attempts, result
-						))
-						return
-
-					elif 'RETRY_ON_REJECTED' in self.module.VARIABLES and self.module.VARIABLES['RETRY_ON_REJECTED']:
-						return self.sell(
-							product, lotsize, orderType=orderType, 
-							slPrice=slPrice, slRange=slRange, 
-							tpPrice=tpPrice, tpRange=tpRange,
-							attempts= attempts + 1
-						)
-					else:
-						raise Exception('PlanError ({0}): Position REJECTED.\n{2}'.format(
-							self.account.accountid, result
-						))
-						return
-
-			if pos:
-				break
-			elif time.time() - start > 10:
-				print('PlanError ({0}): Unable to retrieve position.'.format(self.account.accountid))
-				return None
-			time.sleep(0.01)
-
-		if pos:
-			print('[{0}] Confirmed {1} ({2}) at {3} sl: {4} tp: {5}'.format(
-				pos.orderid, pos.direction, pos.lotsize, pos.entryprice, pos.sl, pos.tp
-			))
-
-		try:
-			self.module.onEntry(pos)
-		except Exception as e:
-			if not 'has no attribute \'onEntry\'' in str(e):
-				self.plan_state = PlanState.STOPPED
-				print('PlanError ({0}):\n{1}'.format(self.account.accountid, traceback.format_exc()))
-
-		self.needs_save = True
-		return pos
+		self.callback_queue.append((ref, Constants.IG_OPEN))
+		return ref
 
 	def stopAndReverse(self, 
 		product, lotsize,
@@ -425,16 +344,16 @@ class Plan(object):
 				direction = pos.direction
 				pos.close()
 
-		new_pos = None
+		ref = None
 		if direction:
 			if direction == Constants.BUY:
-				new_pos = self.sell(
+				ref = self.sell(
 					product, lotsize, 
 					slPrice=slPrice, slRange=slRange, 
 					tpPrice=tpPrice, tpRange=tpRange
 				)
 			else:
-				new_pos = self.buy(
+				ref = self.buy(
 					product, lotsize, 
 					slPrice=slPrice, slRange=slRange, 
 					tpPrice=tpPrice, tpRange=tpRange
@@ -442,7 +361,7 @@ class Plan(object):
 
 		self.closed_positions.sort(key=lambda x: x.opentime)
 
-		return new_pos
+		return ref
 
 	def subscribeChart(self, product, period):
 		chart = self.account.root.manager.subscribeChart(self, product, period)

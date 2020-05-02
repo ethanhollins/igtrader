@@ -40,6 +40,10 @@ class EntryState(Enum):
 	RE_ENTRY_TWO = 11
 	WAIT = 12
 
+class EntryState(Enum):
+	ONE = 1
+	COMPLETE = 2
+
 class PivotState(Enum):
 	ONE = 1
 	TWO = 2
@@ -68,6 +72,7 @@ class Trigger(dict):
 		self.direction = direction
 
 		self.entry_state = EntryState.ONE
+		self.exit_state = ExitState.ONE
 		self.pivot_state_one = PivotState.ONE
 		self.pivot_state_two = PivotState.ONE
 		self.entry_type = EntryType.REGULAR
@@ -81,8 +86,13 @@ class Trigger(dict):
 		self.entry_close = 0
 		self.entry_hl = 0
 
+		# Entry Setup
 		self.below_check = False
 		self.tag_check = False
+
+		# Exit Setup
+		self.boll_check = False
+		self.close_check = False
 
 	def setDirection(self, direction, reverse=False):
 		if reverse:
@@ -234,26 +244,12 @@ def handleStopAndReverse(entry):
 	and check if tradable conditions are met.
 	'''
 	if bank:
-		if entry.entry_type == EntryType.RE_ENTRY:
-			pos = utils.stopAndReverse(
-				VARIABLES['PRODUCT'], 
-				utils.getLotsize(bank, VARIABLES['risk'], VARIABLES['stoprange']), 
-				slRange = VARIABLES['stoprange'],
-				tpPrice = entry.tp_price
-			)
-		else:
-			pos = utils.stopAndReverse(
-				VARIABLES['PRODUCT'], 
-				utils.getLotsize(bank, VARIABLES['risk'], VARIABLES['stoprange']), 
-				slRange = VARIABLES['stoprange'],
-				tpRange = VARIABLES['profitrange']
-			)
-
-		pos.data['stop_state'] = StopState.NONE.value
-		pos.data['entry_type'] = entry.entry_type.value
-		utils.savePositions()
-
-		sess_positions.append(pos)
+		utils.stopAndReverse(
+			VARIABLES['PRODUCT'], 
+			utils.getLotsize(bank, VARIABLES['risk'], VARIABLES['stoprange']), 
+			slRange = VARIABLES['stoprange'],
+			tpRange = VARIABLES['profitrange']
+		)
 
 def handleRegularEntry(entry):
 	''' 
@@ -267,47 +263,36 @@ def handleRegularEntry(entry):
 			if entry.entry_type == EntryType.RE_ENTRY:
 				tp = utils.getAsk(VARIABLES['PRODUCT']) + utils.convertToPrice(VARIABLES['profitrange'])
 				tp = tp if tp > entry.tp_price else entry.tp_price
-
-				pos = utils.buy(
-					VARIABLES['PRODUCT'], 
-					utils.getLotsize(bank, VARIABLES['risk'], VARIABLES['stoprange']), 
-					slRange = VARIABLES['stoprange'],
-					tpPrice = tp
-				)
-			else:				
-				pos = utils.buy(
-					VARIABLES['PRODUCT'], 
-					utils.getLotsize(bank, VARIABLES['risk'], VARIABLES['stoprange']), 
-					slRange = VARIABLES['stoprange'],
-					tpRange = VARIABLES['profitrange']
-				)
+			else:
+				tp = VARIABLES['profitrange']
+			
+			utils.buy(
+				VARIABLES['PRODUCT'], 
+				utils.getLotsize(bank, VARIABLES['risk'], VARIABLES['stoprange']), 
+				slRange = VARIABLES['stoprange'],
+				tpRange = tp
+			)
 
 		else:
 			if entry.entry_type == EntryType.RE_ENTRY:
 				tp = utils.getBid(VARIABLES['PRODUCT']) - utils.convertToPrice(VARIABLES['profitrange'])
 				tp = tp if tp < entry.tp_price else entry.tp_price
-
-				pos = utils.sell(
-					VARIABLES['PRODUCT'], 
-					utils.getLotsize(bank, VARIABLES['risk'], VARIABLES['stoprange']), 
-					slRange = VARIABLES['stoprange'],
-					tpPrice = tp
-				)
 			else:
-				pos = utils.sell(
-					VARIABLES['PRODUCT'], 
-					utils.getLotsize(bank, VARIABLES['risk'], VARIABLES['stoprange']), 
-					slRange = VARIABLES['stoprange'],
-					tpRange = VARIABLES['profitrange']
-				)
+				tp = VARIABLES['profitrange']
 
+			utils.sell(
+				VARIABLES['PRODUCT'], 
+				utils.getLotsize(bank, VARIABLES['risk'], VARIABLES['stoprange']), 
+				slRange = VARIABLES['stoprange'],
+				tpPrice = tp
+			)
 
-		pos.data['stop_state'] = StopState.NONE.value
-		pos.data['entry_type'] = entry.entry_type.value
-		utils.savePositions()
+def onEntry(pos):
+	pos.data['stop_state'] = StopState.NONE.value
+	pos.data['entry_type'] = entry.entry_type.value
+	utils.savePositions()
 
-		sess_positions.append(pos)
-
+	sess_positions.append(pos)
 
 def closeAllPositions(direction, reverse=False):
 	direction = convertToPositionDirection(direction)
@@ -399,6 +384,9 @@ def runSequence():
 	entrySetup(long_trigger)
 	entrySetup(short_trigger)
 
+	exitSetup(long_trigger)
+	exitSetup(short_trigger)
+
 	if time_state == TimeState.STOPPED:
 		isStoppedExit()
 
@@ -411,6 +399,9 @@ def positionStopIncrement():
 	min_dist = 5.0
 
 	for pos in utils.positions:
+		if not 'stop_state' in pos.data:
+			continue
+
 		if pos.direction == Constants.BUY:
 			max_profit = utils.convertToPips(bid[1] - pos.entryprice)
 			c_sl = utils.convertToPips(pos.entryprice - pos.sl)
@@ -544,8 +535,9 @@ def entrySetup(trigger):
 				if not isDoji(0.5) and isBB(trigger.direction):
 					trigger.pivot_close_ab_count += 1
 					if trigger.pivot_close_ab_count == 1:
-						closeAllPositions(trigger.direction, reverse=True)
 						cancelPivot(trigger.direction, reverse=True)
+						trigger.close_check = True
+
 						trigger.entry_close = round(m_chart.getCurrentBidOHLC()[3], 5)
 						trigger.entry_hl = 0
 						setEntryHL(trigger)
@@ -612,6 +604,19 @@ def entrySetup(trigger):
 			if isBB(trigger.direction) and not isDoji(0.2):
 				return confirmation(trigger)
 
+def exitSetup(trigger):
+
+	if trigger.exit_state == ExitState.ONE:
+
+		if isPosInDir(trigger.direction, reverse=True):
+			if isBollTagged():
+				trigger.boll_check = True
+
+		if trigger.boll_check and trigger.close_check:
+			closeAllPositions(trigger.direction, reverse=True)
+			trigger.exit_state = ExitState.COMPLETE
+			return
+
 def setNextPivotOne(trigger):
 	_, high, low, _ = m_chart.getCurrentBidOHLC()
 
@@ -650,6 +655,10 @@ def resetPivot(trigger):
 	trigger.below_check = False
 	trigger.tag_check = False
 	trigger.pivot_close_ab_count = 0
+
+	trigger.exit_state = ExitState.ONE
+	trigger.boll_check = False
+	trigger.close_check = False
 
 def cancelPivot(direction, reverse=False):
 	if reverse:
@@ -777,6 +786,15 @@ def isCciSignalAngle(direction, reverse=False):
 		else:
 			return signal_curr < signal_prev
 
+def isBollTagged():
+	_, high, low, _ = m_chart.getCurrentBidOHLC()
+	upper, lower = boll.getCurrent(m_chart)
+
+	return (
+		high >= upper or
+		low <= lower
+	)
+
 def isBB(direction, reverse=False):
 	_open, _, _, close = m_chart.getCurrentBidOHLC()
 
@@ -807,12 +825,16 @@ def convertToPositionDirection(direction):
 	else:
 		return Constants.SELL
 
-def isPosInDir(direction):
+def isPosInDir(direction, reverse=False):
 	for pos in utils.positions:
-		if pos.direction == Constants.BUY and direction == Direction.LONG:
-			return True
-		elif pos.direction == Constants.SELL and direction == Direction.SHORT:
-			return True
+		pos_direction = convertToPlanDirection(pos.direction)
+
+		if reverse:
+			if pos_direction != direction:
+				return True
+		else:
+			if pos_direction == direction:
+				return True
 
 	return False
 
