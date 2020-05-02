@@ -14,8 +14,6 @@ class Account(object):
 		self.manager = root.manager
 
 		self.accountid = accountid
-		self.position_queue = []
-		self.rejected_queue = []
 
 		self.audusd_bid = None
 		self.getLiveData()
@@ -111,6 +109,7 @@ class Account(object):
 		if 'OPU' in item['values'] and item['values']['OPU']:
 			opu = json.loads(item['values']['OPU'])
 			if opu['dealStatus'] == 'ACCEPTED':
+				
 				if opu['status'] == 'OPEN':
 					pos = Position(
 						self, opu['dealId'],
@@ -125,7 +124,7 @@ class Account(object):
 					if opu['limitLevel']:
 						pos.tp = float(opu['limitLevel'])
 
-					self.position_queue.append(pos)
+					self.matchCallback(tuple(pos.ref,Contants.IG_OPEN))
 
 				elif opu['status'] == 'DELETED':
 
@@ -198,6 +197,14 @@ class Account(object):
 							plan.onRejected(pos)
 							return
 				self.rejected_queue.append(opu['dealReference'])
+
+	def matchCallback(self, item):
+		for plan in self.plans:
+			for c in plan.callback_queue:
+				if c == item:
+					plan.onEntry(pos)
+					del plan.callback_queue[plan.callback_queue.index(c)]
+					return
 
 	def onAUDItemUpdate(self, item):
 		if item['values'] and item['values']['BID']:
