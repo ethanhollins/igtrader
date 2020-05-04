@@ -11,8 +11,10 @@ VARIABLES = {
 	'profitrange': 16.0,
 	'stops': [0,5,10],
 	'profit_points': [12,14,15],
-	'exit_profit_one': 2.0,
-	'exit_profit_two': 1.0,
+	'exit_profit_one_points': 48,
+	'exit_profit_one_perc': 2.0,
+	'exit_profit_two_points': 24,
+	'exit_profit_two_perc': 1.0,
 	'profit_target': 48,
 	'loss_multi': 4,
 	'CCI': None,
@@ -209,9 +211,15 @@ def handleEntries():
 
 		elif time_state.value >= TimeState.EXIT_PROFIT_ONE.value:
 			if time_state == TimeState.EXIT_PROFIT_ONE:
-				is_exit = perc_profit >= VARIABLES['exit_profit_one']
+				is_exit = (
+					getTotalProfit() >= VARIABLES['exit_profit_one_points'] or
+					perc_profit >= VARIABLES['exit_profit_one_perc']
+				)
 			elif time_state == TimeState.EXIT_PROFIT_TWO:
-				is_exit = perc_profit >= VARIABLES['exit_profit_two']
+				is_exit = (
+					getTotalProfit() >= VARIABLES['exit_profit_two_points'] or
+					perc_profit >= VARIABLES['exit_profit_two_perc']
+				)
 			else:
 				is_exit = True
 

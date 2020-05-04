@@ -312,7 +312,9 @@ class Chart(object):
 
 				if self.period == Constants.ONE_MINUTE:
 					self.reset = True
+					real_now = self.nearestHour(now)
 					now = Constants.IG_START_DATE + datetime.timedelta(milliseconds=int(item['values']['UTM']))
+					now = now.replace(year=real_now.year,month=real_now.month,day=real_now.day,hour=real_now.hour)
 					new_ts = self.root.utils.convertDatetimeToTimestamp(now)
 
 					self.addNewBar(new_ts)
