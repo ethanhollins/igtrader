@@ -16,6 +16,7 @@ from Indicators.MACD import MACD
 from Indicators.MAE import MAE
 from Indicators.RSI import RSI
 from Indicators.SMA import SMA
+from Indicators.EMA import EMA
 from Indicators.DONCH import DONCH
 from Indicators.DONCH_CMC import DONCH_CMC
 
@@ -194,12 +195,12 @@ class Plan(object):
 				pos.plan = self
 				self.positions.append(pos)
 
-			try:
-				self.module.onEntry(pos)
-			except Exception as e:
-				if not 'has no attribute \'onEntry\'' in str(e):
-					self.plan_state = PlanState.STOPPED
-					print('PlanError ({0}):\n{1}'.format(self.account.accountid, traceback.format_exc()))
+			# try:
+			self.module.onEntry(pos)
+			# except Exception as e:
+			# 	if not 'has no attribute \'onEntry\'' in str(e):
+			# 		self.plan_state = PlanState.STOPPED
+			# 		print('PlanError ({0}):\n{1}'.format(self.account.accountid, traceback.format_exc()))
 			
 			self.needs_save = True
 
@@ -520,6 +521,11 @@ class Plan(object):
 		sma = SMA(period)
 		self.indicators.append(sma)
 		return sma
+
+	def EMA(self, period):
+		ema = EMA(period)
+		self.indicators.append(ema)
+		return ema
 
 	def MAE(self, period, offset, ma_type='sma'):
 		mae = MAE(period, offset, ma_type=ma_type)

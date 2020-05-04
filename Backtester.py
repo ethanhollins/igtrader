@@ -24,6 +24,7 @@ from Indicators.KELT_IG import KELT_IG
 from Indicators.MACD import MACD
 from Indicators.MAE import MAE
 from Indicators.RSI import RSI
+from Indicators.EMA import EMA
 from Indicators.SMA import SMA
 from Indicators.DONCH import DONCH
 from Indicators.DONCH_CMC import DONCH_CMC
@@ -1153,7 +1154,7 @@ class Backtester(object):
 			if not 'has no attribute \'onEntry\'' in str(e):
 				print('PlanError {0}:\n{1}'.format('Backtester', traceback.format_exc()))
 		
-		return pos
+		return order_id
 
 	def sell(self,
 		product, lotsize, orderType='MARKET', 
@@ -1190,7 +1191,7 @@ class Backtester(object):
 			if not 'has no attribute \'onEntry\'' in str(e):
 				print('PlanError {0}:\n{1}'.format('Backtester', traceback.format_exc()))
 
-		return pos
+		return order_id
 
 	def stopAndReverse(self, 
 		product, lotsize,
@@ -1206,22 +1207,22 @@ class Backtester(object):
 
 		self.closed_positions.sort(key=lambda x: x.opentime)
 
-		new_pos = None
+		ref = None
 		if direction:
 			if direction == Constants.BUY:
-				new_pos = self.sell(
+				ref = self.sell(
 					product, lotsize, 
 					slPrice=slPrice, slRange=slRange, 
 					tpPrice=tpPrice, tpRange=tpRange
 				)
 			else:
-				new_pos = self.buy(
+				ref = self.buy(
 					product, lotsize, 
 					slPrice=slPrice, slRange=slRange, 
 					tpPrice=tpPrice, tpRange=tpRange
 				)
 
-		return new_pos
+		return ref
 
 	def getChart(self, product, period):
 		for chart in self.charts:
@@ -1315,6 +1316,11 @@ class Backtester(object):
 		sma = SMA(period)
 		self.indicators.append(sma)
 		return sma
+
+	def EMA(self, period):
+		ema = EMA(period)
+		self.indicators.append(ema)
+		return ema
 
 	def MAE(self, period, offset, ma_type='sma'):
 		mae = MAE(period, offset, ma_type=ma_type)

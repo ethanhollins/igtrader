@@ -113,6 +113,7 @@ class RootAccount(object):
 			
 			threads = []
 			for acc in self.accounts:
+				acc.matchCallback()
 				t = Thread(target=self.onLoop, args=(acc,))
 				t.start()
 				threads.append(t)

@@ -23,51 +23,49 @@ def setup(utilities):
 	if len(utils.charts) > 0:
 		chart = utils.charts[0]
 	else:
-		chart = utils.getChart(VARIABLES['PRODUCT'], Constants.ONE_MINUTE)
+		chart = utils.getChart(VARIABLES['PRODUCT'], Constants.FOUR_HOURS)
 
 def onNewBar(chart):
 	''' Function called on every new bar '''
 	utils.log("onNewBar",'{}'.format(VARIABLES['num']))
 	utils.log('time', utils.getTime().strftime('%d/%m/%y %H:%M:%S'))
-	utils.log('ohlc', str(chart.getCurrentBidOHLC(utils)))
+	utils.log('ohlc', str(chart.getCurrentBidOHLC()))
 
-# def onLoop():
+def onLoop():
 	''' Function called on every program iteration '''
 	# utils.log("onLoop",'')
 	global count
 	if count == 0:
 		if utils.plan_state.value == 1:
-			if VARIABLES['num'] == 1:
-				pos = utils.sell(VARIABLES['PRODUCT'], 1, slRange=10, tpRange=10)
-				pos.close()
-			if VARIABLES['num'] == 2:
-				pos = utils.buy(VARIABLES['PRODUCT'], 1, slRange=20, tpRange=20)
-				pos.close()
-			if VARIABLES['num'] == 3:
-				pos = utils.buy(VARIABLES['PRODUCT'], 1, slRange=30, tpRange=30)
-				pos.close()
-			if VARIABLES['num'] == 4:
-				pos = utils.sell(VARIABLES['PRODUCT'], 1, slRange=40, tpRange=40)
-				pos.close()
-			if VARIABLES['num'] == 5:
-				pos = utils.sell(VARIABLES['PRODUCT'], 1, slRange=50, tpRange=50)
-				pos.close()
-			if VARIABLES['num'] == 6:
-				pos = utils.buy(VARIABLES['PRODUCT'], 1, slRange=60, tpRange=60)
-				pos.close()
-			if VARIABLES['num'] == 7:
-				pos = utils.sell(VARIABLES['PRODUCT'], 1, slRange=70, tpRange=70)
-				pos.close()
-			if VARIABLES['num'] == 8:
-				pos = utils.buy(VARIABLES['PRODUCT'], 1, slRange=80, tpRange=80)
-				pos = utils.stopAndReverse(VARIABLES['PRODUCT'], 1, slRange = 80)
-				pos.close()
-			if VARIABLES['num'] == 9:
-				pos = utils.sell(VARIABLES['PRODUCT'], 1, slRange=90, tpRange=90)
-				pos.close()
-			if VARIABLES['num'] == 10:
-				pos = utils.sell(VARIABLES['PRODUCT'], 1, slRange=100, tpRange=100)
-				pos = utils.stopAndReverse(VARIABLES['PRODUCT'], 1, slRange = 100)
+			# if VARIABLES['num'] == 1:
+			ref = utils.sell(VARIABLES['PRODUCT'], 1, slRange=10, tpRange=10)
+			# if VARIABLES['num'] == 2:
+			pos = utils.buy(VARIABLES['PRODUCT'], 1, slRange=20, tpRange=20)
+			# if VARIABLES['num'] == 3:
+			pos = utils.buy(VARIABLES['PRODUCT'], 1, slRange=30, tpRange=30)
+			# 	pos.close()
+			# if VARIABLES['num'] == 4:
+			# 	pos = utils.sell(VARIABLES['PRODUCT'], 1, slRange=40, tpRange=40)
+			# 	pos.close()
+			# if VARIABLES['num'] == 5:
+			# 	pos = utils.sell(VARIABLES['PRODUCT'], 1, slRange=50, tpRange=50)
+			# 	pos.close()
+			# if VARIABLES['num'] == 6:
+			# 	pos = utils.buy(VARIABLES['PRODUCT'], 1, slRange=60, tpRange=60)
+			# 	pos.close()
+			# if VARIABLES['num'] == 7:
+			# 	pos = utils.sell(VARIABLES['PRODUCT'], 1, slRange=70, tpRange=70)
+			# 	pos.close()
+			# if VARIABLES['num'] == 8:
+			# 	pos = utils.buy(VARIABLES['PRODUCT'], 1, slRange=80, tpRange=80)
+			# 	pos = utils.stopAndReverse(VARIABLES['PRODUCT'], 1, slRange = 80)
+			# 	pos.close()
+			# if VARIABLES['num'] == 9:
+			# 	pos = utils.sell(VARIABLES['PRODUCT'], 1, slRange=90, tpRange=90)
+			# 	pos.close()
+			# if VARIABLES['num'] == 10:
+			# 	pos = utils.sell(VARIABLES['PRODUCT'], 1, slRange=100, tpRange=100)
+			# 	pos = utils.stopAndReverse(VARIABLES['PRODUCT'], 1, slRange = 100)
 
 
 
@@ -115,6 +113,7 @@ def onNewBar(chart):
 
 def onEntry(pos):
 	utils.log("onEntry", str(dict(pos)))
+	pos.close()
 
 def onStopLoss(pos):
 	utils.log("onStopLoss", str(dict(pos)))

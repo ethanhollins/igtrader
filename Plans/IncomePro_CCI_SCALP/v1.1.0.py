@@ -31,14 +31,13 @@ class EntryState(Enum):
 	TWO = 2
 	THREE = 3
 	FOUR = 4
-	FIVE_A = 5
-	FIVE_B = 6
-	SIX = 7
-	SEVEN = 8
-	COMPLETE = 9
-	RE_ENTRY_ONE = 10
-	RE_ENTRY_TWO = 11
-	WAIT = 12
+	FIVE = 5
+	SIX = 6
+	SEVEN = 7
+	COMPLETE = 8
+	RE_ENTRY_ONE = 9
+	RE_ENTRY_TWO = 10
+	WAIT = 11
 
 class ExitState(Enum):
 	ONE = 1
@@ -82,13 +81,18 @@ class Trigger(dict):
 		self.next_pivot_two = 0
 		self.pivot_line = 0
 		
+		# Close AB Confirmation
 		self.pivot_close_ab_count = 0
+		self.pivot_consec_ab_count = 0
 		self.entry_close = 0
 		self.entry_hl = 0
 
 		# Entry Setup
 		self.below_check = False
 		self.tag_check = False
+		self.ema_tag_check = False
+		self.cycle_complete = False
+		self.is_non_doji = False
 
 		# Exit Setup
 		self.boll_check = False
@@ -118,9 +122,10 @@ def init(utilities):
 	setGlobalVars()
 	setup(utilities)
 
-	global cci, boll
+	global cci, boll, ema
 	cci = utils.CCI(5)
 	boll = utils.BOLL(15, 2)
+	ema = utils.EMA(12)
 
 def setup(utilities):
 	global utils, m_chart, bank
@@ -162,11 +167,8 @@ def onNewBar(chart):
 			time = utils.convertTimestampToDatetime(utils.getLatestTimestamp())
 			london_time = utils.convertTimezone(time, 'Europe/London')
 
-
 			utils.log("\nTime", time.strftime('%d/%m/%y %H:%M:%S'))
 			utils.log("London Time", london_time.strftime('%d/%m/%y %H:%M:%S') + '\n')
-			utils.log('OHLC', m_chart.getCurrentBidOHLC())
-			utils.log('IND','CCI: {}'.format(round(float(cci.getCurrent(m_chart)),5)))
 		elif utils.plan_state.value in (1,):
 			utils.log("\n[{}] onNewBar ({})".format(
 				utils.account.accountid, utils.name), 
@@ -294,6 +296,7 @@ def handleRegularEntry(entry):
 				tpPrice = tp_price, tpRange = tp_range
 			)
 
+
 def onEntry(pos):
 	global pending_entry_details
 	pos.data['stop_state'] = StopState.NONE.value
@@ -412,6 +415,7 @@ def positionStopIncrement():
 		if not 'stop_state' in pos.data:
 			continue
 
+		# Calculate Current Profits and other useful info
 		if pos.direction == Constants.BUY:
 			max_profit = utils.convertToPips(bid[1] - pos.entryprice)
 			c_sl = utils.convertToPips(pos.entryprice - pos.sl)
@@ -425,42 +429,67 @@ def positionStopIncrement():
 
 
 		new_sl = None
+		# Get Dist from entry to tp
+		tp_dist = utils.convertToPips(abs(pos.entryprice - pos.tp))
+
+		# Calculate profit point one
+		profit_point_one = tp_dist - (VARIABLES['profitrange'] - VARIABLES['profit_points'][0])
+		stop_one = tp_dist - (VARIABLES['profitrange'] - VARIABLES['stops'][0])
+
+		# Calculate profit point two
+		profit_point_two = tp_dist - (VARIABLES['profitrange'] - VARIABLES['profit_points'][1])
+		stop_two = tp_dist - (VARIABLES['profitrange'] - VARIABLES['stops'][1])
+
+		# Calculate profit point three
+		profit_point_three = tp_dist - (VARIABLES['profitrange'] - VARIABLES['profit_points'][2])
+		stop_three = tp_dist - (VARIABLES['profitrange'] - VARIABLES['stops'][2])
+
 		if pos.data['stop_state'] <= StopState.NONE.value:
-			if max_profit >= VARIABLES['profit_points'][0]:
-				if profit >= VARIABLES['stops'][0] + min_dist:
-					new_sl = calc_price(utils.convertToPrice(VARIABLES['stops'][0]))
+
+			# Set new SL if max profit exceeds profit point
+			if max_profit >= profit_point_one:
+				if profit >= stop_one + min_dist:
+					new_sl = calc_price(utils.convertToPrice(stop_one))
 				pos.data['stop_state'] = StopState.BREAKEVEN.value
 
 				utils.savePositions()
 
 		if pos.data['stop_state'] <= StopState.BREAKEVEN.value:
-			if c_sl > -VARIABLES['stops'][0] and pos.data['stop_state'] == StopState.BREAKEVEN.value:
-				if profit >= VARIABLES['stops'][0] + min_dist:
-					new_sl = calc_price(utils.convertToPrice(VARIABLES['stops'][0]))
 
-			if max_profit >= VARIABLES['profit_points'][1]:
-				if profit >= VARIABLES['stops'][1] + min_dist:
-					new_sl = calc_price(utils.convertToPrice(VARIABLES['stops'][1]))
+			# If last sl not set, check to set new sl or exit at market
+			if c_sl > -stop_one and pos.data['stop_state'] == StopState.BREAKEVEN.value:
+				if profit >= stop_one + min_dist:
+					new_sl = calc_price(utils.convertToPrice(stop_one))
+				elif profit <= stop_one:
+					pos.close()
+					continue
+				
+			# Set new SL if max profit exceeds profit point
+			if max_profit >= profit_point_two:
+				if profit >= stop_two + min_dist:
+					new_sl = calc_price(utils.convertToPrice(stop_two))
 				pos.data['stop_state'] = StopState.ONE.value
 
 				utils.savePositions()
 
 		if pos.data['stop_state'] <= StopState.ONE.value:
-			if c_sl > -VARIABLES['stops'][1] and pos.data['stop_state'] == StopState.ONE.value:
-				if profit >= VARIABLES['stops'][1] + min_dist:
-					new_sl = calc_price(utils.convertToPrice(VARIABLES['stops'][1]))
 
-			# Get Dist from entry to tp
-			tp_dist = utils.convertToPips(abs(pos.entryprice - pos.tp))
-			profit_point = tp_dist - (VARIABLES['profitrange'] - VARIABLES['profit_points'][2])
-			stop = tp_dist - (VARIABLES['profitrange'] - VARIABLES['stops'][2])
+			# If last sl not set, check to set new sl or exit at market
+			if c_sl > -stop_two and pos.data['stop_state'] == StopState.ONE.value:
+				if profit >= stop_two + min_dist:
+					new_sl = calc_price(utils.convertToPrice(stop_two))
+				elif profit <= stop_two:
+					pos.close()
+					continue
 
-			if profit >= profit_point:
-				new_sl = calc_price(utils.convertToPrice(stop))
+			# Set new SL if profit exceeds profit point
+			if profit >= profit_point_three:
+				new_sl = calc_price(utils.convertToPrice(stop_three))
 				pos.data['stop_state'] = StopState.TWO.value
 
 				utils.savePositions()
 		
+		# Set New Stop Loss
 		if new_sl:
 			pos.modifySL(
 				new_sl			
@@ -468,6 +497,7 @@ def positionStopIncrement():
 
 def pivotSetupOne(trigger):
 
+	# Cross AB T `0`
 	if trigger.pivot_state_one == PivotState.ONE:
 		if isCciABX(trigger.direction, 0):
 			trigger.pivot_state_one = PivotState.TWO
@@ -475,11 +505,14 @@ def pivotSetupOne(trigger):
 			return pivotSetupOne(trigger)
 
 	elif trigger.pivot_state_one == PivotState.TWO:
+		# Set Current pivot
 		setNextPivotOne(trigger)
+		# Reset on Cross AB CT `0` or
 		if isCciABX(trigger.direction, 0, reverse=True):
 			trigger.pivot_state_one = PivotState.ONE
 			trigger.next_pivot_one = 0
 			return
+		# Cross AB T `cci_t` and signal confirmation
 		elif (
 			isCciABX(trigger.direction, VARIABLES['cci_t']) and 
 			isCciSignal(trigger.direction)
@@ -487,6 +520,7 @@ def pivotSetupOne(trigger):
 			trigger.pivot_state_one = PivotState.THREE
 			return
 
+	# Cross AB CT `0` and signal angle confirmation
 	elif trigger.pivot_state_one == PivotState.THREE:
 		setNextPivotOne(trigger)
 		if (
@@ -495,6 +529,7 @@ def pivotSetupOne(trigger):
 		):
 			trigger.pivot_line = trigger.next_pivot_one
 
+			# Reset
 			trigger.pivot_state_one = PivotState.ONE
 			trigger.next_pivot_one = 0
 			resetPivot(trigger)
@@ -502,19 +537,23 @@ def pivotSetupOne(trigger):
 
 def pivotSetupTwo(trigger):
 
+	# Cross AB CT `cci_t`
 	if trigger.pivot_state_two == PivotState.ONE:
 		if isCciABX(trigger.direction, VARIABLES['cci_t'], reverse=True):
 			trigger.pivot_state_two = PivotState.TWO
 			return
 
+	# Cross AB T `0`
 	elif trigger.pivot_state_two == PivotState.TWO:
 		if isCciABX(trigger.direction, 0):
 			trigger.pivot_state_two = PivotState.THREE
 			return pivotSetupTwo(trigger)
 
+	# Cross AB CT `cci_t`
 	elif trigger.pivot_state_two == PivotState.THREE:
 		setNextPivotTwo(trigger)
 		if isCciABX(trigger.direction, VARIABLES['cci_t'], reverse=True):
+			# Set if exceeds last pivot
 			if trigger.direction == Direction.LONG:
 				if not trigger.pivot_line or trigger.next_pivot_two > trigger.pivot_line:
 					trigger.pivot_line = trigger.next_pivot_two
@@ -524,6 +563,7 @@ def pivotSetupTwo(trigger):
 					trigger.pivot_line = trigger.next_pivot_two
 					resetPivot(trigger)
 
+			# Reset
 			trigger.pivot_state_two = PivotState.ONE
 			trigger.next_pivot_two = 0
 			return pivotSetupTwo(trigger)
@@ -532,6 +572,7 @@ def entrySetup(trigger):
 
 	if trigger.pivot_line:
 
+		# Check for wholly AB candle after close confirmation
 		if (
 			trigger.entry_state != EntryState.ONE and
 			trigger.entry_state != EntryState.COMPLETE
@@ -539,12 +580,13 @@ def entrySetup(trigger):
 			if isWhollyABEntryLine(trigger):
 				trigger.below_check = True
 
+		# Close AB confirmation
 		if trigger.entry_state == EntryState.ONE:
 			if isCloseABPivotLine(trigger.direction, trigger.pivot_line):
-
-				if not isDoji(0.5) and isBB(trigger.direction):
-					trigger.pivot_close_ab_count += 1
-					if trigger.pivot_close_ab_count == 1:
+				# BB and non-doji (0.5) Candle Count
+				if trigger.pivot_close_ab_count == 0:
+					if not isDoji(0.5) and isBB(trigger.direction):
+						trigger.pivot_close_ab_count += 1
 						cancelPivot(trigger.direction, reverse=True)
 
 						trigger.entry_close = round(m_chart.getCurrentBidOHLC()[3], 5)
@@ -552,67 +594,105 @@ def entrySetup(trigger):
 						setEntryHL(trigger)
 						return
 
-					elif trigger.pivot_close_ab_count == 2:
+				elif trigger.pivot_close_ab_count == 1:
+					# Second BB and non-doji (0.5)
+					if not isDoji(0.5) and isBB(trigger.direction):
 						trigger.entry_state = EntryState.TWO
 						trigger.entry_type = EntryType.REGULAR
 						trigger.tp_price = 0
 						setEntryHL(trigger)
 						return entrySetup(trigger)
 
+					# Two consecutive non-doji (1.0)
+					elif isWhollyABPivotLine(trigger) and not isBB(trigger.direction):
+
+						# Check if at least one bar non-doji (1.0)
+						if not isDoji(1.0):
+							trigger.is_non_doji = True
+							trigger.pivot_consec_ab_count += 1
+						elif trigger.pivot_consec_ab_count == 1:
+							if trigger.is_non_doji:
+								trigger.pivot_consec_ab_count += 1
+							else:
+								trigger.pivot_consec_ab_count = 0
+						else:
+							trigger.pivot_consec_ab_count += 1
+
+						if trigger.pivot_consec_ab_count == 2:
+							trigger.entry_state = EntryState.TWO
+							trigger.entry_type = EntryType.REGULAR
+							trigger.tp_price = 0
+							setEntryHL(trigger)
+							return entrySetup(trigger)
+					# Reset consecutive count
+					else:
+						trigger.pivot_consec_ab_count = 0
+			else:
+				trigger.pivot_consec_ab_count = 0
+
+		# Cross AB CT `cci_ct`
 		elif trigger.entry_state == EntryState.TWO:
 			if isCciABX(trigger.direction, VARIABLES['cci_ct'], reverse=True):
 				trigger.entry_state = EntryState.THREE
 				return
 		
 		elif trigger.entry_state == EntryState.THREE:
+			# Tagging entry line
 			if isTaggingEntryLine(trigger):
 				trigger.tag_check = True
+			# Tagging ema
+			if isTaggingEma(trigger.direction) and not trigger.cycle_complete:
+				trigger.ema_tag_check = True
+			# Tag reset on cci CT cross
 			if isCciABX(trigger.direction, VARIABLES['cci_ct'], reverse=True):
 				trigger.tag_check = False
+				trigger.ema_tag_check = False
 
+			# T cci cross
 			if isCciABX(trigger.direction, VARIABLES['cci_t']):
 				trigger.entry_state = EntryState.FOUR
 				return entrySetup(trigger)
 		
+		# Check qualifying factors
 		elif trigger.entry_state == EntryState.FOUR:
-			if trigger.tag_check:
-				trigger.entry_state = EntryState.FIVE_A
-				return entrySetup(trigger)
-			if trigger.below_check:
-				trigger.entry_state = EntryState.FIVE_B
+			if (
+				trigger.tag_check or
+				trigger.below_check or
+				trigger.ema_tag_check
+			):
+				trigger.entry_state = EntryState.FIVE
 				return entrySetup(trigger)
 			else:
 				trigger.entry_state = EntryState.TWO
+				trigger.cycle_complete = True
 				return
 
-		elif trigger.entry_state == EntryState.FIVE_A:
+		# Entry on BB and non-doji (0.2)
+		elif trigger.entry_state == EntryState.FIVE:
 			if isBB(trigger.direction) and not isDoji(0.2):
 				trigger.entry_state = EntryState.COMPLETE
 				if confirmation(trigger):
 					trigger.entry_type = EntryType.RE_ENTRY
 					return True
 
-		elif trigger.entry_state == EntryState.FIVE_B:
-			if isBB(trigger.direction) and not isDoji(0.5):
-				trigger.entry_state = EntryState.COMPLETE
-				if confirmation(trigger):
-					trigger.entry_type = EntryType.RE_ENTRY
-					return True
-
+		# Reset once close below pivot
 		elif trigger.entry_state == EntryState.COMPLETE:
 			if isCloseABPivotLine(trigger.direction, trigger.pivot_line, reverse=True):
 				trigger.entry_state = EntryState.ONE
 				return entrySetup(trigger)
 
+		# Re-entry Cross AB `cci_t`
 		elif trigger.entry_state == EntryState.RE_ENTRY_ONE:
 			if isCciABX(trigger.direction, VARIABLES['cci_t']):
 				trigger.entry_state = EntryState.RE_ENTRY_TWO
 				return entrySetup(trigger)
 
+		# Re-entry on BB and non-doji (0.2)
 		elif trigger.entry_state == EntryState.RE_ENTRY_TWO:
 			if isBB(trigger.direction) and not isDoji(0.2):
 				return confirmation(trigger)
 
+# Exit on boll tag and close ab rev-pivot line
 def exitSetup(trigger):
 
 	if trigger.exit_state == ExitState.ONE:
@@ -665,7 +745,11 @@ def setEntryHL(trigger):
 def resetPivot(trigger):
 	trigger.below_check = False
 	trigger.tag_check = False
+	trigger.ema_tag_check = False
+	trigger.cycle_complete = False
+	trigger.is_non_doji = False
 	trigger.pivot_close_ab_count = 0
+	trigger.pivot_consec_ab_count = 0
 
 	trigger.exit_state = ExitState.ONE
 	trigger.boll_check = False
@@ -693,6 +777,7 @@ def cancelPivot(direction, reverse=False):
 				short_trigger.entry_state = EntryState.ONE
 				resetPivot(short_trigger)
 
+# Exit on finished session w/ CCI angle
 def isStoppedExit():
 	for pos in utils.positions:
 		if pos.getPipProfit() >= 0:
@@ -713,6 +798,14 @@ def isCloseABPivotLine(direction, pivot_line, reverse=False):
 			return close > pivot_line
 		else:
 			return close < pivot_line
+
+def isWhollyABPivotLine(trigger):
+	_open, _, _, close = m_chart.getCurrentBidOHLC()
+
+	if trigger.direction == Direction.LONG:
+		return _open > trigger.pivot_line and close > trigger.pivot_line
+	else:
+		return _open < trigger.pivot_line and close < trigger.pivot_line
 
 def isWhollyABEntryLine(trigger):
 	_open, _, _, close = m_chart.getCurrentBidOHLC()
@@ -735,6 +828,15 @@ def isTaggingEntryLine(trigger):
 		return low <= trigger.entry_hl
 	else:
 		return high >= trigger.entry_hl
+
+def isTaggingEma(direction):
+	_, high, low, _ = m_chart.getCurrentBidOHLC()
+	ema_val = ema.getCurrent(m_chart)
+
+	if direction == Direction.LONG:
+		return low <= ema_val
+	else:
+		return high >= ema_val
 
 def isCciABX(direction, x, reverse=False):
 	chidx = round(float(cci.getCurrent(m_chart)),5)
@@ -877,8 +979,8 @@ def report():
 		utils.log('', "\n[{}] Report:".format(utils.account.accountid))
 
 	utils.log('', "")
-	utils.log('IND','CCI: {:.5f}'.format(cci.getCurrent(m_chart)))
 	utils.log('', 'TS: {} OHLC: {}'.format(m_chart.c_ts, m_chart.getCurrentBidOHLC()))
+	utils.log('IND','CCI: {:.5f} |EMA: {:.5f}'.format(cci.getCurrent(m_chart), ema.getCurrent(m_chart)))
 	utils.log('', 'TimeState: {}\n'.format(time_state))
 	utils.log('', "LONG T: {}\n".format(long_trigger))
 	utils.log('', "SHORT T: {}".format(short_trigger))
