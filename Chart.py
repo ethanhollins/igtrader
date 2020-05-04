@@ -143,7 +143,7 @@ class Chart(object):
 			start = Constants.TS_START_DATE
 
 			if self.root.broker == 'ig':
-				data = self.download(count=2000)
+				data = self.download(count=2500)
 			elif self.root.broker == 'oanda':
 				data = self.download(start=start, end=end)
 			else:
@@ -152,6 +152,7 @@ class Chart(object):
 		ask_keys = ['ask_open', 'ask_high', 'ask_low', 'ask_close']
 		bid_keys = ['bid_open', 'bid_high', 'bid_low', 'bid_close']
 
+		# load_data = load_data[~load_data[ask_keys + bid_keys].contains('True')]
 
 		self.c_ask = data.iloc[-1][ask_keys].values.tolist()
 		self.c_bid = data.iloc[-1][bid_keys].values.tolist()
@@ -312,7 +313,7 @@ class Chart(object):
 
 				if self.period == Constants.ONE_MINUTE:
 					self.reset = True
-					real_now = self.nearestHour(now)
+					real_now = now
 					now = Constants.IG_START_DATE + datetime.timedelta(milliseconds=int(item['values']['UTM']))
 					now = now.replace(year=real_now.year,month=real_now.month,day=real_now.day,hour=real_now.hour)
 					new_ts = self.root.utils.convertDatetimeToTimestamp(now)
