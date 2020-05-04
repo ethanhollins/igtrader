@@ -609,6 +609,7 @@ def entrySetup(trigger):
 						trigger.entry_type = EntryType.REGULAR
 						trigger.tp_price = 0
 						setEntryHL(trigger)
+						resetEntry(trigger)
 						return entrySetup(trigger)
 
 					# Two consecutive non-doji (1.0)
@@ -631,6 +632,7 @@ def entrySetup(trigger):
 							trigger.entry_type = EntryType.REGULAR
 							trigger.tp_price = 0
 							setEntryHL(trigger)
+							resetEntry(trigger)
 							return entrySetup(trigger)
 					# Reset consecutive count
 					else:
@@ -750,12 +752,14 @@ def setEntryHL(trigger):
 		if trigger.entry_hl == 0 or ohlc[2] < trigger.entry_hl:
 			trigger.entry_hl = round(ohlc[2], 5)
 
-def resetPivot(trigger):
+def resetEntry(trigger):
 	trigger.below_check = False
 	trigger.tag_check = False
 	trigger.ema_tag_check = False
 	trigger.cycle_complete = False
 	trigger.is_non_doji = False
+
+def resetPivot(trigger):
 	trigger.pivot_close_ab_count = 0
 	trigger.pivot_consec_ab_count = 0
 
