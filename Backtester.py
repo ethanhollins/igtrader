@@ -111,11 +111,11 @@ class Chart(object):
 
 	def getBidOHLC(self, shift, amount):
 		c_idx = (np.abs(self.bids_ts - self.c_ts)).argmin()
-		return self.bids_ohlc[max(c_idx+1-shift-amount, 0):c_idx+1-shift]
+		return self.bids_ohlc[c_idx+1-shift-amount:c_idx+1-shift]
 
 	def getAskOHLC(self, shift, amount):
 		c_idx = (np.abs(self.asks_ts - self.c_ts)).argmin()
-		return self.asks_ohlc[max(c_idx+1-shift-amount, 0):c_idx+1-shift]
+		return self.asks_ohlc[c_idx+1-shift-amount:c_idx+1-shift]
 
 	def getCurrentBidOHLC(self):
 		c_idx = (np.abs(self.bids_ts - self.c_ts)).argmin()
@@ -441,7 +441,7 @@ class Backtester(object):
 					t_data = t_data.loc[t_data['timestamp'] <= ts_end]
 				frags.append(t_data)
 		data = pd.concat(frags).set_index('timestamp')
-
+		
 		ask_keys = ['ask_open', 'ask_high', 'ask_low', 'ask_close']
 		bid_keys = ['bid_open', 'bid_high', 'bid_low', 'bid_close']
 		
@@ -479,6 +479,11 @@ class Backtester(object):
 				self.charts.append(self.getChartFromChart(chart))
 
 			self.module.setup(self)
+
+		for chart in self.charts:
+			offset = self.getPeriodNumber(chart.period)*60
+			chart.bids_ts += offset
+			chart.asks_ts += offset
 
 		all_ts = np.sort(np.unique(np.concatenate([
 			chart.bids_ts
@@ -526,7 +531,7 @@ class Backtester(object):
 
 		# CMD Vars
 		next_p = None
-		
+
 		start_time = timer()
 		for i in range(all_ts.size):
 			self.c_ts = all_ts[i]
@@ -1037,16 +1042,42 @@ class Backtester(object):
 	def convertTimezone(self, dt, tz):
 		return dt.astimezone(pytz.timezone(tz))
 
+	def convertToLondonTimezone(self, dt):
+		dst_start = self.findFirstWeekday(
+			datetime.datetime(year=dt.year, month=3, day=31, hour=1),
+			6,
+			reverse=True
+		)
+		dst_end = self.findFirstWeekday(
+			datetime.datetime(year=dt.year, month=10, day=31, hour=1),
+			6,
+			reverse=True
+		)
+		if dst_start <= dt < dst_end:
+			return dt + datetime.timedelta(hours=1)
+		else:
+			return dt
+
+	def findFirstWeekday(self, dt, weekday, reverse=False):
+		while dt.weekday() != weekday:
+			if reverse:
+				dt -= datetime.timedelta(days=1)
+			else:
+				dt += datetime.timedelta(days=1)
+		return dt
+
 	def setTimezone(self, dt, tz):
 		return pytz.timezone(tz).localize(dt)
 
 	def convertTimestampToDatetime(self, ts):
-		return self.convertTimezone(Constants.DT_START_DATE + datetime.timedelta(seconds=int(ts)), 'Australia/Melbourne')
+		return Constants.DT_START_DATE + datetime.timedelta(seconds=int(ts))
 		
 	def convertDatetimeToTimestamp(self, dt):
-		if not dt.tzinfo:
-			dt = self.setTimezone(dt, 'UTC')
-		return int((dt - Constants.DT_START_DATE).total_seconds())
+		# dt = self.convertTimezone(dt, 'Australia/Melbourne')
+		if self.source == 'ig' or self.source == 'oanda':
+			return int((dt - Constants.DT_START_DATE).total_seconds())
+		elif self.source == 'mt':
+			return int((dt - Constants.MT_DT_START_DATE).total_seconds())
 		
 
 	def getTime(self):

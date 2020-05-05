@@ -987,7 +987,8 @@ def confirmation(trigger, reverse=False):
 		pending_entry = None
 		return False
 	
-	trigger.boll_check = False
+	long_trigger.boll_check = False
+	short_trigger.boll_check = False
 	utils.log("confirmation", '{0} {1}'.format(pending_entry.direction, pending_entry.entry_type))
 	return True
 

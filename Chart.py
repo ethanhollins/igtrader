@@ -306,8 +306,6 @@ class Chart(object):
 				if self.period == Constants.ONE_MINUTE:
 					self.reset = True
 					new_ts = int(item['values']['UTM']) // 1000
-					print(int(item['values']['UTM']))
-					print(new_ts)
 
 					self.addNewBar(new_ts)
 
