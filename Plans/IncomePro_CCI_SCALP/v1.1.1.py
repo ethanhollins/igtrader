@@ -553,7 +553,7 @@ def pivotSetupTwo(trigger):
 
 	# Cross AB CT `cci_t`
 	if trigger.pivot_state_two == PivotState.ONE:
-		if isCciABX(trigger.direction, VARIABLES['cci_t'], reverse=True):
+		if isCciABX(trigger.direction, 0, reverse=True):
 			trigger.pivot_state_two = PivotState.TWO
 			return
 
@@ -566,7 +566,7 @@ def pivotSetupTwo(trigger):
 	# Cross AB CT `cci_t`
 	elif trigger.pivot_state_two == PivotState.THREE:
 		setNextPivotTwo(trigger)
-		if isCciABX(trigger.direction, VARIABLES['cci_t'], reverse=True):
+		if isCciABX(trigger.direction, 0, reverse=True):
 			# Set if exceeds last pivot
 			if trigger.direction == Direction.LONG:
 				if not trigger.pivot_line or trigger.next_pivot_two > trigger.pivot_line:
@@ -1018,10 +1018,10 @@ def report():
 		cci.getCurrent(m_chart), ema.getCurrent(m_chart), boll.getCurrent(m_chart)
 	))
 	utils.log('', 'TimeState: {}\n'.format(time_state))
-	utils.log('', "LONG T:{}\n".format(prettyPrintTrigger(long_trigger)))
-	utils.log('', "SHORT T:{}".format(prettyPrintTrigger(short_trigger)))
+	utils.log('', "LONG Trigger:{}\n".format(prettyPrintTrigger(long_trigger)))
+	utils.log('', "SHORT Trigger:{}".format(prettyPrintTrigger(short_trigger)))
 
-	utils.log('', "\nSESSION POSITIONS:")
+	utils.log('', "\nPOSITIONS:")
 	count = 0
 	for pos in sess_positions:
 		count += 1
@@ -1039,14 +1039,15 @@ def report():
 			else:
 				sl_pips = utils.convertToPips(pos.sl - pos.entryprice)
 
-			utils.log('', "{}: {} Profit: {} | {}% ENTRY: {} SL: {} | {}".format(
+			utils.log('', "{}: {} Profit: {:.1f} | {:.2f}%\tENTRY: {:.5f} | SL: {:.5f} -> {:.1f} | TP: {:.5f}".format(
 				count,
 				pos.direction,
 				pos.getPipProfit(), 
 				pos.getPercentageProfit(),
 				pos.entryprice,
 				pos.sl,
-				sl_pips
+				sl_pips,
+				pos.tp
 			))
 
 	utils.log('', utils.getTime().strftime('%d/%m/%y %H:%M:%S'))

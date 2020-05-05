@@ -152,8 +152,6 @@ class Chart(object):
 		ask_keys = ['ask_open', 'ask_high', 'ask_low', 'ask_close']
 		bid_keys = ['bid_open', 'bid_high', 'bid_low', 'bid_close']
 
-		# load_data = load_data[~load_data[ask_keys + bid_keys].contains('True')]
-
 		self.c_ask = data.iloc[-1][ask_keys].values.tolist()
 		self.c_bid = data.iloc[-1][bid_keys].values.tolist()
 
@@ -299,13 +297,7 @@ class Chart(object):
 
 			cons_end = int(item['values']['CONS_END']) if item['values']['CONS_END'] else None
 
-			is_new_bar = (
-				cons_end == 1# or 
-				# (self.last_bid_open != 0 and b_open != self.last_bid_open) or 
-				# (self.last_ask_open != 0 and a_open != self.last_ask_open)
-			)
-
-			if is_new_bar:
+			if cons_end == 1:
 				now = datetime.datetime.now()
 				now = self.root.utils.setTimezone(now, 'Australia/Melbourne')
 				lon = self.root.utils.convertTimezone(now, 'Europe/London')
@@ -313,10 +305,9 @@ class Chart(object):
 
 				if self.period == Constants.ONE_MINUTE:
 					self.reset = True
-					real_now = now
-					now = Constants.IG_START_DATE + datetime.timedelta(milliseconds=int(item['values']['UTM']))
-					now = now.replace(year=real_now.year,month=real_now.month,day=real_now.day,hour=real_now.hour)
-					new_ts = self.root.utils.convertDatetimeToTimestamp(now)
+					new_ts = int(item['values']['UTM']) // 1000
+					print(int(item['values']['UTM']))
+					print(new_ts)
 
 					self.addNewBar(new_ts)
 

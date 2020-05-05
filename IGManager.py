@@ -169,14 +169,19 @@ class IGManager(object):
 				result['timestamp'].append(ts)
 
 				price_keys = ['openPrice', 'highPrice', 'lowPrice', 'closePrice']
-				asks = [
-					float(price[i]['ask']) if price[i]['ask'] else float(price[i]['bid']) != None 
-					for i in price_keys
-				]
-				bids = [
-					float(price[i]['bid']) if price[i]['bid'] else float(price[i]['ask']) != None 
-					for i in price_keys
-				]
+				asks = [price[i]['ask'] for i in price_keys]
+				bids = [price[i]['bid'] for i in price_keys]
+				if all(asks):
+					asks = list(map(float, asks))
+				elif all(bids):
+					asks = list(map(float, bids))
+				else:
+					continue
+
+				if all(bids):
+					bids = list(map(float, bids))
+				else:
+					bids = list(map(float, asks))
 
 				result['ask_open'].append(asks[0])
 				result['ask_high'].append(asks[1])

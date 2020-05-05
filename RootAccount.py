@@ -171,14 +171,20 @@ class RootAccount(object):
 				plans_info = info['plans']
 				if info['start']:
 					start = utils.convertDatetimeToTimestamp(
-						datetime.datetime.strptime(info['start'], '%d/%m/%y %H:%M')
+						utils.convertTimezone(
+							datetime.datetime.strptime(info['start'], '%d/%m/%y %H:%M'),
+							'Australia/Melbourne'
+						)
 					)
 				else:
 					start = None
 
 				if info['end']:
 					end = utils.convertDatetimeToTimestamp(
-						datetime.datetime.strptime(info['end'], '%d/%m/%y %H:%M')
+						utils.convertTimezone(
+							datetime.datetime.strptime(info['end'], '%d/%m/%y %H:%M'),
+							'Australia/Melbourne'
+						)
 					)
 				else:
 					end = None

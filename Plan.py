@@ -72,9 +72,11 @@ class Plan(object):
 		
 		self.c_ts = bt.c_ts - self.getPeriodNumber(chart.period)*60
 		while self.c_ts < self.getLatestChartTimestamp():
+			print(self.c_ts)
+			print(self.getLatestChartTimestamp())
 			bt = Backtester(self.account.root, self.name, self.variables)
 			self.module, _ = bt.backtestRun(start=self.c_ts, start_off=1, plan=self)
-			self.c_ts = bt.c_ts - self.getPeriodNumber(chart.period)*60
+			self.c_ts = bt.c_ts
 		self.module.setup(self)
 
 		self.updatePositions()

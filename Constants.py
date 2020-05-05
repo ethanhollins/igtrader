@@ -71,10 +71,10 @@ REJECTED = 'REJECTED'
 '''
 Timestamps
 '''
-import datetime
-TS_START_DATE = datetime.datetime(year=2020, month=1, day=1)
-DT_START_DATE = datetime.datetime(year=1970, month=1, day=1)
-IG_START_DATE = datetime.datetime(year=1970, month=1, day=1, hour=11)
+import datetime as dt
+import pytz
+TS_START_DATE = dt.datetime(year=2020, month=1, day=1)
+DT_START_DATE = pytz.timezone('UTC').localize(dt.datetime(year=1970, month=1, day=1))
 
 '''
 Backtester

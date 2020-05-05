@@ -49,6 +49,7 @@ class Utilities(object):
 
 	def convertSnapshotToTimestamp(self, snapshot):
 		s_dt = datetime.datetime.strptime(snapshot, '%Y/%m/%d %H:%M:%S')
+		s_dt = self.setTimezone(s_dt, 'Australia/Melbourne')
 		return int((s_dt - Constants.DT_START_DATE).total_seconds())
 
 	def convertSnapshotToDatetime(self, snapshot):
@@ -57,25 +58,24 @@ class Utilities(object):
 	def convertUTCSnapshotToTimestamp(self, snapshot):
 		time = datetime.datetime.strptime(snapshot.split('.')[0], '%Y-%m-%dT%H:%M:%S')
 		time = self.setTimezone(time, 'UTC')
-		time = self.convertTimezone(time, 'Australia/Melbourne').replace(tzinfo=None)
-		# s_dt = self.convertToMelbourneTimezone(s_dt)
 		return int((time - Constants.DT_START_DATE).total_seconds())
 
 	def convertUTCTimeToTimestamp(self, time):
 		time = self.setTimezone(time, 'UTC')
-		time = self.convertTimezone(time, 'Australia/Melbourne').replace(tzinfo=None)
-		# time = self.convertToMelbourneTimezone(time)
+		time = self.convertTimezone(time, 'Australia/Melbourne')
 		return int((time - Constants.DT_START_DATE).total_seconds())
 
 	def convertLondonTimeToTimestamp(self, time):
 		time = self.setTimezone(time, 'Europe/London')
-		time = self.convertTimezone(time, 'Australia/Melbourne').replace(tzinfo=None)
+		time = self.convertTimezone(time, 'Australia/Melbourne')
 		return int((time - Constants.DT_START_DATE).total_seconds())
 
 	def convertTimestampToDatetime(self, ts):
-		return Constants.DT_START_DATE + datetime.timedelta(seconds=int(ts))
+		return self.convertTimezone(Constants.DT_START_DATE + datetime.timedelta(seconds=int(ts)), 'Australia/Melbourne')
 		
 	def convertDatetimeToTimestamp(self, dt):
+		if not dt.tzinfo:
+			dt = self.setTimezone(dt, 'UTC')
 		return int((dt - Constants.DT_START_DATE).total_seconds())
 
 	def convertToPips(self, price):
