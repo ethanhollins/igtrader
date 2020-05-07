@@ -73,7 +73,7 @@ Timestamps
 '''
 import datetime as dt
 import pytz
-TS_START_DATE = dt.datetime(year=2020, month=1, day=1)
+TS_START_DATE = dt.datetime(year=2000, month=1, day=1)
 DT_START_DATE = pytz.timezone('UTC').localize(dt.datetime(year=1970, month=1, day=1))
 
 '''

@@ -425,7 +425,9 @@ class Backtester(object):
 
 	def load(self, product, period):
 		start = Constants.TS_START_DATE
+		start = self.convertTimezone(start, 'Australia/Melbourne')
 		end = datetime.datetime.now()
+		end = self.convertTimezone(end, 'Australia/Melbourne')
 
 		data_dir = os.path.join('Data/', '{}/{}/{}/'.format(self.source, product, period))
 		frags = []
@@ -1074,10 +1076,7 @@ class Backtester(object):
 		
 	def convertDatetimeToTimestamp(self, dt):
 		# dt = self.convertTimezone(dt, 'Australia/Melbourne')
-		if self.source == 'ig' or self.source == 'oanda':
-			return int((dt - Constants.DT_START_DATE).total_seconds())
-		elif self.source == 'mt':
-			return int((dt - Constants.MT_DT_START_DATE).total_seconds())
+		return int((dt - Constants.DT_START_DATE).total_seconds())
 		
 
 	def getTime(self):

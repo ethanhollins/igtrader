@@ -65,7 +65,8 @@ class TimeState(Enum):
 	TRADING = 1
 	EXIT_PROFIT_ONE = 2
 	EXIT_PROFIT_TWO = 3
-	STOPPED = 4
+	END = 4
+	STOPPED = 5
 
 class Trigger(dict):
 
@@ -162,6 +163,7 @@ def setGlobalVars():
 	bank = utils.getTradableBank()
 	time_state = TimeState.TRADING
 
+	print('GLOBAL VARS')
 	sess_positions = []
 
 def onNewBar(chart):
@@ -232,7 +234,7 @@ def handleEntries():
 			closeAllPositions(None)
 			pending_entry = None
 
-			time_state = TimeState.STOPPED
+			time_state = TimeState.END
 			return
 
 		if isOppDirectionPositionExists(pending_entry.direction):
@@ -388,6 +390,9 @@ def checkTime():
 	stopped = london_time.replace(hour=19,minute=30,second=0,microsecond=0)
 
 	if start <= london_time < stopped:
+		if time_state == TimeState.END:
+			return
+
 		if london_time >= exit_profit_two:
 			time_state = TimeState.EXIT_PROFIT_TWO
 		elif london_time >= exit_profit_one:
@@ -1051,5 +1056,9 @@ def report():
 				pos.tp
 			))
 
-	utils.log('', utils.getTime().strftime('%d/%m/%y %H:%M:%S'))
+	time = utils.convertTimezone(
+		utils.getTime(),
+		'Australia/Melbourne'
+	)
+	utils.log('', time.strftime('%d/%m/%y %H:%M:%S'))
 	utils.log('', "--|\n")
